@@ -24,7 +24,7 @@ return new class extends Migration
          * See `docs/prerequisites.md` for suggested lengths on 'name' and 'guard_name' if "1071 Specified key was too long" errors are encountered.
          */
         Schema::create($tableNames['permissions'], static function (Blueprint $table) {
-            $table->uuid('uuid')->primary()->unique(); // permission uuid
+            $table->uuid('uuid')->primary()->unique();
             $table->string('name');
             $table->string('guard_name');
             $table->timestamps();
