@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Nihom – Platform properti terpercaya untuk menemukan rumah impian Anda di Indonesia. Lebih dari 10.000 listing siap pilih.">
-    <title>Nihom – Temukan Properti Impian Anda</title>
+    <title>mihom – Temukan Properti Impian Anda</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -21,7 +21,7 @@
             transition: background 0.3s, box-shadow 0.3s;
         }
         .navbar.scrolled {
-            background: rgba(255,255,255,0.97);
+            background: rgba(255, 255, 255, 0.97);
             box-shadow: 0 2px 20px rgba(0,0,0,0.10);
         }
         .navbar-inner {
@@ -42,21 +42,11 @@
         .nav-logo-text {
             font-size: 22px;
             font-weight: 800;
-            color: #fff;
+            color: #ffffffff;
             letter-spacing: -0.5px;
             transition: color 0.3s;
         }
-        .navbar.scrolled .nav-logo-text { color: #1a1a2e; }
-        .nav-logo-icon {
-            width: 32px;
-            height: 32px;
-            background: #f97316;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
+        .navbar.scrolled .nav-logo-text { color: #1a1a2eff; }
         .nav-links {
             display: flex;
             align-items: center;
@@ -1048,8 +1038,9 @@
     <nav class="navbar" id="navbar">
         <div class="navbar-inner">
             <a href="#" class="nav-logo">
-                <div class="nav-logo-icon">🏠</div>
-                <span class="nav-logo-text">nihom</span>
+                <img id="logo-black" style="display: none;" src="{{ asset ('assets/png/blck trnsprn.png') }}" alt="Logo" class="h-8">
+                <img id="logo-white" src="{{ asset ('assets/png/wht trnsprn.png') }}" alt="Logo" class="h-8">
+                <span class="nav-logo-text">mihom</span>
             </a>
             <ul class="nav-links">
                 <li><a href="#beranda" class="nav-link active">Beranda</a></li>
@@ -1485,13 +1476,20 @@
     </footer>
 
     <script>
+        const logoblack = document.getElementById('logo-black');
+        const logowhite = document.getElementById('logo-white');
+
         // ——— Navbar scroll effect ———
         const navbar = document.getElementById('navbar');
         window.addEventListener('scroll', () => {
             if (window.scrollY > 60) {
                 navbar.classList.add('scrolled');
+                logoblack.style.display = 'block';
+                logowhite.style.display = 'none';
             } else {
                 navbar.classList.remove('scrolled');
+                logoblack.style.display = 'none';
+                logowhite.style.display = 'block';
             }
         });
 
