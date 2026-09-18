@@ -1048,7 +1048,7 @@
                 <li><a href="#tentang" class="nav-link">Tentang Kami</a></li>
                 <li><a href="#kontak" class="nav-link">Kontak</a></li>
             </ul>
-            <a href="#" class="btn-nav-cta">Daftar Gratis</a>
+            <a href="#" class="btn-nav-cta">Daftar / Masuk</a>
             <button class="nav-hamburger" id="hamburgerBtn" aria-label="Buka Menu" aria-expanded="false">
                 <span class="hamburger-line"></span>
                 <span class="hamburger-line"></span>
@@ -1075,7 +1075,7 @@
         />
         <div class="hero-overlay"></div>
         <div class="hero-content">
-            <p class="hero-badge">🏡 Platform Properti #1 Indonesia</p>
+            <p class="hero-badge">Pilihan terbaik untuk anda</p>
             <h1 class="hero-title">Temukan Properti<br/>Impian Anda</h1>
             <p class="hero-subtitle">Kami membantu Anda menemukan properti yang sempurna sesuai kebutuhan dan anggaran. Lebih dari 10.000 listing terpercaya tersedia.</p>
 
@@ -1412,8 +1412,8 @@
         <div class="footer-inner">
             <div>
                 <div class="footer-logo">
-                    <div class="nav-logo-icon">🏠</div>
-                    <span class="footer-logo-text">nihom</span>
+                    <img id="logo-white" src="{{ asset ('assets/png/wht trnsprn.png') }}" alt="Logo" class="h-8">
+                    <span class="footer-logo-text">mihom</span>
                 </div>
                 <p class="footer-tagline">Platform properti terpercaya untuk menemukan rumah impian Anda di seluruh Indonesia.</p>
                 <div class="footer-socials">
