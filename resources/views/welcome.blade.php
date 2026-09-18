@@ -99,6 +99,87 @@
             box-shadow: 0 4px 16px rgba(249,115,22,0.45);
         }
 
+        /* Hamburger Button */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            gap: 5px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            padding: 0;
+        }
+        .nav-hamburger:hover { background: rgba(255,255,255,0.12); }
+        .navbar.scrolled .nav-hamburger:hover { background: #f3f4f6; }
+        .hamburger-line {
+            width: 22px;
+            height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        .navbar.scrolled .hamburger-line { background: #374151; }
+        .nav-hamburger.open .hamburger-line:nth-child(1) {
+            transform: translateY(7px) rotate(45deg);
+        }
+        .nav-hamburger.open .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+        .nav-hamburger.open .hamburger-line:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+
+        /* Mobile Nav Drawer */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 64px;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid #f3f4f6;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            z-index: 99;
+            padding: 16px 20px 24px;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .mobile-nav.open { display: flex; }
+        .mobile-nav-link {
+            display: block;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #374151;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .mobile-nav-link:hover, .mobile-nav-link.active {
+            background: #fff7ed;
+            color: #f97316;
+        }
+        .mobile-nav-cta {
+            display: block;
+            margin-top: 12px;
+            background: #f97316;
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(249,115,22,0.4);
+        }
+
         /* ==============================
            HERO
         ============================== */
@@ -129,6 +210,7 @@
             margin: 0 auto;
             padding: 120px 24px 80px;
             width: 100%;
+            box-sizing: border-box;
         }
         .hero-badge {
             display: inline-flex;
@@ -193,7 +275,6 @@
             display: flex;
             align-items: center;
             padding: 16px 20px;
-            gap: 0;
             flex-wrap: wrap;
             gap: 8px;
         }
@@ -238,6 +319,7 @@
             white-space: nowrap;
             transition: all 0.2s;
             box-shadow: 0 4px 14px rgba(249,115,22,0.4);
+            width: 100%;
         }
         .btn-search:hover {
             background: #ea6c0a;
@@ -253,6 +335,8 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
         }
         .section-tag {
             font-size: 12px;
@@ -464,10 +548,11 @@
             align-items: center;
         }
         @media (max-width: 900px) {
-            .solution-inner { grid-template-columns: 1fr; }
+            .solution-inner { grid-template-columns: 1fr; gap: 40px; }
         }
         .sol-img-wrap {
             position: relative;
+            padding-bottom: 28px;
         }
         .sol-img {
             width: 100%;
@@ -478,15 +563,16 @@
         }
         .sol-badge {
             position: absolute;
-            bottom: -20px;
-            right: -20px;
+            bottom: 0;
+            right: 0;
             background: #fff;
             border-radius: 16px;
-            padding: 16px 20px;
+            padding: 14px 18px;
             display: flex;
             align-items: center;
             gap: 12px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            max-width: calc(100% - 24px);
         }
         .sol-badge-icon { font-size: 28px; }
         .sol-badge-num {
@@ -861,6 +947,99 @@
             opacity: 1;
             transform: none;
         }
+
+        /* ==============================
+           RESPONSIVE – TABLET (≤ 768px)
+        ============================== */
+        @media (max-width: 768px) {
+            /* Navbar */
+            .nav-links, .btn-nav-cta { display: none; }
+            .nav-hamburger { display: flex; }
+
+            /* Hero */
+            .hero-content { padding: 100px 20px 60px; }
+            .hero-subtitle { font-size: 15px; }
+
+            /* Search box */
+            .search-box { border-radius: 14px; }
+            .search-fields { flex-direction: column; align-items: stretch; gap: 0; padding: 12px 16px; }
+            .search-field { min-width: unset; padding: 10px 0 !important; border-bottom: 1px solid #f3f4f6; }
+            .search-field:last-of-type { border-bottom: none; }
+            .search-divider { display: none; }
+            .btn-search { margin-top: 12px; border-radius: 10px; }
+
+            /* Sections */
+            .section { padding: 56px 20px; }
+            .section-header-row { flex-direction: column; align-items: flex-start; }
+
+            /* Solution */
+            .sol-img { height: 280px; }
+            .features-grid { grid-template-columns: 1fr; gap: 16px; }
+
+            /* Stats */
+            .stats-section { padding: 48px 20px; }
+
+            /* Testimonial */
+            .testimonial-grid { grid-template-columns: 1fr 1fr; }
+
+            /* CTA */
+            .cta-section { padding: 72px 20px; }
+            .btn-cta { padding: 14px 28px; font-size: 15px; }
+        }
+
+        /* ==============================
+           RESPONSIVE – MOBILE (≤ 480px)
+        ============================== */
+        @media (max-width: 480px) {
+            /* Navbar */
+            .navbar-inner { padding: 0 16px; }
+
+            /* Hero */
+            .hero-content { padding: 88px 16px 48px; }
+            .hero-badge { font-size: 12px; padding: 5px 12px; }
+            .hero-subtitle { font-size: 14px; margin-bottom: 28px; }
+
+            /* Search */
+            .search-tab { padding: 12px 18px; font-size: 13px; }
+
+            /* Sections */
+            .section { padding: 40px 16px; }
+            .section-header-row .btn-outline { align-self: flex-start; }
+
+            /* Type grid – already 2 cols but make padding tighter */
+            .type-card { padding: 18px 8px; }
+            .type-icon { font-size: 26px; width: 50px; height: 50px; }
+
+            /* Property grid */
+            .property-grid { grid-template-columns: 1fr; }
+
+            /* Solution */
+            .sol-img { height: 220px; }
+            .sol-badge { padding: 10px 14px; gap: 8px; }
+            .sol-badge-num { font-size: 16px; }
+            .sol-badge-icon { font-size: 22px; }
+
+            /* Stats */
+            .stats-section { padding: 36px 16px; }
+            .stats-grid { gap: 20px; }
+
+            /* How it works */
+            .how-card { padding: 24px 20px; }
+            .how-step { font-size: 36px; }
+
+            /* Testimonial */
+            .testimonial-grid { grid-template-columns: 1fr; }
+
+            /* CTA */
+            .cta-section { padding: 56px 16px; }
+            .cta-subtitle { font-size: 14px; }
+            .btn-cta { display: block; text-align: center; padding: 14px 20px; }
+
+            /* Footer */
+            .footer-inner { padding: 40px 16px; }
+            .footer-bottom { padding: 16px; }
+            .footer-bottom-inner { flex-direction: column; text-align: center; gap: 4px; }
+        }
     </style>
 </head>
 <body style="margin:0;font-family:'Instrument Sans',ui-sans-serif,system-ui,sans-serif;background:#fff;">
@@ -879,8 +1058,22 @@
                 <li><a href="#kontak" class="nav-link">Kontak</a></li>
             </ul>
             <a href="#" class="btn-nav-cta">Daftar Gratis</a>
+            <button class="nav-hamburger" id="hamburgerBtn" aria-label="Buka Menu" aria-expanded="false">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
         </div>
     </nav>
+
+    <!-- ===== MOBILE NAV DRAWER ===== -->
+    <div class="mobile-nav" id="mobileNav">
+        <a href="#beranda" class="mobile-nav-link active" onclick="closeMobileNav()">Beranda</a>
+        <a href="#properti" class="mobile-nav-link" onclick="closeMobileNav()">Properti</a>
+        <a href="#tentang" class="mobile-nav-link" onclick="closeMobileNav()">Tentang Kami</a>
+        <a href="#kontak" class="mobile-nav-link" onclick="closeMobileNav()">Kontak</a>
+        <a href="#" class="mobile-nav-cta">Daftar Gratis</a>
+    </div>
 
     <!-- ===== HERO ===== -->
     <section class="hero-section" id="beranda">
@@ -1299,6 +1492,29 @@
                 navbar.classList.add('scrolled');
             } else {
                 navbar.classList.remove('scrolled');
+            }
+        });
+
+        // ——— Hamburger menu toggle ———
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mobileNav = document.getElementById('mobileNav');
+
+        function closeMobileNav() {
+            hamburgerBtn.classList.remove('open');
+            mobileNav.classList.remove('open');
+            hamburgerBtn.setAttribute('aria-expanded', 'false');
+        }
+
+        hamburgerBtn.addEventListener('click', () => {
+            const isOpen = mobileNav.classList.toggle('open');
+            hamburgerBtn.classList.toggle('open', isOpen);
+            hamburgerBtn.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        // Close mobile nav when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navbar.contains(e.target) && !mobileNav.contains(e.target)) {
+                closeMobileNav();
             }
         });
 
