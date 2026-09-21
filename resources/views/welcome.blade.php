@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Nihom – Platform properti terpercaya untuk menemukan rumah impian Anda di Indonesia. Lebih dari 10.000 listing siap pilih.">
+    <link rel="icon" href="{{ asset('assets/png/faviconblack.png') }}" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="{{ asset('assets/png/faviconwhite.png') }}" media="(prefers-color-scheme: dark)">
     <title>mihom – Temukan Properti Impian Anda</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
