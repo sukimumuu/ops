@@ -1050,7 +1050,7 @@
                 <li><a href="#tentang" class="nav-link">Tentang Kami</a></li>
                 <li><a href="#kontak" class="nav-link">Kontak</a></li>
             </ul>
-            <a href="#" class="btn-nav-cta">Daftar / Masuk</a>
+            <a href="{{ route('login') }}" class="btn-nav-cta">Daftar / Masuk</a>
             <button class="nav-hamburger" id="hamburgerBtn" aria-label="Buka Menu" aria-expanded="false">
                 <span class="hamburger-line"></span>
                 <span class="hamburger-line"></span>
@@ -1065,7 +1065,7 @@
         <a href="#properti" class="mobile-nav-link" onclick="closeMobileNav()">Properti</a>
         <a href="#tentang" class="mobile-nav-link" onclick="closeMobileNav()">Tentang Kami</a>
         <a href="#kontak" class="mobile-nav-link" onclick="closeMobileNav()">Kontak</a>
-        <a href="#" class="mobile-nav-cta">Daftar Gratis</a>
+        <a href="{{ route('login') }}" class="mobile-nav-cta">Daftar / Masuk</a>
     </div>
 
     <!-- ===== HERO ===== -->
