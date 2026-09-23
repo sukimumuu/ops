@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap');
+
+@keyframes welcome-fade-in {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.navbar.scrolled {
+    background: rgb(255 255 255 / 97%);
+    box-shadow: 0 2px 20px rgb(44 62 80 / 10%);
+}
+
+.navbar.scrolled .nav-logo-text { color: #2C3E50; }
+.navbar.scrolled .nav-link { color: #2C3E50; }
+.navbar.scrolled .nav-link:hover,
+.navbar.scrolled .nav-link.active { background: #fff0eb; color: #FC4907; }
+.navbar.scrolled .hamburger-line { background: #2C3E50; }
+.navbar.scrolled .nav-hamburger:hover { background: #f3f4f6; }
+
+.mobile-nav.open { display: flex; }
+.nav-hamburger.open .hamburger-line:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-hamburger.open .hamburger-line:nth-child(2) { opacity: 0; }
+.nav-hamburger.open .hamburger-line:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.fade-in { opacity: 0; transform: translateY(28px); }
+.fade-in.visible { animation: welcome-fade-in 0.6s ease forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    .fade-in { opacity: 1; transform: none; }
+}
