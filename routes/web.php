@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PropertyController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -13,3 +14,5 @@ Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('regi
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+Route::get('/katalog', [PropertyController::class, 'index'])->name('katalog');
+Route::get('/welcome', [PropertyController::class, 'welcome'])->name('welcome');
