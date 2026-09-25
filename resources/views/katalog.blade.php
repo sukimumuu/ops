@@ -5,30 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Katalog Properti - Mihom</title>
     
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS (CDN for static preview) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#FC4907',
-                        secondary: '#2C3E50',
-                        light: '#F8F9FA'
-                    },
-                    fontFamily: {
-                        manrope: ['Manrope', 'sans-serif'],
-                        outfit: ['Outfit', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+     @vite(['resources/css/app.css', 'resources/css/welcome.css', 'resources/js/app.js'])
 </head>
 <body class="font-manrope bg-light text-secondary antialiased">
     <!-- Navbar Component -->
@@ -43,7 +20,7 @@
         <div class="absolute inset-0 bg-gradient-to-t from-secondary/80 to-transparent"></div>
         
         <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center">
-            <span class="text-light font-bold text-sm tracking-wider uppercase mb-2">Katalog Properti Pilihan</span>
+            <span class="text-white font-bold text-sm tracking-wider uppercase mb-2">Katalog Properti Pilihan</span>
             <h1 class="font-outfit text-5xl md:text-6xl font-extrabold text-white leading-tight max-w-2xl mb-4">
                 Temukan ruang untuk hidup lebih baik.
             </h1>
@@ -226,5 +203,21 @@
 
     <!-- Footer Component -->
     <x-footer />
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        const blackLogo = document.getElementById('logo-black');
+        const whiteLogo = document.getElementById('logo-white');
+        const hamburger = document.getElementById('hamburgerBtn');
+        const mobileNav = document.getElementById('mobileNav');
+        window.addEventListener('scroll', () => { const scrolled = window.scrollY > 60; navbar.classList.toggle('scrolled', scrolled); blackLogo.classList.toggle('hidden', !scrolled); blackLogo.classList.toggle('block', scrolled); whiteLogo.classList.toggle('hidden', scrolled); });
+        function closeMobileNav() { mobileNav.classList.remove('open'); hamburger.classList.remove('open'); hamburger.setAttribute('aria-expanded', 'false'); }
+        hamburger.addEventListener('click', () => { const open = mobileNav.classList.toggle('open'); hamburger.classList.toggle('open', open); hamburger.setAttribute('aria-expanded', String(open)); });
+        document.addEventListener('click', (event) => { if (!navbar.contains(event.target) && !mobileNav.contains(event.target)) closeMobileNav(); });
+        function setTab(button) { document.querySelectorAll('.search-tab').forEach((tab) => tab.classList.remove('active')); button.classList.add('active'); }
+        const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) entry.target.classList.add('visible'); }), { threshold: 0.12 });
+        document.querySelectorAll('.fade-in').forEach((element) => observer.observe(element));
+        document.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener('click', (event) => { const target = document.querySelector(link.getAttribute('href')); if (target) { event.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); } }));
+    </script>
 </body>
 </html>

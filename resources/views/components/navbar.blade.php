@@ -8,6 +8,7 @@
         <div class="hidden items-center gap-2 md:flex">
             <a href="{{ route('home') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/15">Beranda</a>
             <a href="{{ route('properti') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/15">Properti</a>
+            <a href="{{ route('kalkulator-pajak') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/15">Kalkulator Pajak</a>
             <a href="#tentang" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/15">Tentang Kami</a>
             <a href="#kontak" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/15">Kontak</a>
         </div>
