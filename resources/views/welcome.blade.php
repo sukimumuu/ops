@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Mihom - Platform properti terpercaya untuk menemukan rumah impian Anda di Indonesia.">
-    <link rel="icon" href="{{ asset('assets/png/faviconblack.ico') }}" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="{{ asset('assets/png/favicongray.ico') }}" media="(prefers-color-scheme: light)">
     <link rel="icon" href="{{ asset('assets/png/faviconwhite.ico') }}" media="(prefers-color-scheme: dark)">
     <title>Mihom - Temukan Properti Impian Anda</title>
     @vite(['resources/css/app.css', 'resources/css/welcome.css', 'resources/js/app.js'])
