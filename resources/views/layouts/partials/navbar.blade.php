@@ -83,6 +83,7 @@
 {{-- Navbar Bot --}}
 <header class="hidden lg:block sticky top-0 flex items-center gap-4 h-16 px-4 sm:px-6 bg-secondary border-b border-slate-200 shadow-sm">
     <nav class="flex items-center text-white/80 gap-4 h-16">
+        @role('Superadmin')
         <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
                      ? 'border-b-6 border-b-primary text-primary'
                      : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
@@ -103,5 +104,69 @@
         <li class="flex items-center list-none text-sm font-semibold h-16">
             <a href="">Audit Log</a>
         </li>
+        @endrole
+        @role('PPAT')
+        <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
+                     ? 'border-b-6 border-b-primary text-primary'
+                     : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+            <a href="">Dashboard Antrian</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Pengecekan BPN</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Validasi Pajak</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Jadwal Penandatanganan AJB</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Manajemen Akta</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Resi Balik Nama/a>
+        </li>
+        @endrole
+        @role('Buyer')
+        <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
+                     ? 'border-b-6 border-b-primary text-primary'
+                     : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+            <a href="">Dashboard</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Properti Tersimpan</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Jadwal Survei Saya</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Transaksi & Escrow</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Profil & Verifikasi (KYC)/a>
+        </li>
+        @endrole
+        @role('Seller')
+        <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
+                     ? 'border-b-6 border-b-primary text-primary'
+                     : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+            <a href="">Dashboard</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Properti Saya</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Permintaan Survei Masuk</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Transaksi Penjualan</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Rekening Pencairan</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Profil & Verifikasi (KYC)</a>
+        </li>
+        @endrole
     </nav>
 </header>
