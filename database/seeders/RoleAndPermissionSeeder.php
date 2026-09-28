@@ -56,7 +56,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]);
 
         // Admin Concierge Role
-        $adminConciergeRole = Role::firstOrCreate(['name' => 'Admin Concierge']);$adminConciergeRole->givePermissionTo([
+        $adminConciergeRole = Role::firstOrCreate(['name' => 'PPAT']);$adminConciergeRole->givePermissionTo([
             'users.view_all_users',
             'users.verify_kyc',
             'properties.approve_listing',
@@ -74,6 +74,6 @@ class RoleAndPermissionSeeder extends Seeder
         ]);
 
         // Super Admin Role (Mendapatkan semua permission)
-        $superAdminRole = Role::firstOrCreate(['name' => 'Super Admin']);$superAdminRole->givePermissionTo(Permission::all());
+        $superAdminRole = Role::firstOrCreate(['name' => 'Superadmin']);$superAdminRole->givePermissionTo(Permission::all());
     }
 }
