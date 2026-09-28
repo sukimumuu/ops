@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -15,17 +16,20 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        $credentials = $request->validate([
+            'phone' => ['required', 'string'],
+            'password' => ['required'],
+        ]);
 
-        if (Auth::attempt($credentials)) {
+        if (Auth::attempt(['phone' => $credentials['phone'], 'password' => $credentials['password']], $request->filled('remember'))) {
             $request->session()->regenerate();
 
             return redirect()->intended('dashboard');
         }
 
         return back()->withErrors([
-            'email' => 'The provided credentials do not match.',
-        ]);
+            'phone' => 'Nomor telepon atau kata sandi yang Anda masukkan salah.',
+        ])->withInput($request->only('phone'));
     }
 
     public function logout(Request $request)
@@ -46,17 +50,20 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'phone' => 'required|string|max:20|unique:users',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $user = User::create($validatedData);
+        $user = User::create([
+            'name' => trim($validatedData['first_name'].' '.($validatedData['last_name'] ?? '')),
+            'phone' => $validatedData['phone'],
+            'password' => Hash::make($validatedData['password']),
+        ]);
 
         Auth::login($user);
 
         return redirect()->route('dashboard');
     }
-    
-    
 }
