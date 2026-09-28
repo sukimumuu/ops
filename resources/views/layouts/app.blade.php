@@ -14,6 +14,7 @@
     <style>
         [x-cloak] { display: none !important; }
     </style>
+    @stack('styles')
 </head>
 
 <body class="h-full font-body bg-white text-slate-700 antialiased"
@@ -44,5 +45,6 @@
     @include('layouts.partials.footer')
 </div>
 
+@stack('scripts')
 </body>
 </html>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ListingWizardController;
 use App\Http\Controllers\PropertyController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,5 +22,16 @@ Route::post('/daftar', [AuthController::class, 'register'])->name('register');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Listing Wizard (Progressive Listing)
+    Route::prefix('listing')->name('listing.')->group(function () {
+        Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');
+        Route::post('/step-1', [ListingWizardController::class, 'storeStepOne'])->name('step-one');
+        Route::post('/step-2/{property}', [ListingWizardController::class, 'storeStepTwo'])->name('step-two');
+        Route::get('/review/{property}', [ListingWizardController::class, 'review'])->name('review');
+        Route::post('/submit/{property}', [ListingWizardController::class, 'submit'])->name('submit');
+        Route::get('/photo-url/{propertyPhoto}', [ListingWizardController::class, 'signedPhotoUrl'])->name('photo-url');
+    });
 });
+
 
