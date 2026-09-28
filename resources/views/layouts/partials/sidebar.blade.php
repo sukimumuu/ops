@@ -1,14 +1,14 @@
 <aside x-cloak
        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
        class="fixed inset-y-0 left-0 z-50 w-64 flex flex-col
-        transform bg-secondary text-white transition-transform duration-300 ease-in-out
-        lg:translate-x-0 lg:bg-white lg:text-slate-700">
+        transform bg-white text-black transition-transform duration-300 ease-in-out
+        lg:translate-x-0 lg:hidden lg:bg-white lg:text-slate-700">
 
     <!-- Brand -->
     <div class="flex items-center justify-between h-16 px-6 border-b border-white/10 lg:border-slate-200">
         <a href="" class="flex items-center gap-2.5">
                 <!-- Replace with your logo -->
-            <img id="logo-white" src="{{ asset('assets/png/blck trnsprn.png') }}" alt="Mihom" class="h-8">
+            <img id="logo-black" src="{{ asset('assets/png/gry trnsprn.png') }}" alt="Mihom" class="h-8">
             <span class="font-heading text-xl font-bold text-white tracking-tight lg:text-black">
                 Mihom
             </span>
@@ -26,7 +26,7 @@
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto px-3 py-5 space-y-1">
 
-        <p class="px-3 pb-2 text-[11px] font-bold uppercase trackeeeing-widest text-white/60 lg:text-black/40">
+        <p class="px-3 pb-2 text-[11px] font-bold uppercase trackeeeing-widest text-black/60 lg:text-black/40">
             Main Menu
         </p>
 
@@ -35,7 +35,7 @@
            class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold
                   {{ request()->routeIs('dashboard')
                      ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                     : 'text-white/80 hover:text-white hover:bg-white/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5' }}">
+                     : 'text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5' }}">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                  viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -44,7 +44,7 @@
             Dashboard
         </a>
 
-        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
+        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                  viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -53,7 +53,7 @@
             Projects
         </a>
 
-        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
+        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                  viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -62,7 +62,7 @@
             Team
         </a>
 
-        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
+        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                  viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -71,7 +71,7 @@
             Reports
         </a>
 
-        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
+        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                  viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -80,21 +80,4 @@
             Settings
         </a>
     </nav>
-
-    <!-- Sidebar footer / user -->
-    <div class="p-4 border-t border-white/10 lg:border-slate-200">
-        <div class="flex items-center gap-3 px-2">
-            <span class="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white font-heading font-bold">
-                {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
-            </span>
-            <div class="min-w-0">
-                <p class="text-sm font-bold text-white truncate lg:text-secondary">
-                    {{ Auth::user()->name ?? 'User Name' }}
-                </p>
-                <p class="text-xs text-white/60 truncate lg:text-slate-500">
-                    {{ Auth::user()->email ?? 'user@example.com' }}
-                </p>
-            </div>
-        </div>
-    </div>
 </aside>
