@@ -1,3 +1,4 @@
+{{-- Navbar Top --}}
 <header class="sticky top-0 z-30 flex items-center gap-4 h-16 px-4 sm:px-6
                 bg-white border-b border-slate-200 shadow-sm">
 
@@ -11,9 +12,8 @@
     </button>
 
     <!-- Page title (optional yield) -->
-    <h1 class="font-heading text-lg font-bold text-secondary">
-        @yield('page-title', 'Dashboard')
-    </h1>
+    <img id="logo-black" src="{{ asset('assets/png/gry trnsprn.png') }}" alt="Mihom" class="hidden lg:block h-8">
+    <span class="nav-logo-text font-display text-[14px] lg:text-[22px] font-bold tracking-tight text-secondary transition duration-100 -colors">@yield('page-title', 'Dashboard')</span>
 
     <div class="flex-1"></div>
 
@@ -50,6 +50,7 @@
             <span class="flex items-center justify-center w-9 h-9 rounded-full bg-secondary text-white font-heading font-bold text-sm">
                 {{ strtoupper(substr(Auth::user()->name ?? 'U', 0, 1)) }}
             </span>
+            <span class="text-[14px]">{{ Auth::user()->name ?? 'User' }}</span>
             <svg class="hidden sm:block w-4 h-4 text-slate-400" fill="none" stroke="currentColor"
                     stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -77,4 +78,30 @@
             </form>
         </div>
     </div>
+</header>
+
+{{-- Navbar Bot --}}
+<header class="hidden lg:block sticky top-0 flex items-center gap-4 h-16 px-4 sm:px-6 bg-secondary border-b border-slate-200 shadow-sm">
+    <nav class="flex items-center text-white/80 gap-4 h-16">
+        <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
+                     ? 'border-b-6 border-b-primary text-primary'
+                     : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+            <a href="">Dashboard</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Manajemen Pengguna</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Master Data Properti</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Transaksi & Escrow</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Sistem & Konfigurasi</a>
+        </li>
+        <li class="flex items-center list-none text-sm font-semibold h-16">
+            <a href="">Audit Log</a>
+        </li>
+    </nav>
 </header>
