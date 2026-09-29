@@ -28,9 +28,9 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('listing')->name('listing.')->group(function () {
         Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');
         Route::post('/step-1', [ListingWizardController::class, 'storeStepOne'])->name('step-one');
-        Route::post('/step-2/{property}', [ListingWizardController::class, 'storeStepTwo'])->name('step-two');
-        Route::get('/review/{property}', [ListingWizardController::class, 'review'])->name('review');
-        Route::post('/submit/{property}', [ListingWizardController::class, 'submit'])->name('submit');
+        Route::post('/step-2', [ListingWizardController::class, 'storeStepTwo'])->name('step-two');
+        Route::get('/review', [ListingWizardController::class, 'review'])->name('review');
+        Route::post('/submit', [ListingWizardController::class, 'submit'])->name('submit');
         Route::get('/photo-url/{propertyPhoto}', [ListingWizardController::class, 'signedPhotoUrl'])->name('photo-url');
     });
 });

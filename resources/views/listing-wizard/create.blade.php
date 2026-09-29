@@ -820,7 +820,6 @@ function listingWizard() {
                     return;
                 }
 
-                this.propertyId = data.property_id;
                 this.currentStep = 2;
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -852,7 +851,7 @@ function listingWizard() {
                 this.photoFiles.forEach(file => formData.append('photos[]', file));
                 formData.append('certificate_file', this.certificateFile);
 
-                const url = '{{ route("listing.step-two", ":id") }}'.replace(':id', this.propertyId);
+                const url = '{{ route("listing.step-two") }}';
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -891,7 +890,7 @@ function listingWizard() {
             this.isLoading = true;
 
             try {
-                const url = '{{ route("listing.submit", ":id") }}'.replace(':id', this.propertyId);
+                const url = '{{ route("listing.submit") }}';
 
                 const response = await fetch(url, {
                     method: 'POST',
