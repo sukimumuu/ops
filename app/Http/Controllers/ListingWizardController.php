@@ -28,65 +28,45 @@ class ListingWizardController extends Controller
     {
         $validated = $request->validated();
 
-        $property = Property::create([
-            'uuid' => Str::uuid()->toString(),
-            'seller_id' => Auth::id(),
-            'type' => $validated['type'],
-            'status' => 'draft',
-            'title' => $validated['title'],
-            'description' => $validated['description'],
-            'price' => $validated['price'],
-            'land_area_sqm' => $validated['land_area_sqm'],
-            'building_area_sqm' => $validated['building_area_sqm'] ?? null,
-            'certificate_type' => $validated['certificate_type'],
-            'province' => $validated['province'],
-            'city' => $validated['city'],
-            'district' => $validated['district'],
-            'address' => $validated['address'],
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
-        ]);
+        $request->session()->put('listing_wizard.step_1', $validated);
 
         return response()->json([
             'success' => true,
             'message' => 'Informasi properti berhasil disimpan.',
-            'property_id' => $property->id,
         ]);
     }
 
     /**
      * Handle Step 2: Upload photos & certificate.
      */
-    public function storeStepTwo(StoreListingStepTwoRequest $request, Property $property): \Illuminate\Http\JsonResponse
+    public function storeStepTwo(StoreListingStepTwoRequest $request): \Illuminate\Http\JsonResponse
     {
-        $this->authorizeOwnership($property);
+        $sessionId = session()->getId();
+        $photoPaths = [];
 
         // Store property photos
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $index => $photo) {
-                $path = $photo->store("properties/{$property->id}/photos", 'local');
-
-                PropertyPhoto::create([
-                    'property_id' => $property->id,
-                    'file_path' => $path,
-                    'type' => 'photo',
-                    'sort_order' => $index,
-                ]);
+                $path = $photo->store("properties/tmp/{$sessionId}/photos", 'local');
+                
+                $photoPaths[] = [
+                    'path' => $path,
+                    'order' => $index,
+                ];
             }
         }
 
-        // Store certificate file (private disk for signed URL)
+        // Store certificate file
+        $certPath = null;
         if ($request->hasFile('certificate_file')) {
             $certPath = $request->file('certificate_file')
-                ->store("properties/{$property->id}/certificates", 'local');
-
-            PropertyPhoto::create([
-                'property_id' => $property->id,
-                'file_path' => $certPath,
-                'type' => 'certificate',
-                'sort_order' => 0,
-            ]);
+                ->store("properties/tmp/{$sessionId}/certificates", 'local');
         }
+
+        $request->session()->put('listing_wizard.step_2', [
+            'photos' => $photoPaths,
+            'certificate' => $certPath,
+        ]);
 
         return response()->json([
             'success' => true,
@@ -97,11 +77,61 @@ class ListingWizardController extends Controller
     /**
      * Handle Step 3: Submit listing for verification.
      */
-    public function submit(Property $property): \Illuminate\Http\JsonResponse
+    public function submit(Request $request): \Illuminate\Http\JsonResponse
     {
-        $this->authorizeOwnership($property);
+        $step1 = $request->session()->get('listing_wizard.step_1');
+        $step2 = $request->session()->get('listing_wizard.step_2');
 
-        $property->update(['status' => 'pending_verification']);
+        if (!$step1 || !$step2) {
+            return response()->json(['success' => false, 'message' => 'Data wizard tidak lengkap atau sesi telah berakhir.'], 400);
+        }
+
+        $property = Property::create([
+            'uuid' => Str::uuid()->toString(),
+            'seller_id' => Auth::id(),
+            'type' => $step1['type'],
+            'status' => 'pending_verification',
+            'title' => $step1['title'],
+            'description' => $step1['description'],
+            'price' => $step1['price'],
+            'land_area_sqm' => $step1['land_area_sqm'],
+            'building_area_sqm' => $step1['building_area_sqm'] ?? null,
+            'certificate_type' => $step1['certificate_type'],
+            'province' => $step1['province'],
+            'city' => $step1['city'],
+            'district' => $step1['district'],
+            'address' => $step1['address'],
+            'latitude' => $step1['latitude'] ?? null,
+            'longitude' => $step1['longitude'] ?? null,
+        ]);
+
+        if (isset($step2['photos']) && is_array($step2['photos'])) {
+            foreach ($step2['photos'] as $photo) {
+                $newPath = "properties/{$property->id}/photos/" . basename($photo['path']);
+                Storage::disk('local')->move($photo['path'], $newPath);
+
+                PropertyPhoto::create([
+                    'property_id' => $property->id,
+                    'file_path' => $newPath,
+                    'type' => 'photo',
+                    'sort_order' => $photo['order'],
+                ]);
+            }
+        }
+
+        if (isset($step2['certificate']) && $step2['certificate']) {
+            $newCertPath = "properties/{$property->id}/certificates/" . basename($step2['certificate']);
+            Storage::disk('local')->move($step2['certificate'], $newCertPath);
+
+            PropertyPhoto::create([
+                'property_id' => $property->id,
+                'file_path' => $newCertPath,
+                'type' => 'certificate',
+                'sort_order' => 0,
+            ]);
+        }
+
+        $request->session()->forget('listing_wizard');
 
         return response()->json([
             'success' => true,
@@ -113,33 +143,33 @@ class ListingWizardController extends Controller
     /**
      * Get review data for step 3.
      */
-    public function review(Property $property): \Illuminate\Http\JsonResponse
+    public function review(Request $request): \Illuminate\Http\JsonResponse
     {
-        $this->authorizeOwnership($property);
+        $step1 = $request->session()->get('listing_wizard.step_1');
+        $step2 = $request->session()->get('listing_wizard.step_2');
 
-        $property->load(['photos', 'certificate']);
+        if (!$step1) {
+            return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
+        }
 
-        $photoUrls = $property->photos->map(function (PropertyPhoto $photo) {
-            return Storage::disk('local')->temporaryUrl($photo->file_path, now()->addMinutes(30));
-        });
+        $photoUrls = [];
+        if (isset($step2['photos'])) {
+            foreach ($step2['photos'] as $photo) {
+                $photoUrls[] = Storage::disk('local')->temporaryUrl($photo['path'], now()->addMinutes(30));
+            }
+        }
 
         $certificateUrl = null;
-        $certificateFile = $property->certificate->first();
-        if ($certificateFile) {
+        if (isset($step2['certificate']) && $step2['certificate']) {
             $certificateUrl = Storage::disk('local')->temporaryUrl(
-                $certificateFile->file_path,
+                $step2['certificate'],
                 now()->addMinutes(10)
             );
         }
 
         return response()->json([
             'success' => true,
-            'property' => $property->only([
-                'id', 'uuid', 'type', 'title', 'description', 'price',
-                'land_area_sqm', 'building_area_sqm', 'certificate_type',
-                'province', 'city', 'district', 'address',
-                'latitude', 'longitude',
-            ]),
+            'property' => $step1,
             'photo_urls' => $photoUrls,
             'certificate_url' => $certificateUrl,
         ]);
