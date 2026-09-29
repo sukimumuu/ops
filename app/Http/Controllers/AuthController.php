@@ -16,12 +16,16 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        
         $credentials = $request->validate([
             'phone' => ['required', 'string'],
             'password' => ['required'],
         ]);
+        $credentials['phone'] = preg_replace('/\D/', '', $credentials['phone']);
+        $credentials['phone'] = preg_replace('/^(0|62)/', '', $credentials['phone']);
+        $formattedPhone = '62' . $credentials['phone']; 
 
-        if (Auth::attempt(['phone' => $credentials['phone'], 'password' => $credentials['password']], $request->filled('remember'))) {
+        if (Auth::attempt(['phone' => $formattedPhone, 'password' => $credentials['password']], $request->filled('remember'))) {
             $request->session()->regenerate();
 
             return redirect()->intended('dashboard');

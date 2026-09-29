@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('name');
-            $table->string('email')->unique();
+            $table->string('username');
+            $table->string('email')->unique()->nullable();
             $table->string('phone')->unique();
             $table->string('password');
             $table->enum('kyc_status', ['pending', 'verified', 'unverified'])->default('unverified');

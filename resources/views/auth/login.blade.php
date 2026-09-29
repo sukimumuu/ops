@@ -73,7 +73,7 @@
                     id="tab-login" role="tab" aria-selected="true" aria-controls="panel-login"
                     onclick="switchTab('login')">Masuk</button>
                 <button
-                    class="auth-tab flex-1 rounded-lg border-0 bg-transparent px-3 py-2 text-sm font-bold text-white/45 transition hover:bg-white/5 hover:text-white/75"
+                    class="auth-tab flex-1 rounded-lg border-0 bg-secondary px-3 py-2 text-sm font-bold text-white/45 transition hover:bg-white/5 hover:text-white/75"
                     id="tab-register" role="tab" aria-selected="false" aria-controls="panel-register"
                     onclick="switchTab('register')">Daftar Akun</button>
             </div>
@@ -342,8 +342,7 @@
         }
         document.querySelectorAll('input[type="tel"]').forEach((input) => input.addEventListener('input', function() {
             let value = this.value.replace(/\D/g, '');
-            if (value.startsWith('0')) value = value.slice(1);
-            if (value.startsWith('62')) value = value.slice(2);
+            value = value.replace(/^(0|62)/, ''); 
             this.value = value;
         }));
         (() => {
