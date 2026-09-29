@@ -23,6 +23,7 @@ Route::post('/daftar', [AuthController::class, 'register'])->name('register');
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::get('/properti-saya', [DashboardController::class, 'myProperties'])->name('my-properties');
     // Listing Wizard (Progressive Listing)
     Route::prefix('listing')->name('listing.')->group(function () {
         Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');
