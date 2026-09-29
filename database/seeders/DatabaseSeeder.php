@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         $superadmin = User::create([
             'uuid' => (string) Str::uuid(),
             'name' => 'Superadmin',
+            'username' => 'superadmin',
             'email' => 'superadmin@mihom.id',
             'password' => Hash::make('password'),
             'phone' => '997997997997'
@@ -30,6 +31,7 @@ class DatabaseSeeder extends Seeder
         $ppat = User::create([
             'uuid' => (string) Str::uuid(),
             'name' => 'PPAT',
+            'username' => 'ppat',
             'email' => 'ppat@mihom.id',
             'password' => Hash::make('password'),
             'phone' => '998998998998'
@@ -38,6 +40,7 @@ class DatabaseSeeder extends Seeder
         $buyer = User::create([
             'uuid' => (string) Str::uuid(),
             'name' => 'Buyer',
+            'username' => 'buyer',
             'email' => 'buyer@mihom.id',
             'password' => Hash::make('password'),
             'phone' => '996996996996'
@@ -46,6 +49,7 @@ class DatabaseSeeder extends Seeder
         $seller = User::create([
             'uuid' => (string) Str::uuid(),
             'name' => 'Seller',
+            'username' => 'seller',
             'email' => 'seller@mihom.id',
             'password' => Hash::make('password'),
             'phone' => '995995995995'
