@@ -10,4 +10,9 @@ class DashboardController extends Controller
     {
         return view('dashboard.index');
     }
+
+    public function myProperties() 
+    {
+        return view('dashboard.pages.properti-saya');
+    }
 }

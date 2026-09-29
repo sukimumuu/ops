@@ -15,7 +15,9 @@
 <div class="max-w-4xl mx-auto py-4 sm:py-8 px-2 sm:px-0"
      x-data="listingWizard()"
      x-cloak>
-
+    <x-button-dashboard variant="secondary" size="sm">
+        <a href="{{ route('my-properties') }}">Kembali</a>
+    </x-button-dashboard>
     {{-- ===== STEP INDICATOR ===== --}}
     <div class="flex items-center justify-center gap-0 mb-8 sm:mb-10">
         {{-- Step 1 --}}

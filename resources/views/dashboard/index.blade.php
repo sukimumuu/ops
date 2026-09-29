@@ -1,6 +1,5 @@
 @extends('layouts.app')
-@section('page-title', 'Mihom Dashboard')
-@section('content')
+@section('page-title', 'Dashboard')
 @section('content')
     <div class="max-w-2xl mx-auto">
 
@@ -47,5 +46,4 @@
         </x-card-dashboard>
 
     </div>
-@endsection
 @endsection
