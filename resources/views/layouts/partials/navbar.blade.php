@@ -12,7 +12,9 @@
         </button>
     
         <!-- Page title (optional yield) -->
-        <img id="logo-black" src="{{ asset('assets/png/gry trnsprn.png') }}" alt="Mihom" class="hidden lg:block h-8">
+        <a href="{{ route('home') }}">
+            <img id="logo-black" src="{{ asset('assets/png/gry trnsprn.png') }}" alt="Mihom" class="hidden lg:block h-8">
+        </a>
         
     
         <div class="flex-1"></div>
