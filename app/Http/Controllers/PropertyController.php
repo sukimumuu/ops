@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 class PropertyController extends Controller
 {
     public function index()
@@ -14,5 +12,10 @@ class PropertyController extends Controller
     public function welcome()
     {
         return view('welcome');
+    }
+
+    public function show(string $property)
+    {
+        return view('detail-properti');
     }
 }
