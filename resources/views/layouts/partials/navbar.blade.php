@@ -84,11 +84,6 @@
                          : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
                 <a href="{{ route('buyer.transaction-escrow') }}">Transaksi & Escrow</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.profile-kyc')
-                         ? 'border-b-6 border-b-primary text-primary'
-                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
-                <a href="{{ route('buyer.profile-kyc') }}">Profil & Verifikasi (KYC)</a>
-            </li>
             @endrole
             @role('Seller')
             <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
@@ -151,7 +146,7 @@
                     @click.outside="open = false"
                     x-transition.origin.top.right
                     class="absolute right-0 mt-2 w-48 rounded-xl bg-white border border-slate-200 shadow-lg py-1">
-                <a href="#" class="block px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-primary-soft hover:text-primary">
+                <a href="{{ route('profile') }}" class="block px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-primary-soft hover:text-primary">
                     Profile
                 </a>
                 <a href="#" class="block lg:hidden relative px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-primary-soft hover:text-primary">

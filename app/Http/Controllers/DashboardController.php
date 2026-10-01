@@ -11,6 +11,11 @@ class DashboardController extends Controller
         return view('dashboard.index');
     }
 
+    public function profile()
+    {
+        return view('dashboard.profile');
+    }
+
     public function myProperties() 
     {
         return view('dashboard.pages.properti-saya');

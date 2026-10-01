@@ -17,7 +17,7 @@
     @stack('styles')
 </head>
 
-<body class="h-full font-body bg-white text-slate-700 antialiased"
+<body class="h-full font-body bg-slate-100 text-slate-700 antialiased"
       x-data="{ sidebarOpen: false }">
 
 <!-- ============ SIDEBAR (mobile overlay backdrop) ============ -->
@@ -37,7 +37,7 @@
     @include('layouts.partials.navbar')
 
     <!-- ============ MAIN CONTENT ============ -->
-    <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 bg-white">
+    <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 w-4/5 mx-auto">
         @yield('content')
         {{ $slot ?? '' }}
     </main>
