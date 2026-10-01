@@ -21,6 +21,7 @@ Route::post('/daftar', [AuthController::class, 'register'])->name('register');
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profil', [DashboardController::class, 'profile'])->name('profile');
+    Route::get('/notifikasi', [DashboardController::class, 'detailNotif'])->name('detail-notif');
     
     Route::name('seller.')->group(function () {
         Route::get('/properti-saya', [SellerController::class, 'myProperties'])->name('my-properties');
