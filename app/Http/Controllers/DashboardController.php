@@ -16,14 +16,4 @@ class DashboardController extends Controller
         return view('dashboard.profile');
     }
 
-    public function myProperties() 
-    {
-        return view('dashboard.pages.properti-saya');
-    }
-
-    public function detailProperty()
-    {
-        return view('detail-properti');
-    }
-
 }

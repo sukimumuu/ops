@@ -91,32 +91,36 @@
                          : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                 <a href="{{ route('dashboard') }}">Dashboard</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('my-properties') || request()->routeIs('listing.create') 
+            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.my-properties') || request()->routeIs('listing.create') 
                          ? 'border-b-6 border-b-primary text-primary'
                          : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                <a href="{{ route('my-properties') }}">Properti Saya</a>
+                <a href="{{ route('seller.my-properties') }}">Properti Saya</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16">
-                <a href="">Permintaan Survei Masuk</a>
+                    <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.request-survey')
+                                ? 'border-b-6 border-b-primary text-primary'
+                                : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                <a href="{{ route('seller.request-survey') }}">Permintaan Survei Masuk</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16">
-                <a href="">Transaksi Penjualan</a>
+            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.selling-transaction')
+                         ? 'border-b-6 border-b-primary text-primary'
+                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                <a href="{{ route('seller.selling-transaction') }}">Transaksi Penjualan</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16">
-                <a href="">Rekening Pencairan</a>
-            </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16">
-                <a href="">Profil & Verifikasi (KYC)</a>
+            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.disbursement-account')
+                         ? 'border-b-6 border-b-primary text-primary'
+                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                <a href="{{ route('seller.disbursement-account') }}">Rekening Pencairan</a>
             </li>
             @endrole
         </nav>
         <div class="flex-1"></div>
-        
-         <x-button-dashboard type="button" variant="outline" class="hover:bg-primary hover:text-white">
-            <a href="">
-                Pasang Iklan Properti
-            </a>
-        </x-button>
+        @role('Buyer')
+        <x-button-dashboard type="button" variant="outline" class="hover:bg-primary hover:text-white">
+           <a href="">
+               Pasang Iklan Properti
+           </a>
+       </x-button>
+        @endrole
         <!-- Notifications -->
         <button class="hidden lg:block relative p-2 rounded-lg text-slate-500 hover:text-secondary hover:bg-slate-100">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"

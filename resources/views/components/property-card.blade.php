@@ -1,5 +1,5 @@
 @props(['image', 'tag', 'price', 'title', 'location', 'specs'])
-<a href="{{ route('detail-property') }}">
+<a href="{{ route('property-details') }}">
 
 <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
     <div class="relative h-56 overflow-hidden">
