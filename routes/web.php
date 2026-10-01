@@ -23,6 +23,7 @@ Route::post('/daftar', [AuthController::class, 'register'])->name('register');
 Route::get('/detail-properti', [DashboardController::class, 'detailProperty'])->name('detail-property');   
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/profil', [DashboardController::class, 'profile'])->name('profile');
 
     Route::get('/properti-saya', [DashboardController::class, 'myProperties'])->name('my-properties');
     // Listing Wizard (Progressive Listing)
@@ -39,6 +40,5 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/properti-tersimpan', [BuyerController::class, 'savedProperties'])->name('saved-properties');
         Route::get('/jadwal-survei', [BuyerController::class, 'surveySchedule'])->name('survey-schedule');
         Route::get('/transaksi-escrow', [BuyerController::class, 'transactionEscrow'])->name('transaction-escrow');
-        Route::get('/profil-kyc', [BuyerController::class, 'profileKYC'])->name('profile-kyc');
     });
 });
