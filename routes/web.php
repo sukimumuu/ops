@@ -3,37 +3,38 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingWizardController;
-use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\SellerController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
-Route::get('/properti', [PropertyController::class, 'index'])->name('properti');
-Route::get('/properti/{property}', [PropertyController::class, 'show'])->name('properti.show');
-Route::get('/kalkulator-pajak', function () {
-    return view('kalkulator-pajak');
-})->name('kalkulator-pajak');
+Route::get('/', [HomeController::class, 'home'])->name('home');
+Route::get('/kalkulator-pajak', [HomeController::class, 'taxCalculator'])->name('tax-calculator');
+Route::get('/detail-properti', [HomeController::class, 'propertyDetails'])->name('property-details');
+Route::get('/properti', [HomeController::class, 'property'])->name('properties');
 
 Route::get('/masuk', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/masuk', [AuthController::class, 'login']);
 Route::post('/keluar', [AuthController::class, 'logout'])->name('logout');
-Route::post('/daftar', [AuthController::class, 'register'])->name('register');
-Route::get('/detail-properti', [DashboardController::class, 'detailProperty'])->name('detail-property');
+Route::post('/daftar', [AuthController::class, 'register'])->name('register'); 
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profil', [DashboardController::class, 'profile'])->name('profile');
     Route::get('/notifikasi', [DashboardController::class, 'detailNotif'])->name('detail-notif');
-
-    Route::get('/properti-saya', [DashboardController::class, 'myProperties'])->name('my-properties');
-    // Listing Wizard (Progressive Listing)
+    
+    Route::name('seller.')->group(function () {
+        Route::get('/properti-saya', [SellerController::class, 'myProperties'])->name('my-properties');
+        Route::get('/permintaan-survei', [SellerController::class, 'requestSurvey'])->name('request-survey');
+        Route::get('/transaksi-penjualan', [SellerController::class, 'sellingTransaction'])->name('selling-transaction');
+        Route::get('/rekening-pencairan', [SellerController::class, 'disbursementAccount'])->name('disbursement-account');
+    });
     Route::prefix('listing')->name('listing.')->group(function () {
         Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');
-        Route::post('/step-1', [ListingWizardController::class, 'storeStepOne'])->name('step-one');
-        Route::post('/step-2', [ListingWizardController::class, 'storeStepTwo'])->name('step-two');
-        Route::get('/review', [ListingWizardController::class, 'review'])->name('review');
-        Route::post('/submit', [ListingWizardController::class, 'submit'])->name('submit');
+        Route::post('/langkah-1', [ListingWizardController::class, 'storeStepOne'])->name('step-one');
+        Route::post('/langkah-2', [ListingWizardController::class, 'storeStepTwo'])->name('step-two');
+        Route::get('/tinjau-ulang', [ListingWizardController::class, 'review'])->name('review');
+        Route::post('/buat', [ListingWizardController::class, 'submit'])->name('submit');
         Route::get('/photo-url/{propertyPhoto}', [ListingWizardController::class, 'signedPhotoUrl'])->name('photo-url');
     });
 

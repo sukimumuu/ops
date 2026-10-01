@@ -56,7 +56,7 @@
             @endforeach
         </div></div></section>
 
-        <section class="fade-in bg-gray-50 px-4 py-20 sm:px-6"><div class="mx-auto max-w-7xl"><div class="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p class="mb-3 text-xs font-extrabold uppercase tracking-[0.2em] text-primary">Rekomendasi</p><h2 class="font-display text-3xl font-extrabold text-secondary sm:text-4xl">Properti Terbaik Untuk Anda</h2></div><a href="{{ route('properti') }}" class="rounded-lg border-2 border-primary px-5 py-2.5 text-sm font-bold text-primary transition hover:bg-primary hover:text-white">Lihat Semua Properti</a></div><div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <section class="fade-in bg-gray-50 px-4 py-20 sm:px-6"><div class="mx-auto max-w-7xl"><div class="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p class="mb-3 text-xs font-extrabold uppercase tracking-[0.2em] text-primary">Rekomendasi</p><h2 class="font-display text-3xl font-extrabold text-secondary sm:text-4xl">Properti Terbaik Untuk Anda</h2></div><a href="{{ route('properties') }}" class="rounded-lg border-2 border-primary px-5 py-2.5 text-sm font-bold text-primary transition hover:bg-primary hover:text-white">Lihat Semua Properti</a></div><div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ([['1568605114967-8130f3a36994','Rp 1,2 M','Rumah Modern 3 Kamar Tidur','Kemang, Jakarta Selatan','Dijual','3','120 m²'],['1600596542815-ffad4c1539a9','Rp 3,5 M','Villa Mewah dengan Kolam Renang','Ubud, Bali','Dijual','4','250 m²'],['1545324418-cc1a3fa10c00','Rp 8,5 Jt/bln','Apartemen Studio City View','Sudirman, Jakarta Pusat','Disewa','1','42 m²'],['1512917774080-9991f1c4c750','Rp 2,1 M','Rumah Cluster Premium Baru','BSD City, Tangerang','Dijual','4','180 m²']] as [$image, $price, $title, $location, $status, $beds, $size])
                 <article class="overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"><div class="relative"><img src="https://images.unsplash.com/photo-{{ $image }}?w=500&q=80&auto=format&fit=crop" alt="{{ $title }}" class="h-48 w-full object-cover"><span class="absolute left-3 top-3 rounded-full {{ $status === 'Disewa' ? 'bg-blue-500' : 'bg-primary' }} px-3 py-1 text-[11px] font-extrabold uppercase text-white">{{ $status }}</span></div><div class="p-4"><p class="mb-1 text-lg font-extrabold text-primary">{{ $price }}</p><h3 class="mb-2 text-sm font-bold leading-5 text-secondary">{{ $title }}</h3><p class="mb-3 text-xs text-gray-400">⌖ {{ $location }}</p><div class="flex gap-4 border-t border-gray-100 pt-3 text-xs font-semibold text-gray-500"><span>⌂ {{ $beds }}</span><span>▣ {{ $size }}</span></div></div></article>
             @endforeach
@@ -79,11 +79,32 @@
         const whiteLogo = document.getElementById('logo-white');
         const hamburger = document.getElementById('hamburgerBtn');
         const mobileNav = document.getElementById('mobileNav');
-        window.addEventListener('scroll', () => { const scrolled = window.scrollY > 60; navbar.classList.toggle('scrolled', scrolled); blackLogo.classList.toggle('hidden', !scrolled); blackLogo.classList.toggle('block', scrolled); whiteLogo.classList.toggle('hidden', scrolled); });
-        function closeMobileNav() { mobileNav.classList.remove('open'); hamburger.classList.remove('open'); hamburger.setAttribute('aria-expanded', 'false'); }
-        hamburger.addEventListener('click', () => { const open = mobileNav.classList.toggle('open'); hamburger.classList.toggle('open', open); hamburger.setAttribute('aria-expanded', String(open)); });
-        document.addEventListener('click', (event) => { if (!navbar.contains(event.target) && !mobileNav.contains(event.target)) closeMobileNav(); });
-        function setTab(button) { document.querySelectorAll('.search-tab').forEach((tab) => tab.classList.remove('active')); button.classList.add('active'); }
+        window.addEventListener('scroll', () => { 
+            const scrolled = window.scrollY > 60; 
+            navbar.classList.toggle('scrolled', scrolled); 
+            blackLogo.classList.toggle('hidden', !scrolled); 
+            blackLogo.classList.toggle('block', scrolled); 
+            whiteLogo.classList.toggle('hidden', scrolled); 
+        });
+        function closeMobileNav() { 
+            mobileNav.classList.remove('open'); 
+            hamburger.classList.remove('open'); 
+            hamburger.setAttribute('aria-expanded', 'false'); 
+        }
+        hamburger.addEventListener('click', () => { 
+            const open = mobileNav.classList.toggle('open'); 
+            hamburger.classList.toggle('open', open); 
+            hamburger.setAttribute('aria-expanded', 
+            String(open)); 
+        });
+        document.addEventListener('click', (event) => { 
+            if (!navbar.contains(event.target) && !mobileNav.contains(event.target)) 
+            closeMobileNav(); 
+        });
+        function setTab(button) { 
+            document.querySelectorAll('.search-tab').forEach((tab) => tab.classList.remove('active')); 
+            button.classList.add('active'); 
+        }
         const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) entry.target.classList.add('visible'); }), { threshold: 0.12 });
         document.querySelectorAll('.fade-in').forEach((element) => observer.observe(element));
         document.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener('click', (event) => { const target = document.querySelector(link.getAttribute('href')); if (target) { event.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); } }));

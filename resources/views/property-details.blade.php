@@ -18,8 +18,8 @@
             </a>
             <div class="hidden items-center gap-2 md:flex">
                 <a href="{{ route('home') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Beranda</a>
-                <a href="{{ route('properti') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Properti</a>
-                <a href="{{ route('kalkulator-pajak') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Kalkulator Pajak</a>
+                <a href="{{ route('properties') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Properti</a>
+                <a href="{{ route('tax-calculator') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Kalkulator Pajak</a>
                 <a href="#tentang" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Tentang Kami</a>
                 <a href="#kontak" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Kontak</a>
             </div>
@@ -44,8 +44,8 @@
 
     <div class="mobile-nav fixed inset-x-0 top-16 z-40 hidden flex-col gap-1 border-b border-gray-100 bg-white/95 p-4 shadow-xl backdrop-blur-md md:hidden" id="mobileNav">
         <a href="{{ route('home') }}" class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary" onclick="closeMobileNav()">Beranda</a>
-        <a href="{{ route('properti') }}" class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary" onclick="closeMobileNav()">Properti</a>
-        <a href="{{ route('kalkulator-pajak') }}" class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary" onclick="closeMobileNav()">Kalkulator Pajak</a>
+        <a href="{{ route('properties') }}" class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary" onclick="closeMobileNav()">Properti</a>
+        <a href="{{ route('tax-calculator') }}" class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary" onclick="closeMobileNav()">Kalkulator Pajak</a>
         <a href="#tentang" class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary" onclick="closeMobileNav()">Tentang Kami</a>
         <a href="#kontak" class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary" onclick="closeMobileNav()">Kontak</a>
         <a href="{{ route('login') }}" class="mt-2 rounded-lg bg-primary px-5 py-3 text-center text-sm font-bold text-white">Daftar / Masuk</a>
@@ -59,7 +59,7 @@
                 <nav class="mb-4 flex items-center gap-2 text-sm" aria-label="Breadcrumb">
                     <a href="{{ route('home') }}" class="text-white/60 hover:text-white transition">Beranda</a>
                     <span class="text-white/40">/</span>
-                    <a href="{{ route('properti') }}" class="text-white/60 hover:text-white transition">Properti</a>
+                    <a href="{{ route('properties') }}" class="text-white/60 hover:text-white transition">Properti</a>
                     <span class="text-white/40">/</span>
                     <span class="text-white font-semibold">Detail</span>
                 </nav>
@@ -484,7 +484,7 @@
                         <p class="mb-2 text-xs font-extrabold uppercase tracking-[0.2em] text-primary">Serupa</p>
                         <h2 class="font-outfit text-3xl font-extrabold text-secondary">Pilihan lain yang mungkin Anda suka!</h2>
                     </div>
-                    <a href="{{ route('properti') }}" class="rounded-lg border-2 border-primary px-5 py-2.5 text-sm font-bold text-primary transition hover:bg-primary hover:text-white">Lihat Semua</a>
+                    <a href="{{ route('properties') }}" class="rounded-lg border-2 border-primary px-5 py-2.5 text-sm font-bold text-primary transition hover:bg-primary hover:text-white">Lihat Semua</a>
                 </div>
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ([
