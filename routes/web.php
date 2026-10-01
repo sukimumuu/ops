@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ListingWizardController;
 use App\Http\Controllers\PropertyController;
@@ -32,5 +33,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/review', [ListingWizardController::class, 'review'])->name('review');
         Route::post('/submit', [ListingWizardController::class, 'submit'])->name('submit');
         Route::get('/photo-url/{propertyPhoto}', [ListingWizardController::class, 'signedPhotoUrl'])->name('photo-url');
+    });
+
+    Route::name('buyer.')->group(function () {
+        Route::get('/properti-tersimpan', [BuyerController::class, 'savedProperties'])->name('saved-properties');
+        Route::get('/jadwal-survei', [BuyerController::class, 'surveySchedule'])->name('survey-schedule');
+        Route::get('/transaksi-escrow', [BuyerController::class, 'transactionEscrow'])->name('transaction-escrow');
+        Route::get('/profil-kyc', [BuyerController::class, 'profileKYC'])->name('profile-kyc');
     });
 });

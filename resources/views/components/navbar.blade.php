@@ -12,7 +12,19 @@
             <a href="#tentang" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/15">Tentang Kami</a>
             <a href="#kontak" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/15">Kontak</a>
         </div>
+        @guest
         <a href="{{ route('login') }}" class="hidden rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#df3f05] md:block">Daftar / Masuk</a>
+        @endguest
+        @auth
+        <span class="flex gap-2 text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" class="size-6">
+                <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" clip-rule="evenodd" />
+            </svg>
+            <a href="{{ route('dashboard') }}" class="text-sm font-bold md:block">
+                {{ Auth::user()->name }}
+            </a>
+        </span>
+        @endauth
         <button class="nav-hamburger flex h-10 w-10 flex-col items-center justify-center gap-[5px] rounded-lg border-0 bg-transparent p-0 md:hidden" id="hamburgerBtn" aria-label="Buka Menu" aria-expanded="false">
             <span class="hamburger-line h-0.5 w-[22px] rounded bg-white transition"></span><span class="hamburger-line h-0.5 w-[22px] rounded bg-white transition"></span><span class="hamburger-line h-0.5 w-[22px] rounded bg-white transition"></span>
         </button>
