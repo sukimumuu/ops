@@ -10,7 +10,37 @@
     @vite(['resources/css/app.css', 'resources/css/welcome.css', 'resources/css/detail-properti.css', 'resources/js/app.js'])
 </head>
 <body class="font-manrope bg-white text-secondary antialiased">
-    <x-navbar />
+    <nav class="navbar fixed inset-x-0 top-0 z-50 transition-all duration-350" id="navbar">
+        <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+            <a href="{{ route('home') }}" class="flex items-center gap-2 no-underline">
+                <img id="logo-black" src="{{ asset('assets/png/gry trnsprn.png') }}" alt="Mihom" class="h-8 transition duration-100 ">
+                <span class="nav-logo-text font-display text-[22px] font-extrabold tracking-tight text-grey transition duration-100 -colors">mihom</span>
+            </a>
+            <div class="hidden items-center gap-2 md:flex">
+                <a href="{{ route('home') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Beranda</a>
+                <a href="{{ route('properti') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Properti</a>
+                <a href="{{ route('kalkulator-pajak') }}" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Kalkulator Pajak</a>
+                <a href="#tentang" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Tentang Kami</a>
+                <a href="#kontak" class="nav-link rounded-lg px-4 py-2 text-sm font-semibold text-grey/90 transition hover:bg-grey/15">Kontak</a>
+            </div>
+            @guest
+            <a href="{{ route('login') }}" class="hidden rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#df3f05] md:block">Daftar / Masuk</a>
+            @endguest
+            @auth
+            <span class="flex gap-2 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" class="size-6">
+                    <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" clip-rule="evenodd" />
+                </svg>
+                <a href="{{ route('dashboard') }}" class="text-sm font-bold md:block">
+                    {{ Auth::user()->name }}
+                </a>
+            </span>
+            @endauth
+            <button class="nav-hamburger flex h-10 w-10 flex-col items-center justify-center gap-[5px] rounded-lg border-0 bg-transparent p-0 md:hidden" id="hamburgerBtn" aria-label="Buka Menu" aria-expanded="false">
+                <span class="hamburger-line h-0.5 w-[22px] rounded bg-white transition"></span><span class="hamburger-line h-0.5 w-[22px] rounded bg-white transition"></span><span class="hamburger-line h-0.5 w-[22px] rounded bg-white transition"></span>
+            </button>
+        </div>
+    </nav>
 
     <div class="mobile-nav fixed inset-x-0 top-16 z-40 hidden flex-col gap-1 border-b border-gray-100 bg-white/95 p-4 shadow-xl backdrop-blur-md md:hidden" id="mobileNav">
         <a href="{{ route('home') }}" class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary" onclick="closeMobileNav()">Beranda</a>
@@ -535,7 +565,10 @@
         const whiteLogo = document.getElementById('logo-white');
         const hamburger = document.getElementById('hamburgerBtn');
         const mobileNav = document.getElementById('mobileNav');
-        window.addEventListener('scroll', () => { const scrolled = window.scrollY > 60; navbar.classList.toggle('scrolled', scrolled); blackLogo.classList.toggle('hidden', !scrolled); blackLogo.classList.toggle('block', scrolled); whiteLogo.classList.toggle('hidden', scrolled); });
+        window.addEventListener('scroll', () => { 
+            const scrolled = window.scrollY > 60; 
+            navbar.classList.toggle('scrolled', scrolled); 
+        });
         function closeMobileNav() { mobileNav.classList.remove('open'); hamburger.classList.remove('open'); hamburger.setAttribute('aria-expanded', 'false'); }
         hamburger.addEventListener('click', () => { const open = mobileNav.classList.toggle('open'); hamburger.classList.toggle('open', open); hamburger.setAttribute('aria-expanded', String(open)); });
         document.addEventListener('click', (event) => { if (!navbar.contains(event.target) && !mobileNav.contains(event.target)) closeMobileNav(); });
