@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 class DashboardController extends Controller
 {
     public function index()
@@ -16,7 +14,7 @@ class DashboardController extends Controller
         return view('dashboard.profile');
     }
 
-    public function myProperties() 
+    public function myProperties()
     {
         return view('dashboard.pages.properti-saya');
     }
@@ -26,4 +24,8 @@ class DashboardController extends Controller
         return view('detail-properti');
     }
 
+    public function detailNotif()
+    {
+        return view('dashboard.detail-notif');
+    }
 }

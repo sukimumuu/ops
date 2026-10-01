@@ -20,10 +20,11 @@ Route::get('/masuk', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/masuk', [AuthController::class, 'login']);
 Route::post('/keluar', [AuthController::class, 'logout'])->name('logout');
 Route::post('/daftar', [AuthController::class, 'register'])->name('register');
-Route::get('/detail-properti', [DashboardController::class, 'detailProperty'])->name('detail-property');   
+Route::get('/detail-properti', [DashboardController::class, 'detailProperty'])->name('detail-property');
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profil', [DashboardController::class, 'profile'])->name('profile');
+    Route::get('/notifikasi', [DashboardController::class, 'detailNotif'])->name('detail-notif');
 
     Route::get('/properti-saya', [DashboardController::class, 'myProperties'])->name('my-properties');
     // Listing Wizard (Progressive Listing)
