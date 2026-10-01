@@ -66,20 +66,28 @@
             @role('Buyer')
             <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
                          ? 'border-b-6 border-b-primary text-primary'
-                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                <a href="">Dashboard</a>
+                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                <a href="{{ route('dashboard') }}">Dashboard</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16">
-                <a href="">Properti Tersimpan</a>
+            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.saved-properties')
+                         ? 'border-b-6 border-b-primary text-primary'
+                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                <a href="{{ route('buyer.saved-properties') }}">Properti Tersimpan</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16">
-                <a href="">Jadwal Survei Saya</a>
+            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.survey-schedule')
+                         ? 'border-b-6 border-b-primary text-primary'
+                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                <a href="{{ route('buyer.survey-schedule') }}">Jadwal Survei Saya</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16">
-                <a href="">Transaksi & Escrow</a>
+            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.transaction-escrow')
+                         ? 'border-b-6 border-b-primary text-primary'
+                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                <a href="{{ route('buyer.transaction-escrow') }}">Transaksi & Escrow</a>
             </li>
-            <li class="flex items-center list-none text-sm font-semibold h-16">
-                <a href="">Profil & Verifikasi (KYC)</a>
+            <li class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.profile-kyc')
+                         ? 'border-b-6 border-b-primary text-primary'
+                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                <a href="{{ route('buyer.profile-kyc') }}">Profil & Verifikasi (KYC)</a>
             </li>
             @endrole
             @role('Seller')
@@ -108,7 +116,12 @@
             @endrole
         </nav>
         <div class="flex-1"></div>
-    
+        
+         <x-button-dashboard type="button" variant="outline" class="hover:bg-primary hover:text-white">
+            <a href="">
+                Pasang Iklan Properti
+            </a>
+        </x-button>
         <!-- Notifications -->
         <button class="hidden lg:block relative p-2 rounded-lg text-slate-500 hover:text-secondary hover:bg-slate-100">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
