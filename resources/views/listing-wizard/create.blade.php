@@ -259,6 +259,7 @@
                                    class="wizard-input text-sm">
                         </div>
                     </div>
+                    <input type="hidden" id="osm_url" x-model="osmUrl">
                 </div>
             </div>
 
@@ -673,6 +674,7 @@ function listingWizard() {
         searchQuery: '',
         isSearching: false,
         searchError: '',
+        osmUrl: '',
 
         form: {
             type: '',
@@ -804,6 +806,7 @@ function listingWizard() {
                     body: JSON.stringify({
                         ...this.form,
                         price: priceNumeric,
+                        url_maps: this.osmUrl,
                     }),
                 });
 
@@ -932,22 +935,13 @@ function listingWizard() {
                 }).addTo(this.mapInstance);
 
                 if (this.form.latitude && this.form.longitude) {
-                    this.mapMarker = L.marker([this.form.latitude, this.form.longitude]).addTo(this.mapInstance);
+                    this.createDraggableMarker([this.form.latitude, this.form.longitude]);
                     this.mapInstance.setView([this.form.latitude, this.form.longitude], 15);
+                    this.updateOsmUrl(this.form.latitude, this.form.longitude);
                 }
 
                 this.mapInstance.on('click', (e) => {
-                    const lat = e.latlng.lat;
-                    const lng = e.latlng.lng;
-
-                    this.form.latitude = lat.toFixed(8);
-                    this.form.longitude = lng.toFixed(8);
-
-                    if (this.mapMarker) {
-                        this.mapMarker.setLatLng(e.latlng);
-                    } else {
-                        this.mapMarker = L.marker(e.latlng).addTo(this.mapInstance);
-                    }
+                    this.setSelectedLocation(e.latlng);
                 });
 
                 this.$watch('form.latitude', (val) => this.updateMarkerFromInputs());
@@ -965,10 +959,38 @@ function listingWizard() {
                 if (this.mapMarker) {
                     this.mapMarker.setLatLng(latlng);
                 } else {
-                    this.mapMarker = L.marker(latlng).addTo(this.mapInstance);
+                    this.createDraggableMarker(latlng);
                 }
+                this.updateOsmUrl(lat, lng);
                 this.mapInstance.setView(latlng, 15);
             }
+        },
+
+        createDraggableMarker(latlng) {
+            this.mapMarker = L.marker(latlng, { draggable: true }).addTo(this.mapInstance);
+            this.mapMarker.on('dragend', (event) => {
+                this.setSelectedLocation(event.target.getLatLng());
+            });
+        },
+
+        setSelectedLocation(latlng) {
+            const latitude = latlng.lat;
+            const longitude = latlng.lng;
+
+            this.form.latitude = latitude.toFixed(8);
+            this.form.longitude = longitude.toFixed(8);
+
+            if (this.mapMarker) {
+                this.mapMarker.setLatLng(latlng);
+            } else {
+                this.createDraggableMarker(latlng);
+            }
+
+            this.updateOsmUrl(latitude, longitude);
+        },
+
+        updateOsmUrl(latitude, longitude) {
+            this.osmUrl = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`;
         }
     };
 }
