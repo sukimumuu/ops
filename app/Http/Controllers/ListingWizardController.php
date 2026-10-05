@@ -88,20 +88,43 @@ class ListingWizardController extends Controller
             return response()->json(['success' => false, 'message' => 'Data wizard tidak lengkap atau sesi telah berakhir.'], 400);
         }
 
+        // Map property_type and category
+        $propertyType = $step1['property_type'];
+        $type = $propertyType === 'bangunan' ? $step1['building_type'] : $step1['land_type'];
+        $category = $step1['transaction_type'] === 'dijual' ? 'sale' : 'rent';
+
         $property = Property::create([
             'uuid' => Str::uuid()->toString(),
             'seller_id' => Auth::id(),
-            'type' => $step1['type'],
+            'property_type' => $propertyType,
+            'type' => $type,
+            'category' => $category,
             'status' => 'pending_verification',
+
             'title' => $step1['title'],
             'description' => $step1['description'],
             'price' => $step1['price'],
+            'negotiable' => $step1['negotiable'] ?? false,
+
             'land_area_sqm' => $step1['land_area_sqm'],
             'building_area_sqm' => $step1['building_area_sqm'] ?? null,
+
+            'rooms' => $step1['bedrooms'] ?? null,
+            'bathrooms' => $step1['bathrooms'] ?? null,
+            'floors' => $step1['floors'] ?? null,
+            'condition' => $step1['condition'] ?? null,
+
+            'front_width' => $step1['front_width'] ?? null,
+            'land_contour' => $step1['land_contour'] ?? null,
+            'road_access' => $step1['road_access'] ?? null,
+            'zone_type' => $step1['zone_type'] ?? null,
+
             'certificate_type' => $step1['certificate_type'],
+
             'province' => $step1['province'],
             'city' => $step1['city'],
             'district' => $step1['district'],
+            'postal_code' => $step1['postal_code'] ?? null,
             'address' => $step1['address'],
             'latitude' => $step1['latitude'] ?? null,
             'longitude' => $step1['longitude'] ?? null,
