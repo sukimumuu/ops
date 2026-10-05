@@ -6,6 +6,8 @@ use App\Http\Requests\StoreListingStepOneRequest;
 use App\Http\Requests\StoreListingStepTwoRequest;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +18,7 @@ class ListingWizardController extends Controller
     /**
      * Show the listing wizard form.
      */
-    public function create(): \Illuminate\Contracts\View\View
+    public function create(): View
     {
         return view('listing-wizard.create');
     }
@@ -24,7 +26,7 @@ class ListingWizardController extends Controller
     /**
      * Handle Step 1: Save property info (draft).
      */
-    public function storeStepOne(StoreListingStepOneRequest $request): \Illuminate\Http\JsonResponse
+    public function storeStepOne(StoreListingStepOneRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -39,7 +41,7 @@ class ListingWizardController extends Controller
     /**
      * Handle Step 2: Upload photos & certificate.
      */
-    public function storeStepTwo(StoreListingStepTwoRequest $request): \Illuminate\Http\JsonResponse
+    public function storeStepTwo(StoreListingStepTwoRequest $request): JsonResponse
     {
         $sessionId = session()->getId();
         $photoPaths = [];
@@ -48,7 +50,7 @@ class ListingWizardController extends Controller
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $index => $photo) {
                 $path = $photo->store("properties/tmp/{$sessionId}/photos", 'local');
-                
+
                 $photoPaths[] = [
                     'path' => $path,
                     'order' => $index,
@@ -77,12 +79,12 @@ class ListingWizardController extends Controller
     /**
      * Handle Step 3: Submit listing for verification.
      */
-    public function submit(Request $request): \Illuminate\Http\JsonResponse
+    public function submit(Request $request): JsonResponse
     {
         $step1 = $request->session()->get('listing_wizard.step_1');
         $step2 = $request->session()->get('listing_wizard.step_2');
 
-        if (!$step1 || !$step2) {
+        if (! $step1 || ! $step2) {
             return response()->json(['success' => false, 'message' => 'Data wizard tidak lengkap atau sesi telah berakhir.'], 400);
         }
 
@@ -103,11 +105,12 @@ class ListingWizardController extends Controller
             'address' => $step1['address'],
             'latitude' => $step1['latitude'] ?? null,
             'longitude' => $step1['longitude'] ?? null,
+            'url_maps' => $step1['url_maps'] ?? null,
         ]);
 
         if (isset($step2['photos']) && is_array($step2['photos'])) {
             foreach ($step2['photos'] as $photo) {
-                $newPath = "properties/{$property->id}/photos/" . basename($photo['path']);
+                $newPath = "properties/{$property->id}/photos/".basename($photo['path']);
                 Storage::disk('local')->move($photo['path'], $newPath);
 
                 PropertyPhoto::create([
@@ -120,7 +123,7 @@ class ListingWizardController extends Controller
         }
 
         if (isset($step2['certificate']) && $step2['certificate']) {
-            $newCertPath = "properties/{$property->id}/certificates/" . basename($step2['certificate']);
+            $newCertPath = "properties/{$property->id}/certificates/".basename($step2['certificate']);
             Storage::disk('local')->move($step2['certificate'], $newCertPath);
 
             PropertyPhoto::create([
@@ -143,12 +146,12 @@ class ListingWizardController extends Controller
     /**
      * Get review data for step 3.
      */
-    public function review(Request $request): \Illuminate\Http\JsonResponse
+    public function review(Request $request): JsonResponse
     {
         $step1 = $request->session()->get('listing_wizard.step_1');
         $step2 = $request->session()->get('listing_wizard.step_2');
 
-        if (!$step1) {
+        if (! $step1) {
             return response()->json(['success' => false, 'message' => 'Data tidak ditemukan.'], 404);
         }
 
@@ -178,7 +181,7 @@ class ListingWizardController extends Controller
     /**
      * Generate a signed temporary URL for a property photo.
      */
-    public function signedPhotoUrl(PropertyPhoto $propertyPhoto): \Illuminate\Http\JsonResponse
+    public function signedPhotoUrl(PropertyPhoto $propertyPhoto): JsonResponse
     {
         $property = $propertyPhoto->property;
         $this->authorizeOwnership($property);

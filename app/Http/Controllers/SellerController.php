@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Property;
+use Illuminate\Support\Facades\Auth;
 
 class SellerController extends Controller
 {
     public function myProperties()
     {
-        return view('dashboard.seller.my-properties');
+        $properties = Property::where('seller_id', Auth::user()->id)->paginate(10);
+        return view('dashboard.seller.my-properties', compact('properties'));
     }
 
     public function requestSurvey()

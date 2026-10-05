@@ -30,6 +30,7 @@ return new class extends Migration
             $table->decimal('longitude', 11, 8)->nullable();
             $table->decimal('land_area_sqm', 10, 2);
             $table->decimal('building_area_sqm', 10, 2)->nullable();
+            $table->string('url_maps')->nullable();
             $table->timestamps();
         });
     }
