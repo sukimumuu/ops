@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Dashboard\BuyerController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\SellerController;
+use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingWizardController;
 use Illuminate\Support\Facades\Route;
@@ -44,5 +45,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/properti-tersimpan', [BuyerController::class, 'savedProperties'])->name('saved-properties');
         Route::get('/jadwal-survei', [BuyerController::class, 'surveySchedule'])->name('survey-schedule');
         Route::get('/transaksi-escrow', [BuyerController::class, 'transactionEscrow'])->name('transaction-escrow');
+    });
+
+    Route::name('superadmin.')->group(function () {
+        Route::get('/manajemen-user', [SuperadminController::class, 'userManagement'])->name('user-management');
+        Route::get('/transaksi-escrow', [SuperadminController::class, 'transactionAndEscrow'])->name('transaction-and-escrow');
+        Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])->name('master-data-property');
+        Route::get('/konfigurasi-sistem', [SuperadminController::class, 'configurationSystem'])->name('configuration-system');
+        Route::get('/audit-log', [SuperadminController::class, 'auditLog'])->name('audit-log');
     });
 });
