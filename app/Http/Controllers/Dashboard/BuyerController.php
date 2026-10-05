@@ -1,24 +1,24 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Dashboard;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
 class BuyerController extends Controller
 {
-    public function savedProperties() {
+    public function savedProperties()
+    {
         return view('dashboard.buyer.saved-properti');
     }
 
-    public function surveySchedule() {
+    public function surveySchedule()
+    {
         return view('dashboard.buyer.survey-schedule');
     }
 
-    public function transactionEscrow() {
+    public function transactionEscrow()
+    {
         return view('dashboard.buyer.transaction-and-escrow');
-    }
-
-    public function profileKyc() {
-        return view('dashboard.buyer.profile-and-kyc');
     }
 }
