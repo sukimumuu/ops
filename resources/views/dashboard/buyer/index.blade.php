@@ -1,0 +1,3 @@
+<div>
+    Buyer Dashboard
+</div>
