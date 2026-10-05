@@ -16,7 +16,8 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->unsignedBigInteger('seller_id');
             $table->foreign('seller_id')->references('id')->on('users')->onDelete('cascade');
-            $table->enum('type', ['residential', 'land']);
+            $table->enum('type', ['residential', 'land', 'house', 'apartment', 'commercial', 'villa', 'rental_room']);
+            $table->enum('category', ['sale', 'rent']);
             $table->enum('status', ['draft', 'pending_verification', 'published', 'reserved', 'sold', 'archived' ])->default('draft');
             $table->string('title');
             $table->text('description');
@@ -31,6 +32,9 @@ return new class extends Migration
             $table->decimal('land_area_sqm', 10, 2);
             $table->decimal('building_area_sqm', 10, 2)->nullable();
             $table->string('url_maps')->nullable();
+            $table->string('rooms')->nullable();
+            $table->string('bathrooms')->nullable();
+            $table->string('floors')->nullable();
             $table->timestamps();
         });
     }
