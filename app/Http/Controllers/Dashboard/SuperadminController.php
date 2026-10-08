@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class SuperadminController extends Controller
@@ -14,7 +15,8 @@ class SuperadminController extends Controller
 
     public function userManagement()
     {
-        return view('dashboard.superadmin.user-management');
+        $users = User::withoutRole('Superadmin')->select('id', 'name', 'email', 'phone')->paginate(10);
+        return view('dashboard.superadmin.user-management', compact('users'));
     }
 
     public function transactionAndEscrow()
