@@ -57,7 +57,11 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::name('superadmin.')->group(function () {
-        Route::get('/manajemen-user', [SuperadminController::class, 'userManagement'])->name('user-management');
+        Route::middleware('role:Superadmin')->group(function () {
+            Route::get('/manajemen-user', [SuperadminController::class, 'userManagement'])->name('user-management');
+            Route::get('/manajemen-user/tambah', [SuperadminController::class, 'createUser'])->name('user-management.create');
+            Route::post('/manajemen-user', [SuperadminController::class, 'storeUser'])->name('user-management.store');
+        });
         Route::get('/transaksi-escrow', [SuperadminController::class, 'transactionAndEscrow'])->name('transaction-and-escrow');
         Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])->name('master-data-property');
         Route::get('/konfigurasi-sistem', [SuperadminController::class, 'configurationSystem'])->name('configuration-system');

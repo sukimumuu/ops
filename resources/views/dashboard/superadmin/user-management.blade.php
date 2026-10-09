@@ -3,10 +3,16 @@
 @section('content')
     <x-card-dashboard title="Daftar Pengguna / Akun" subtitle="Informasi tentang user yang terdaftar">
         <x-slot name="actions">
-            <x-button-dashboard variant="primary" size="sm">
-                <a href="">Tambah Akun Baru </a>
-            </x-button-dashboard>
+            <a href="{{ route('superadmin.user-management.create') }}"
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-xs font-heading font-semibold tracking-tight text-white shadow-lg shadow-primary/25 transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                Tambah Akun Baru
+            </a>
         </x-slot>
+        @if (session('status'))
+            <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800" role="status">
+                {{ session('status') }}
+            </div>
+        @endif
         <div class="space-y-4">
             <x-table>
                 <x-slot name="head">
