@@ -58,6 +58,38 @@
                     <a href="{{ route('superadmin.audit-log') }}">Audit Log</a>
                 </li>
             @endrole
+            @role('Admin')
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('dashboard') }}">Dashboard</a>
+                </li>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.user-management')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('admin.user-management') }}">Manajemen Pengguna</a>
+                </li>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.master-data-property')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('admin.master-data-property') }}">Master Data Properti</a>
+                </li>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.transaction-and-escrow')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('admin.transaction-and-escrow') }}">Transaksi & Escrow</a>
+                </li>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.audit-log')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('admin.audit-log') }}">Audit Log</a>
+                </li>
+            @endrole
             @role('PPAT')
                 <li
                     class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')

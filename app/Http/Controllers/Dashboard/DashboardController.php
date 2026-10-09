@@ -11,10 +11,6 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        if (! auth()->user()?->hasRole('Superadmin')) {
-            return view('dashboard.index');
-        }
-
         $activeTransactionStates = ['held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'];
 
         $metrics = [

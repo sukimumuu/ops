@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Dashboard\AdminController;
 use App\Http\Controllers\Dashboard\BuyerController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\LandDeedController;
@@ -62,5 +63,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])->name('master-data-property');
         Route::get('/konfigurasi-sistem', [SuperadminController::class, 'configurationSystem'])->name('configuration-system');
         Route::get('/audit-log', [SuperadminController::class, 'auditLog'])->name('audit-log');
+    });
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/manajemen-user', [AdminController::class, 'userManagement'])->name('user-management');
+        Route::get('/transaksi-escrow', [AdminController::class, 'transactionAndEscrow'])->name('transaction-and-escrow');
+        Route::get('/master-data-properti', [AdminController::class, 'masterDataProperty'])->name('master-data-property');
+        Route::get('/audit-log', [AdminController::class, 'auditLog'])->name('audit-log');
     });
 });

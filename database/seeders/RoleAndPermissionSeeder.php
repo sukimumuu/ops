@@ -57,6 +57,21 @@ class RoleAndPermissionSeeder extends Seeder
 
         // Admin Concierge Role
         $adminConciergeRole = Role::firstOrCreate(['name' => 'PPAT']);$adminConciergeRole->givePermissionTo([
+            'properties.approve_listing',
+            'properties.reject_listing',
+            'documents.view_sensitive_pii',
+            'documents.verify_status',
+            'documents.input_bpn_result',
+            'appointments.view_all',
+            'transactions.view_all',
+            'transactions.mark_bpn_cleared',
+            'transactions.schedule_ajb',
+            'transactions.trigger_escrow_refund',
+            'transactions.trigger_escrow_release',
+            'system.view_audit_logs'
+        ]);
+
+        $adminRole = Role::firstOrCreate(['name' => 'Admin']);$adminRole->givePermissionTo([
             'users.view_all_users',
             'users.verify_kyc',
             'properties.approve_listing',

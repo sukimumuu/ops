@@ -10,6 +10,9 @@
     @role('PPAT')
         @include('dashboard.land-deed.index')
     @endrole
+    @role('Admin')
+        @include('dashboard.admin.index')
+    @endrole
     @role('Superadmin')
         @include('dashboard.superadmin.index')
     @endrole
