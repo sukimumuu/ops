@@ -65,20 +65,35 @@
                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                     <a href="">Dashboard Antrian</a>
                 </li>
-                <li class="flex items-center list-none text-sm font-semibold h-16">
-                    <a href="">Pengecekan BPN</a>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.bpn-check')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('land-deed.bpn-check') }}">Pengecekan BPN</a>
                 </li>
-                <li class="flex items-center list-none text-sm font-semibold h-16">
-                    <a href="">Validasi Pajak</a>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.tax-validation')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('land-deed.tax-validation') }}">Validasi Pajak</a>
                 </li>
-                <li class="flex items-center list-none text-sm font-semibold createh-16">
-                    <a href="">Jadwal Penandatanganan AJB</a>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.ajb-signing')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('land-deed.ajb-signing') }}">Jadwal Penandatanganan AJB</a>
                 </li>
-                <li class="flex items-center list-none text-sm font-semibold h-16">
-                    <a href="">Manajemen Akta</a>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.deed-management')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('land-deed.deed-management') }}">Manajemen Akta</a>
                 </li>
-                <li class="flex items-center list-none text-sm font-semibold h-16">
-                    <a href="">Resi Balik Nama</a>
+                <li
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.transfer-for-ownership')
+                        ? 'border-b-6 border-b-primary text-primary'
+                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                    <a href="{{ route('land-deed.transfer-for-ownership') }}">Resi Balik Nama</a>
                 </li>
             @endrole
             @role('Buyer')
