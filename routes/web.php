@@ -3,7 +3,9 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Dashboard\BuyerController;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Dashboard\LandDeedController;
 use App\Http\Controllers\Dashboard\SellerController;
+use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingWizardController;
 use Illuminate\Support\Facades\Route;
@@ -44,5 +46,21 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/properti-tersimpan', [BuyerController::class, 'savedProperties'])->name('saved-properties');
         Route::get('/jadwal-survei', [BuyerController::class, 'surveySchedule'])->name('survey-schedule');
         Route::get('/transaksi-escrow', [BuyerController::class, 'transactionEscrow'])->name('transaction-escrow');
+    });
+
+    Route::name('land-deed.')->group(function () {
+        Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])->name('bpn-check');
+        Route::get('/penandatanganan-ajb', [LandDeedController::class, 'ajbSigning'])->name('ajb-signing');
+        Route::get('/manajemen-akta', [LandDeedController::class, 'deedManagement'])->name('deed-management');
+        Route::get('/validasi-pajak', [LandDeedController::class, 'taxValidation'])->name('tax-validation');
+        Route::get('/resi-balik-nama', [LandDeedController::class, 'transferForOwnership'])->name('transfer-for-ownership');
+    });
+
+    Route::name('superadmin.')->group(function () {
+        Route::get('/manajemen-user', [SuperadminController::class, 'userManagement'])->name('user-management');
+        Route::get('/transaksi-escrow', [SuperadminController::class, 'transactionAndEscrow'])->name('transaction-and-escrow');
+        Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])->name('master-data-property');
+        Route::get('/konfigurasi-sistem', [SuperadminController::class, 'configurationSystem'])->name('configuration-system');
+        Route::get('/audit-log', [SuperadminController::class, 'auditLog'])->name('audit-log');
     });
 });

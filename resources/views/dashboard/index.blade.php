@@ -7,6 +7,9 @@
     @role('Seller')
         @include('dashboard.seller.index')
     @endrole
+    @role('PPAT')
+        @include('dashboard.land-deed.index')
+    @endrole
     @role('Superadmin')
         @include('dashboard.superadmin.index')
     @endrole

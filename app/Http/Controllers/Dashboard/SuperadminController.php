@@ -3,12 +3,86 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Property;
+use App\Models\Transaction;
+use App\Models\User;
+use Illuminate\Contracts\View\View;
 
 class SuperadminController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        return view('dashboard.superadmin.index');
+        $activeTransactionStates = ['held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'];
+
+        $metrics = [
+            [
+                'label' => 'Pengguna terdaftar',
+                'value' => User::withoutRole('Superadmin')->count(),
+                'description' => 'Akun di luar superadmin',
+                'icon' => 'users',
+            ],
+            [
+                'label' => 'Properti tayang',
+                'value' => Property::where('status', 'published')->count(),
+                'description' => 'Listing yang terlihat publik',
+                'icon' => 'home',
+            ],
+            [
+                'label' => 'Menunggu verifikasi',
+                'value' => Property::where('status', 'pending_verification')->count(),
+                'description' => 'Listing perlu ditinjau',
+                'icon' => 'clipboard',
+            ],
+            [
+                'label' => 'Transaksi berjalan',
+                'value' => Transaction::whereIn('state', $activeTransactionStates)->count(),
+                'description' => 'Dalam proses hingga AJB',
+                'icon' => 'arrows',
+            ],
+        ];
+
+        $recentTransactions = Transaction::query()
+            ->select('id', 'uuid', 'property_id', 'buyer_id', 'seller_id', 'total_property_amount', 'state', 'created_at')
+            ->with(['property:id,title', 'buyer:id,name', 'seller:id,name'])
+            ->latest()
+            ->limit(6)
+            ->get();
+
+        $pendingProperties = Property::query()
+            ->select('id', 'title', 'seller_id', 'city', 'status', 'created_at')
+            ->with('seller:id,name')
+            ->where('status', 'pending_verification')
+            ->latest()
+            ->limit(6)
+            ->get();
+
+        return view('dashboard.superadmin.index', compact('metrics', 'recentTransactions', 'pendingProperties'));
+    }
+
+    public function userManagement()
+    {
+        $users = User::withoutRole('Superadmin')->select('id', 'name', 'email', 'phone')->paginate(10);
+
+        return view('dashboard.superadmin.user-management', compact('users'));
+    }
+
+    public function transactionAndEscrow()
+    {
+        return view('dashboard.superadmin.transaction-and-escrow');
+    }
+
+    public function masterDataProperty()
+    {
+        return view('dashboard.superadmin.master-data-property');
+    }
+
+    public function configurationSystem()
+    {
+        return view('dashboard.superadmin.configuration-system');
+    }
+
+    public function auditLog()
+    {
+        return view('dashboard.superadmin.audit-log');
     }
 }
