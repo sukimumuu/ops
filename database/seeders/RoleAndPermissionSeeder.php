@@ -73,6 +73,9 @@ class RoleAndPermissionSeeder extends Seeder
             'system.view_audit_logs'
         ]);
 
+        Role::firstOrCreate(['name' => 'admin']);
+        Role::firstOrCreate(['name' => 'user']);
+
         // Super Admin Role (Mendapatkan semua permission)
         $superAdminRole = Role::firstOrCreate(['name' => 'Superadmin']);$superAdminRole->givePermissionTo(Permission::all());
     }
