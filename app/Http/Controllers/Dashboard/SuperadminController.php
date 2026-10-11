@@ -7,11 +7,19 @@ use App\Models\Property;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
 class SuperadminController extends Controller
 {
+    private const USER_ROLES = [
+        'admin' => 'admin',
+        'ppat' => 'PPAT',
+        'user' => 'user',
+    ];
+
     public function userManagement(Request $request): View
     {
         $filters = $request->validate([
@@ -30,7 +38,7 @@ class SuperadminController extends Controller
                         ->orWhere('phone', 'like', "%{$search}%");
                 });
             })
-            ->when($role, fn (Builder $query): Builder => $query->whereHas('roles', fn (Builder $roles): Builder => $roles->where('name', $role)))
+            ->when($role, fn(Builder $query): Builder => $query->whereHas('roles', fn(Builder $roles): Builder => $roles->where('name', $role)))
             ->paginate(10)
             ->withQueryString();
         $roles = Role::query()->where('name', '!=', 'Superadmin')->orderBy('name')->pluck('name');
@@ -38,6 +46,41 @@ class SuperadminController extends Controller
         return view('dashboard.superadmin.user-management', compact('users', 'roles'));
     }
 
+    public function createUser(): View
+    {
+        return view('dashboard.superadmin.create-user');
+    }
+
+    public function storeUser(Request $request): RedirectResponse
+    {
+        if ($request->filled('phone')) {
+            $normalizedPhone = new User;
+            $normalizedPhone->phone = (string) $request->input('phone');
+            $request->merge(['phone' => $normalizedPhone->phone]);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'role' => ['required', Rule::in(array_keys(self::USER_ROLES))],
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'],
+            'password' => $validated['password'],
+        ]);
+        $user->assignRole(self::USER_ROLES[$validated['role']]);
+
+        return redirect()
+            ->route('superadmin.user-management')
+            ->with('status', 'Pengguna baru berhasil ditambahkan.');
+    }
+
+    
     public function transactionAndEscrow()
     {
         return view('dashboard.superadmin.transaction-and-escrow');
@@ -60,11 +103,11 @@ class SuperadminController extends Controller
                         ->orWhere('city', 'like', "%{$search}%")
                         ->orWhere('province', 'like', "%{$search}%")
                         ->orWhere('district', 'like', "%{$search}%")
-                        ->orWhereHas('seller', fn (Builder $seller): Builder => $seller->where('name', 'like', "%{$search}%"));
+                        ->orWhereHas('seller', fn(Builder $seller): Builder => $seller->where('name', 'like', "%{$search}%"));
                 });
             })
-            ->when($filters['property_type'] ?? null, fn (Builder $query, string $type): Builder => $query->where('property_type', $type))
-            ->when($filters['category'] ?? null, fn (Builder $query, string $category): Builder => $query->where('category', $category))
+            ->when($filters['property_type'] ?? null, fn(Builder $query, string $type): Builder => $query->where('property_type', $type))
+            ->when($filters['category'] ?? null, fn(Builder $query, string $category): Builder => $query->where('category', $category))
             ->latest()
             ->paginate(10)
             ->withQueryString();
