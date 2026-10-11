@@ -25,7 +25,14 @@ class AdminController extends Controller
 
     public function masterDataProperty()
     {
-        return view('dashboard.admin.master-data-property');
+        $pendingProperties = Property::query()
+            ->with(['seller:id,name', 'photos', 'certificate'])
+            ->where('status', 'pending_verification')
+            ->latest()
+            ->limit(6)
+            ->get();
+
+        return view('dashboard.admin.master-data-property', compact('pendingProperties'));
     }
 
     public function auditLog()

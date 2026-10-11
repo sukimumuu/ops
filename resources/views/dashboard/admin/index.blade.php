@@ -1,7 +1,7 @@
 <div class="space-y-8">
     <header class="flex flex-col gap-2 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <p class="text-sm font-semibold uppercase tracking-wider text-primary">Superadmin</p>
+            <p class="text-sm font-semibold uppercase tracking-wider text-primary">Admin</p>
             <h1 class="mt-1 font-heading text-2xl font-bold text-secondary">Ringkasan platform</h1>
             <p class="mt-1 text-sm text-slate-500">Pantau pengguna, properti, dan proses transaksi.</p>
         </div>
@@ -52,7 +52,7 @@
                     terbaru</h2>
                 <p class="mt-1 text-sm text-slate-500">Pergerakan terbaru pada alur escrow dan AJB.</p>
             </div>
-            <a href="{{ route('superadmin.transaction-and-escrow') }}"
+            <a href="{{ route('admin.transaction-and-escrow') }}"
                 class="shrink-0 text-sm font-semibold text-primary hover:text-secondary">
                 Semua transaksi <span aria-hidden="true">&rarr;</span>
             </a>
@@ -126,7 +126,7 @@
                     menunggu verifikasi</h2>
                 <p class="mt-1 text-sm text-slate-500">Listing terbaru yang masih perlu ditinjau.</p>
             </div>
-            <a href="{{ route('superadmin.master-data-property') }}"
+            <a href="{{ route('admin.master-data-property') }}"
                 class="shrink-0 text-sm font-semibold text-primary hover:text-secondary">
                 Data properti <span aria-hidden="true">&rarr;</span>
             </a>

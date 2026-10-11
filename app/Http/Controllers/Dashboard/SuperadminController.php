@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Property;
-use App\Models\Transaction;
 use App\Models\User;
-use Illuminate\Contracts\View\View;
 
 class SuperadminController extends Controller
 {
@@ -24,7 +22,14 @@ class SuperadminController extends Controller
 
     public function masterDataProperty()
     {
-        return view('dashboard.superadmin.master-data-property');
+        $pendingProperties = Property::query()
+            ->with(['seller:id,name', 'photos', 'certificate'])
+            ->where('status', 'pending_verification')
+            ->latest()
+            ->limit(6)
+            ->get();
+            
+        return view('dashboard.superadmin.master-data-property', compact('pendingProperties'));
     }
 
     public function configurationSystem()

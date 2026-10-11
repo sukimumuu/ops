@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
-class ButtonDashboard extends Component
+class Drawer extends Component
 {
     /**
      * Create a new component instance.
@@ -21,6 +21,6 @@ class ButtonDashboard extends Component
      */
     public function render(): View|Closure|string
     {
-        return view('components.button-dashboard');
+        return view('components.drawer');
     }
 }
