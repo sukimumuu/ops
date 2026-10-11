@@ -14,6 +14,18 @@
             </div>
         @endif
         <div class="space-y-4">
+            <x-search-filter placeholder="Cari nama, email, atau telepon...">
+                <div>
+                    <label for="role-filter" class="mb-1 block text-xs font-semibold text-slate-600">Peran</label>
+                    <select id="role-filter" name="role"
+                        class="min-w-40 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <option value="">Semua peran</option>
+                        @foreach ($roles as $role)
+                            <option value="{{ $role }}" @selected(request('role') === $role)>{{ $role }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </x-search-filter>
             <x-table>
                 <x-slot name="head">
                     <x-table.cell>Nama</x-table.cell>
