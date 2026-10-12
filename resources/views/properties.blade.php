@@ -69,7 +69,7 @@
             <div>
                 <h3 class="text-xs font-bold text-gray-400 tracking-wider uppercase mb-1">Koleksi Terkini</h3>
                 <h2 class="font-outfit text-3xl font-extrabold text-secondary">Properti pilihan untuk Anda</h2>
-                <p class="text-sm text-gray-500 mt-1">Menampilkan 128 properti terverifikasi</p>
+                <p class="text-sm text-gray-500 mt-1">Menampilkan {{ number_format($properties->total(), 0, ',', '.') }} properti terverifikasi</p>
             </div>
             <div class="flex gap-2">
                 <button class="flex items-center gap-2 border border-gray-200 bg-white px-4 py-2 rounded-full text-sm font-semibold text-secondary hover:bg-gray-50">
@@ -100,82 +100,71 @@
 
         <!-- Property Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Property Card 1 -->
-            <x-property-card 
-                image="https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80"
-                tag="Pilihan editor"
-                price="Rp 4,85 M"
-                title="Aruna Residence"
-                location="Cilandak, Jakarta Selatan"
-                specs="4 KT &bull; 3 KM &bull; 210 m²"
-            />
-            
-            <!-- Property Card 2 -->
-            <x-property-card 
-                image="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"
-                tag="Dekat MRT"
-                price="Rp 2,9 M"
-                title="Verde Heights"
-                location="Kuningan, Jakarta Selatan"
-                specs="2 KT &bull; 2 KM &bull; 98 m²"
-            />
-
-            <!-- Property Card 3 -->
-            <x-property-card 
-                image="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80"
-                tag="Baru"
-                price="Rp 8,2 M"
-                title="Uma Svara Villa"
-                location="Ubud, Bali"
-                specs="3 KT &bull; 3 KM &bull; 340 m²"
-            />
-
-            <!-- Property Card 4 -->
-            <x-property-card 
-                image="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80"
-                tag="Open house"
-                price="Rp 5,6 M"
-                title="Kemang Courtyard"
-                location="Kemang, Jakarta Selatan"
-                specs="4 KT &bull; 4 KM &bull; 260 m²"
-            />
-
-            <!-- Property Card 5 -->
-            <x-property-card 
-                image="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80"
-                tag="Harga terbaik"
-                price="Rp 3,15 M"
-                title="Nara Townhouse"
-                location="Alam Sutera, Tangerang"
-                specs="3 KT &bull; 3 KM &bull; 188 m²"
-            />
-
-            <!-- Property Card 6 -->
-            <x-property-card 
-                image="https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=800&q=80"
-                tag="Eksklusif"
-                price="Rp 6,75 M"
-                title="The Maris"
-                location="Sanur, Bali"
-                specs="3 KT &bull; 3 KM &bull; 280 m²"
-            />
+            @forelse ($properties as $property)
+                <x-property-card
+                    :uuid="$property->uuid"
+                    :image="$property->image_url"
+                    :tag="$property->category === 'rent' ? 'Disewa' : 'Dijual'"
+                    :price="'Rp ' . number_format((float) $property->price, 0, ',', '.')"
+                    :title="$property->title"
+                    :location="$property->district . ', ' . $property->city"
+                    :specs="$property->listing_specs"
+                />
+            @empty
+                <p class="col-span-full rounded-2xl bg-white p-8 text-center text-sm text-gray-500">
+                    {{ $propertiesUnavailable ? 'Properti belum dapat dimuat saat ini. Silakan coba kembali nanti.' : 'Belum ada properti terverifikasi saat ini.' }}
+                </p>
+            @endforelse
         </div>
 
         <!-- Pagination -->
-        <div class="flex justify-center items-center gap-2 mt-12">
-            <button class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
-                &larr;
-            </button>
-            <button class="w-10 h-10 flex justify-center items-center rounded-lg bg-primary text-white font-bold">1</button>
-            <button class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-secondary font-bold hover:bg-gray-50">2</button>
-            <button class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-secondary font-bold hover:bg-gray-50">3</button>
-            <button class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-secondary font-bold hover:bg-gray-50">4</button>
-            <span class="text-gray-400">...</span>
-            <button class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-secondary font-bold hover:bg-gray-50">12</button>
-            <button class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
-                &rarr;
-            </button>
-        </div>
+        @if ($properties->hasPages())
+            @php
+                $currentPage = $properties->currentPage();
+                $lastPage = $properties->lastPage();
+                $pageNumbers = $lastPage <= 7
+                    ? range(1, $lastPage)
+                    : array_unique(array_merge([1], range(max(2, $currentPage - 1), min($lastPage - 1, $currentPage + 1)), [$lastPage]));
+                $previousPageNumber = null;
+            @endphp
+            <nav class="flex justify-center items-center gap-2 mt-12" aria-label="Navigasi halaman properti">
+                @if ($properties->onFirstPage())
+                    <span aria-disabled="true" class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-gray-500 opacity-50">
+                        &larr;
+                    </span>
+                @else
+                    <a href="{{ $properties->previousPageUrl() }}" rel="prev" aria-label="Halaman sebelumnya" class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
+                        &larr;
+                    </a>
+                @endif
+
+                @foreach ($pageNumbers as $pageNumber)
+                    @if ($previousPageNumber !== null && $pageNumber - $previousPageNumber > 1)
+                        <span class="text-gray-400">...</span>
+                    @endif
+
+                    @if ($pageNumber === $currentPage)
+                        <span aria-current="page" class="w-10 h-10 flex justify-center items-center rounded-lg bg-primary text-white font-bold">{{ $pageNumber }}</span>
+                    @else
+                        <a href="{{ $properties->url($pageNumber) }}" class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-secondary font-bold hover:bg-gray-50">
+                            {{ $pageNumber }}
+                        </a>
+                    @endif
+
+                    @php($previousPageNumber = $pageNumber)
+                @endforeach
+
+                @if ($properties->hasMorePages())
+                    <a href="{{ $properties->nextPageUrl() }}" rel="next" aria-label="Halaman berikutnya" class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
+                        &rarr;
+                    </a>
+                @else
+                    <span aria-disabled="true" class="w-10 h-10 flex justify-center items-center rounded-lg border border-gray-200 text-gray-500 opacity-50">
+                        &rarr;
+                    </span>
+                @endif
+            </nav>
+        @endif
     </main>
 
     <!-- Consultation Banner -->
