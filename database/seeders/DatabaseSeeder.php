@@ -28,6 +28,17 @@ class DatabaseSeeder extends Seeder
             'phone' => '997997997997'
         ]);
         $superadmin->assignRole('Superadmin');
+
+        $admin = User::create([
+            'uuid' => (string) Str::uuid(),
+            'name' => 'Admin',
+            'username' => 'admin',
+            'email' => 'admin@mihom.id',
+            'password' => Hash::make('password'),
+            'phone' => '991991991991'
+        ]);
+        $admin->assignRole('Admin');
+
         $ppat = User::create([
             'uuid' => (string) Str::uuid(),
             'name' => 'PPAT',
@@ -37,6 +48,7 @@ class DatabaseSeeder extends Seeder
             'phone' => '998998998998'
         ]);
         $ppat->assignRole('PPAT');
+
         $buyer = User::create([
             'uuid' => (string) Str::uuid(),
             'name' => 'Buyer',
@@ -46,6 +58,7 @@ class DatabaseSeeder extends Seeder
             'phone' => '996996996996'
         ]);
         $buyer->assignRole('Buyer');
+
         $seller = User::create([
             'uuid' => (string) Str::uuid(),
             'name' => 'Seller',

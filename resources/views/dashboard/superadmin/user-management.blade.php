@@ -3,11 +3,29 @@
 @section('content')
     <x-card-dashboard title="Daftar Pengguna / Akun" subtitle="Informasi tentang user yang terdaftar">
         <x-slot name="actions">
-            <x-button-dashboard variant="primary" size="sm">
-                <a href="">Tambah Akun Baru </a>
-            </x-button-dashboard>
+            <a href="{{ route('superadmin.user-management.create') }}"
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-xs font-heading font-semibold tracking-tight text-white shadow-lg shadow-primary/25 transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                Tambah Akun Baru
+            </a>
         </x-slot>
+        @if (session('status'))
+            <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800" role="status">
+                {{ session('status') }}
+            </div>
+        @endif
         <div class="space-y-4">
+            <x-search-filter placeholder="Cari nama, email, atau telepon...">
+                <div>
+                    <label for="role-filter" class="mb-1 block text-xs font-semibold text-slate-600">Peran</label>
+                    <select id="role-filter" name="role"
+                        class="min-w-40 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <option value="">Semua peran</option>
+                        @foreach ($roles as $role)
+                            <option value="{{ $role }}" @selected(request('role') === $role)>{{ $role }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </x-search-filter>
             <x-table>
                 <x-slot name="head">
                     <x-table.cell>Nama</x-table.cell>

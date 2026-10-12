@@ -4,76 +4,115 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Property;
-use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Spatie\Permission\Models\Role;
 
 class SuperadminController extends Controller
 {
-    public function index(): View
+    private const USER_ROLES = [
+        'admin' => 'admin',
+        'ppat' => 'PPAT',
+        'user' => 'user',
+    ];
+
+    public function userManagement(Request $request): View
     {
-        $activeTransactionStates = ['held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'];
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'role' => ['nullable', 'string', 'exists:roles,name', 'not_in:Superadmin'],
+        ]);
+        $search = trim($filters['search'] ?? '');
+        $role = $filters['role'] ?? null;
+        $users = User::withoutRole('Superadmin')
+            ->select('id', 'name', 'email', 'phone')
+            ->with('roles:id,name')
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            })
+            ->when($role, fn(Builder $query): Builder => $query->whereHas('roles', fn(Builder $roles): Builder => $roles->where('name', $role)))
+            ->paginate(10)
+            ->withQueryString();
+        $roles = Role::query()->where('name', '!=', 'Superadmin')->orderBy('name')->pluck('name');
 
-        $metrics = [
-            [
-                'label' => 'Pengguna terdaftar',
-                'value' => User::withoutRole('Superadmin')->count(),
-                'description' => 'Akun di luar superadmin',
-                'icon' => 'users',
-            ],
-            [
-                'label' => 'Properti tayang',
-                'value' => Property::where('status', 'published')->count(),
-                'description' => 'Listing yang terlihat publik',
-                'icon' => 'home',
-            ],
-            [
-                'label' => 'Menunggu verifikasi',
-                'value' => Property::where('status', 'pending_verification')->count(),
-                'description' => 'Listing perlu ditinjau',
-                'icon' => 'clipboard',
-            ],
-            [
-                'label' => 'Transaksi berjalan',
-                'value' => Transaction::whereIn('state', $activeTransactionStates)->count(),
-                'description' => 'Dalam proses hingga AJB',
-                'icon' => 'arrows',
-            ],
-        ];
-
-        $recentTransactions = Transaction::query()
-            ->select('id', 'uuid', 'property_id', 'buyer_id', 'seller_id', 'total_property_amount', 'state', 'created_at')
-            ->with(['property:id,title', 'buyer:id,name', 'seller:id,name'])
-            ->latest()
-            ->limit(6)
-            ->get();
-
-        $pendingProperties = Property::query()
-            ->select('id', 'title', 'seller_id', 'city', 'status', 'created_at')
-            ->with('seller:id,name')
-            ->where('status', 'pending_verification')
-            ->latest()
-            ->limit(6)
-            ->get();
-
-        return view('dashboard.superadmin.index', compact('metrics', 'recentTransactions', 'pendingProperties'));
+        return view('dashboard.superadmin.user-management', compact('users', 'roles'));
     }
 
-    public function userManagement()
+    public function createUser(): View
     {
-        $users = User::withoutRole('Superadmin')->select('id', 'name', 'email', 'phone')->paginate(10);
-
-        return view('dashboard.superadmin.user-management', compact('users'));
+        return view('dashboard.superadmin.create-user');
     }
 
+    public function storeUser(Request $request): RedirectResponse
+    {
+        if ($request->filled('phone')) {
+            $normalizedPhone = new User;
+            $normalizedPhone->phone = (string) $request->input('phone');
+            $request->merge(['phone' => $normalizedPhone->phone]);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'role' => ['required', Rule::in(array_keys(self::USER_ROLES))],
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'],
+            'password' => $validated['password'],
+        ]);
+        $user->assignRole(self::USER_ROLES[$validated['role']]);
+
+        return redirect()
+            ->route('superadmin.user-management')
+            ->with('status', 'Pengguna baru berhasil ditambahkan.');
+    }
+
+    
     public function transactionAndEscrow()
     {
         return view('dashboard.superadmin.transaction-and-escrow');
     }
 
-    public function masterDataProperty()
+    public function masterDataProperty(Request $request): View
     {
-        return view('dashboard.superadmin.master-data-property');
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'property_type' => ['nullable', 'in:bangunan,tanah'],
+            'category' => ['nullable', 'in:sale,rent'],
+        ]);
+        $search = trim($filters['search'] ?? '');
+        $pendingProperties = Property::query()
+            ->with(['seller:id,name', 'photos', 'certificate'])
+            ->where('status', 'pending_verification')
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query->where('title', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('province', 'like', "%{$search}%")
+                        ->orWhere('district', 'like', "%{$search}%")
+                        ->orWhereHas('seller', fn(Builder $seller): Builder => $seller->where('name', 'like', "%{$search}%"));
+                });
+            })
+            ->when($filters['property_type'] ?? null, fn(Builder $query, string $type): Builder => $query->where('property_type', $type))
+            ->when($filters['category'] ?? null, fn(Builder $query, string $category): Builder => $query->where('category', $category))
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('dashboard.superadmin.master-data-property', compact('pendingProperties'));
     }
 
     public function configurationSystem()
