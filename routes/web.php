@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'home'])->name('home');
 Route::get('/kalkulator-pajak', [HomeController::class, 'taxCalculator'])->name('tax-calculator');
-Route::get('/detail-properti', [HomeController::class, 'propertyDetails'])->name('property-details');
+Route::get('/detail-properti/{uuid}', [HomeController::class, 'propertyDetails'])
+    ->whereUuid('uuid')
+    ->name('property-details');
 Route::get('/properti', [HomeController::class, 'property'])->name('properties');
 Route::get('/tentang', [HomeController::class, 'about'])->name('about');
 Route::get('/kontak', [HomeController::class, 'contact'])->name('contact');

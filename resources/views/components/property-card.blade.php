@@ -1,9 +1,13 @@
-@props(['image', 'tag', 'price', 'title', 'location', 'specs'])
-<a href="{{ route('property-details') }}">
+@props(['uuid', 'image', 'tag', 'price', 'title', 'location', 'specs'])
+<a href="{{ route('property-details', ['uuid' => $uuid]) }}">
 
 <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl transition-shadow duration-300 group cursor-pointer">
     <div class="relative h-56 overflow-hidden">
-        <img src="{{ $image }}" alt="{{ $title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+        @if ($image)
+            <img src="{{ $image }}" alt="{{ $title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+        @else
+            <div class="w-full h-full bg-gray-100"></div>
+        @endif
         
         <div class="absolute top-4 left-4">
             <span class="bg-white text-primary font-bold text-[10px] uppercase tracking-wider py-1.5 px-3 rounded-full shadow-sm">
