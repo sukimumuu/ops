@@ -17,7 +17,8 @@ class SuperadminController extends Controller
     private const USER_ROLES = [
         'admin' => 'admin',
         'ppat' => 'PPAT',
-        'user' => 'user',
+        'buyer' => 'Buyer',
+        'seller' => 'Seller',
     ];
 
     public function userManagement(Request $request): View
@@ -38,7 +39,7 @@ class SuperadminController extends Controller
                         ->orWhere('phone', 'like', "%{$search}%");
                 });
             })
-            ->when($role, fn(Builder $query): Builder => $query->whereHas('roles', fn(Builder $roles): Builder => $roles->where('name', $role)))
+            ->when($role, fn (Builder $query): Builder => $query->whereHas('roles', fn (Builder $roles): Builder => $roles->where('name', $role)))
             ->paginate(10)
             ->withQueryString();
         $roles = Role::query()->where('name', '!=', 'Superadmin')->orderBy('name')->pluck('name');
@@ -59,12 +60,21 @@ class SuperadminController extends Controller
             $request->merge(['phone' => $normalizedPhone->phone]);
         }
 
+        $provinceCode = preg_quote((string) $request->input('province_code'), '/');
+        $cityCode = preg_quote((string) $request->input('city_code'), '/');
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role' => ['required', Rule::in(array_keys(self::USER_ROLES))],
+            'province' => ['required_if:role,ppat', 'nullable', 'string', 'max:100'],
+            'city' => ['required_if:role,ppat', 'nullable', 'string', 'max:100'],
+            'district' => ['required_if:role,ppat', 'nullable', 'string', 'max:100'],
+            'province_code' => ['required_if:role,ppat', 'nullable', 'string', 'regex:/^\\d{2}$/'],
+            'city_code' => ['required_if:role,ppat', 'nullable', 'string', 'regex:/^'.$provinceCode.'\\.\\d{2}$/'],
+            'district_code' => ['required_if:role,ppat', 'nullable', 'string', 'regex:/^'.$cityCode.'\\.\\d{2}$/'],
         ]);
 
         $user = User::create([
@@ -72,6 +82,9 @@ class SuperadminController extends Controller
             'email' => $validated['email'] ?? null,
             'phone' => $validated['phone'],
             'password' => $validated['password'],
+            'province' => $validated['role'] === 'ppat' ? $validated['province'] : null,
+            'city' => $validated['role'] === 'ppat' ? $validated['city'] : null,
+            'district' => $validated['role'] === 'ppat' ? $validated['district'] : null,
         ]);
         $user->assignRole(self::USER_ROLES[$validated['role']]);
 
@@ -80,7 +93,6 @@ class SuperadminController extends Controller
             ->with('status', 'Pengguna baru berhasil ditambahkan.');
     }
 
-    
     public function transactionAndEscrow()
     {
         return view('dashboard.superadmin.transaction-and-escrow');
@@ -103,11 +115,11 @@ class SuperadminController extends Controller
                         ->orWhere('city', 'like', "%{$search}%")
                         ->orWhere('province', 'like', "%{$search}%")
                         ->orWhere('district', 'like', "%{$search}%")
-                        ->orWhereHas('seller', fn(Builder $seller): Builder => $seller->where('name', 'like', "%{$search}%"));
+                        ->orWhereHas('seller', fn (Builder $seller): Builder => $seller->where('name', 'like', "%{$search}%"));
                 });
             })
-            ->when($filters['property_type'] ?? null, fn(Builder $query, string $type): Builder => $query->where('property_type', $type))
-            ->when($filters['category'] ?? null, fn(Builder $query, string $category): Builder => $query->where('category', $category))
+            ->when($filters['property_type'] ?? null, fn (Builder $query, string $type): Builder => $query->where('property_type', $type))
+            ->when($filters['category'] ?? null, fn (Builder $query, string $category): Builder => $query->where('category', $category))
             ->latest()
             ->paginate(10)
             ->withQueryString();
