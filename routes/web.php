@@ -5,6 +5,7 @@ use App\Http\Controllers\Dashboard\AdminController;
 use App\Http\Controllers\Dashboard\BuyerController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\LandDeedController;
+use App\Http\Controllers\Dashboard\PropertyReviewController;
 use App\Http\Controllers\Dashboard\SellerController;
 use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\HomeController;
@@ -66,7 +67,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/manajemen-user', [SuperadminController::class, 'storeUser'])->name('user-management.store');
         });
         Route::get('/transaksi-escrow', [SuperadminController::class, 'transactionAndEscrow'])->name('transaction-and-escrow');
-        Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])->name('master-data-property');
+        Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])
+            ->middleware('role:Admin|Superadmin')
+            ->name('master-data-property');
         Route::get('/konfigurasi-sistem', [SuperadminController::class, 'configurationSystem'])->name('configuration-system');
         Route::get('/audit-log', [SuperadminController::class, 'auditLog'])->name('audit-log');
     });
@@ -74,7 +77,16 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/manajemen-user', [AdminController::class, 'userManagement'])->name('user-management');
         Route::get('/transaksi-escrow', [AdminController::class, 'transactionAndEscrow'])->name('transaction-and-escrow');
-        Route::get('/master-data-properti', [AdminController::class, 'masterDataProperty'])->name('master-data-property');
+        Route::get('/master-data-properti', [AdminController::class, 'masterDataProperty'])
+            ->middleware('role:Admin|Superadmin')
+            ->name('master-data-property');
         Route::get('/audit-log', [AdminController::class, 'auditLog'])->name('audit-log');
+    });
+
+    Route::middleware('role:Admin|Superadmin')->prefix('property-review')->name('property-review.')->group(function () {
+        Route::post('/properties/{property}/status', [PropertyReviewController::class, 'updateStatus'])
+            ->name('status');
+        Route::get('/files/{propertyPhoto}', [PropertyReviewController::class, 'showFile'])
+            ->name('file');
     });
 });
