@@ -47,6 +47,7 @@
                                 'bg-sky-50 text-sky-700 border border-sky-200'         => $property->status === 'reserved',
                                 'bg-purple-50 text-purple-700 border border-purple-200' => $property->status === 'sold',
                                 'bg-rose-50 text-rose-700 border border-rose-200'     => $property->status === 'archived',
+                                'bg-red-50 text-red-700 border border-red-200' => $property->status === 'rejected',
                             ])>
                                 @if ($property->status === 'draft')
                                     Draft
@@ -60,6 +61,8 @@
                                     Terjual
                                 @elseif ($property->status === 'archived')
                                     Diarsipkan
+                                @elseif ($property->status === 'rejected')
+                                    Ditolak
                                 @else
                                     {{ ucfirst($property->status) }}
                                 @endif

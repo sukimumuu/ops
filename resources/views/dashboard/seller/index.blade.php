@@ -113,6 +113,7 @@
                             'border-sky-200 bg-sky-50 text-sky-700' => $property->status === 'reserved',
                             'border-purple-200 bg-purple-50 text-purple-700' => $property->status === 'sold',
                             'border-rose-200 bg-rose-50 text-rose-700' => $property->status === 'archived',
+                            'border-red-200 bg-red-50 text-red-700' => $property->status === 'rejected',
                         ])>
                             @switch($property->status)
                                 @case('pending_verification') Menunggu verifikasi @break
@@ -120,6 +121,7 @@
                                 @case('reserved') Dipesan @break
                                 @case('sold') Terjual @break
                                 @case('archived') Diarsipkan @break
+                                @case('rejected') Ditolak @break
                                 @default {{ ucfirst($property->status) }}
                             @endswitch
                         </span>
