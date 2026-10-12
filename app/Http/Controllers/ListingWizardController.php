@@ -18,9 +18,11 @@ class ListingWizardController extends Controller
     /**
      * Show the listing wizard form.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('listing-wizard.create');
+        return view('listing-wizard.create', [
+            'initialForm' => $request->session()->get('listing_wizard.step_1', []),
+        ]);
     }
 
     /**
@@ -122,8 +124,11 @@ class ListingWizardController extends Controller
             'certificate_type' => $step1['certificate_type'],
 
             'province' => $step1['province'],
+            'province_code' => $step1['province_code'] ?? null,
             'city' => $step1['city'],
+            'city_code' => $step1['city_code'] ?? null,
             'district' => $step1['district'],
+            'district_code' => $step1['district_code'] ?? null,
             'postal_code' => $step1['postal_code'] ?? null,
             'address' => $step1['address'],
             'latitude' => $step1['latitude'] ?? null,

@@ -9,6 +9,7 @@ use App\Http\Controllers\Dashboard\SellerController;
 use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingWizardController;
+use App\Http\Controllers\RegionDataController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'home'])->name('home');
@@ -38,6 +39,13 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::prefix('listing')->name('listing.')->group(function () {
         Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');
+        Route::get('/wilayah/provinces', [RegionDataController::class, 'provinces'])->name('regions.provinces');
+        Route::get('/wilayah/provinces/{provinceCode}/regencies', [RegionDataController::class, 'regencies'])
+            ->where('provinceCode', '\\d{2}')
+            ->name('regions.regencies');
+        Route::get('/wilayah/regencies/{regencyCode}/districts', [RegionDataController::class, 'districts'])
+            ->where('regencyCode', '\\d{2}\\.\\d{2}')
+            ->name('regions.districts');
         Route::post('/langkah-1', [ListingWizardController::class, 'storeStepOne'])->name('step-one');
         Route::post('/langkah-2', [ListingWizardController::class, 'storeStepTwo'])->name('step-two');
         Route::get('/tinjau-ulang', [ListingWizardController::class, 'review'])->name('review');

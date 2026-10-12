@@ -22,6 +22,9 @@ class StoreListingStepOneRequest extends FormRequest
      */
     public function rules(): array
     {
+        $provinceCode = preg_quote((string) $this->input('province_code'), '/');
+        $cityCode = preg_quote((string) $this->input('city_code'), '/');
+
         return [
             'property_type' => ['required', 'in:bangunan,tanah'],
             'building_type' => ['required_if:property_type,bangunan', 'string', 'nullable'],
@@ -49,8 +52,11 @@ class StoreListingStepOneRequest extends FormRequest
             'certificate_type' => ['required', 'string'],
 
             'province' => ['required', 'string', 'max:100'],
+            'province_code' => ['required', 'string', 'regex:/^\\d{2}$/'],
             'city' => ['required', 'string', 'max:100'],
+            'city_code' => ['required', 'string', 'regex:/^'.$provinceCode.'\\.\\d{2}$/'],
             'district' => ['required', 'string', 'max:100'],
+            'district_code' => ['required', 'string', 'regex:/^'.$cityCode.'\\.\\d{2}$/'],
             'postal_code' => ['nullable', 'string', 'max:20'],
             'address' => ['required', 'string', 'max:500'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
@@ -85,8 +91,13 @@ class StoreListingStepOneRequest extends FormRequest
             'road_access.required_if' => 'Akses jalan wajib dipilih.',
             'certificate_type.required' => 'Jenis sertifikat wajib dipilih.',
             'province.required' => 'Provinsi wajib diisi.',
+            'province_code.required' => 'Pilih provinsi dari daftar yang tersedia.',
             'city.required' => 'Kota/Kabupaten wajib diisi.',
+            'city_code.required' => 'Pilih kota/kabupaten dari daftar yang tersedia.',
+            'city_code.regex' => 'Kota/kabupaten harus berasal dari provinsi yang dipilih.',
             'district.required' => 'Kecamatan wajib diisi.',
+            'district_code.required' => 'Pilih kecamatan dari daftar yang tersedia.',
+            'district_code.regex' => 'Kecamatan harus berasal dari kota/kabupaten yang dipilih.',
             'address.required' => 'Alamat lengkap wajib diisi.',
         ];
     }
