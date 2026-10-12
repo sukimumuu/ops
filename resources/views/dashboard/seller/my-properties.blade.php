@@ -40,18 +40,13 @@
                         <x-table.data>
                             <span @class([
                                 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold',
-                                'bg-slate-100 text-slate-700 border border-slate-200' =>
-                                    $property->status === 'draft',
-                                'bg-amber-50 text-amber-700 border border-amber-200' =>
-                                    $property->status === 'pending_verification',
-                                'bg-emerald-50 text-emerald-700 border border-emerald-200' =>
-                                    $property->status === 'published',
-                                'bg-sky-50 text-sky-700 border border-sky-200' =>
-                                    $property->status === 'reserved',
-                                'bg-purple-50 text-purple-700 border border-purple-200' =>
-                                    $property->status === 'sold',
-                                'bg-rose-50 text-rose-700 border border-rose-200' =>
-                                    $property->status === 'archived',
+                                'bg-slate-100 text-slate-700 border border-slate-200' => $property->status === 'draft',
+                                'bg-amber-50 text-amber-700 border border-amber-200'   => $property->status === 'pending_verification',
+                                'bg-emerald-50 text-emerald-700 border border-emerald-200' => $property->status === 'published',
+                                'bg-sky-50 text-sky-700 border border-sky-200'         => $property->status === 'reserved',
+                                'bg-purple-50 text-purple-700 border border-purple-200' => $property->status === 'sold',
+                                'bg-rose-50 text-rose-700 border border-rose-200'     => $property->status === 'archived',
+                                'bg-red-50 text-red-700 border border-red-200' => $property->status === 'rejected',
                             ])>
                                 @if ($property->status === 'draft')
                                     Draft
@@ -65,6 +60,8 @@
                                     Terjual
                                 @elseif ($property->status === 'archived')
                                     Diarsipkan
+                                @elseif ($property->status === 'rejected')
+                                    Ditolak
                                 @else
                                     {{ ucfirst($property->status) }}
                                 @endif
