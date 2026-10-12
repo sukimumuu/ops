@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('property_type'); // 'bangunan' or 'tanah'
             $table->string('type'); // 'rumah', 'apartemen', 'kavling', etc.
             $table->enum('category', ['sale', 'rent']);
-            $table->enum('status', ['draft', 'pending_verification', 'published', 'reserved', 'sold', 'archived'])->default('draft');
+            $table->enum('status', ['draft', 'pending_verification', 'published', 'rejected', 'reserved', 'sold', 'archived'])->default('draft');
             $table->string('title');
             $table->text('description');
 

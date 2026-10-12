@@ -42,10 +42,23 @@
                         <p class="max-w-56 truncate font-semibold text-secondary">{{ $property->title }}</p>
                     </x-table.data>
                     <x-table.data>{{ $property->seller->name }}</x-table.data>
-                    <x-table.data>{{ $property->city }}</x-table.data>
                     <x-table.data>
-                        <span
-                            class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Menunggu</span>
+                        <a class="text-blue-800" href="{{ $property->url_maps }}" target="_blank">{{ $property->city }}</a>
+                    </x-table.data>
+                    <x-table.data>
+                        @if ($property->status == 'pending_verification')
+                            <span
+                                class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Menunggu
+                            </span>
+                        @elseif($property->status == 'published')
+                            <span
+                                class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Terbit
+                            </span>
+                        @elseif($property->status == 'reserved')
+                            <span
+                                class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Dipesan
+                            </span>
+                        @endif
                     </x-table.data>
                     <x-table.data>{{ $property->created_at->format('d M Y') }}</x-table.data>
                     <x-table.data>

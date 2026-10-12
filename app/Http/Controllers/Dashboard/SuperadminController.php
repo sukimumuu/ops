@@ -108,7 +108,6 @@ class SuperadminController extends Controller
         $search = trim($filters['search'] ?? '');
         $pendingProperties = Property::query()
             ->with(['seller:id,name', 'photos', 'certificate'])
-            ->where('status', 'pending_verification')
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('title', 'like', "%{$search}%")
