@@ -99,7 +99,7 @@
                 <div class="wz-review-photos">
                     @forelse ($property->photos as $photo)
                         <div class="wz-review-photo-thumb">
-                            @if (filled($photo->file_path) && Storage::disk('local')->exists($photo->file_path))
+                            @if (filled($photo->file_path) && (Storage::disk('public')->exists($photo->file_path) || Storage::disk('local')->exists($photo->file_path)))
                                 <img src="{{ route('property-review.file', $photo) }}"
                                     alt="Foto {{ $property->title }}"
                                     onerror="this.hidden = true; this.nextElementSibling.hidden = false;">

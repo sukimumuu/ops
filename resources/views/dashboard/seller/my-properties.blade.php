@@ -4,9 +4,9 @@
     <x-card-dashboard title="Properti Saya"
             subtitle="Informasi tentang properti yang saya iklankan">
         <x-slot name="actions">
-            <x-button-dashboard variant="primary" size="sm">
+            <x-button variant="primary" size="sm">
                 <a href="{{ route('listing.create') }}">Tambah Properti Baru</a> 
-            </x-button-dashboard>
+            </x-button>
         </x-slot>
         <div class="space-y-4">
             <x-table>
