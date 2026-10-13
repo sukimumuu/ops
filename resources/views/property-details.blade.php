@@ -615,6 +615,22 @@
         const rateDisplay = document.getElementById('rateDisplay');
         const monthlyPaymentEl = document.getElementById('monthlyPayment');
 
+        function updateRateSlider() {
+            const min = Number(rateSlider.min);
+            const max = Number(rateSlider.max);
+            const value = Number(rateSlider.value);
+            const thumbSize = parseFloat(getComputedStyle(rateSlider).getPropertyValue('--thumb-size'));
+            const trackWidth = rateSlider.clientWidth;
+            if (trackWidth <= 0 || !Number.isFinite(thumbSize)) {
+                return;
+            }
+
+            const ratio = max === min ? 0 : Math.min(1, Math.max(0, (value - min) / (max - min)));
+            const thumbCenter = thumbSize / 2 + ratio * (trackWidth - thumbSize);
+
+            rateSlider.style.setProperty('--value', `${(thumbCenter / trackWidth) * 100}%`);
+        }
+
         function calculateMortgage() {
             const priceStr = document.getElementById('mortgagePrice').value.replace(/\./g, '').replace(/,/g, '');
             const price = parseFloat(priceStr) || 0;
@@ -623,6 +639,7 @@
             const rate = parseFloat(rateSlider.value) || 7.5;
 
             rateDisplay.textContent = rate + '%';
+            updateRateSlider();
 
             const loanAmount = price * (1 - downPercent / 100);
             const monthlyRate = rate / 100 / 12;
@@ -640,6 +657,7 @@
         }
 
         rateSlider.addEventListener('input', calculateMortgage);
+        window.addEventListener('resize', updateRateSlider);
         document.getElementById('mortgageDown').addEventListener('input', calculateMortgage);
         document.getElementById('mortgageTenor').addEventListener('change', calculateMortgage);
         document.getElementById('mortgagePrice').addEventListener('input', calculateMortgage);
