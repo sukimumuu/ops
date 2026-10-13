@@ -48,7 +48,7 @@
                 </x-table.data>
                 <x-table.data>{{ $property->created_at->format('d M Y') }}</x-table.data>
                 <x-table.data>
-                    <x-dashboard.property-approval-modal :property="$property" />
+                    <x-dashboard.property-approval-modal :property="$property" :ppat-users="$ppatUsers" />
                 </x-table.data>
             </x-table.row>
         @empty

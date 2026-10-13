@@ -13,6 +13,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'Seller', 'guard_name' => 'web']);
 });
 

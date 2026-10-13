@@ -122,8 +122,12 @@ class SuperadminController extends Controller
             ->latest()
             ->paginate(10)
             ->withQueryString();
+        $ppatUsers = User::role('PPAT')
+            ->select('id', 'name', 'phone', 'province', 'city', 'district')
+            ->orderBy('name')
+            ->get();
 
-        return view('dashboard.superadmin.master-data-property', compact('pendingProperties'));
+        return view('dashboard.superadmin.master-data-property', compact('pendingProperties', 'ppatUsers'));
     }
 
     public function configurationSystem()

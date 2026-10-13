@@ -37,6 +37,7 @@ it('filters users by search and role for admins and superadmins', function () {
 
 it('filters pending properties by search, type, and category for admins and superadmins', function () {
     Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);
 
     $administrator = User::factory()->create();
     $administrator->assignRole('Superadmin');
@@ -73,5 +74,63 @@ it('filters pending properties by search, type, and category for admins and supe
         $this->get($url.'?search=Bandung&property_type=bangunan&category=sale')
             ->assertSeeText('Bandung Rumah Dijual')
             ->assertDontSeeText('Bandung Tanah Disewakan');
+    }
+});
+
+it('shows PPAT profiles with matching property districts first for admins and superadmins', function () {
+    Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'Seller', 'guard_name' => 'web']);
+
+    $administrator = User::factory()->create();
+    $administrator->assignRole('Superadmin');
+    $seller = User::factory()->create();
+    $property = Property::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'seller_id' => $seller->id,
+        'property_type' => 'bangunan',
+        'type' => 'rumah',
+        'category' => 'sale',
+        'status' => 'pending_verification',
+        'title' => 'Properti Coblong',
+        'description' => 'Properti untuk pengujian PPAT.',
+        'price' => 1250000000,
+        'negotiable' => false,
+        'province' => 'Jawa Barat',
+        'city' => 'Bandung',
+        'district' => 'Coblong',
+        'address' => 'Jl. Merdeka No. 1',
+        'land_area_sqm' => 120,
+        'building_area_sqm' => 90,
+        'certificate_type' => 'SHM',
+    ]);
+
+    $localPpat = User::factory()->create([
+        'name' => 'PPAT Coblong',
+        'district' => ' coblong ',
+        'city' => 'Bandung',
+        'province' => 'Jawa Barat',
+    ]);
+    $localPpat->assignRole('PPAT');
+    $otherDistrictPpat = User::factory()->create([
+        'name' => 'PPAT Cicendo',
+        'district' => 'Cicendo',
+        'city' => 'Bandung',
+        'province' => 'Jawa Barat',
+    ]);
+    $otherDistrictPpat->assignRole('PPAT');
+    $nonPpatUser = User::factory()->create([
+        'name' => 'Non PPAT Coblong',
+        'district' => 'Coblong',
+    ]);
+    $nonPpatUser->assignRole('Seller');
+
+    $this->actingAs($administrator);
+
+    foreach ([route('admin.master-data-property'), route('superadmin.master-data-property')] as $url) {
+        $this->get($url)
+            ->assertSeeTextInOrder(['PPAT Coblong', 'PPAT Cicendo'])
+            ->assertSeeText('Prioritas kecamatan: Coblong')
+            ->assertDontSeeText('Non PPAT Coblong');
     }
 });
