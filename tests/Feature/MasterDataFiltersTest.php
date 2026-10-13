@@ -77,7 +77,7 @@ it('filters pending properties by search, type, and category for admins and supe
     }
 });
 
-it('shows PPAT profiles with matching property districts first for admins and superadmins', function () {
+it('renders PPAT search and assignment controls for each selected property', function () {
     Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'Seller', 'guard_name' => 'web']);
@@ -129,8 +129,8 @@ it('shows PPAT profiles with matching property districts first for admins and su
 
     foreach ([route('admin.master-data-property'), route('superadmin.master-data-property')] as $url) {
         $this->get($url)
-            ->assertSeeTextInOrder(['PPAT Coblong', 'PPAT Cicendo'])
-            ->assertSeeText('Prioritas kecamatan: Coblong')
-            ->assertDontSeeText('Non PPAT Coblong');
+            ->assertSee('usersUrl:', false)
+            ->assertSee('assignUrl:', false)
+            ->assertSee('Cari nama, email, telepon, atau wilayah');
     }
 });

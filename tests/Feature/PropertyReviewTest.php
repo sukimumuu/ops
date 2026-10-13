@@ -238,3 +238,119 @@ it('renders missing image and certificate placeholders instead of broken links',
         ->assertSeeText('Sertifikat tidak tersedia')
         ->assertDontSee(route('property-review.file', $photo), false);
 });
+
+it('returns PPAT search results in district priority with six users per page', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('Admin');
+    $property = createReviewProperty();
+    $localPpat = User::factory()->create([
+        'name' => 'Local PPAT',
+        'email' => 'local-ppat@example.test',
+        'district' => ' coblong ',
+    ]);
+    $localPpat->assignRole('PPAT');
+
+    $otherPpats = User::factory()->count(7)->sequence(fn ($sequence) => [
+        'name' => 'Other PPAT '.($sequence->index + 1),
+        'email' => 'other-ppat-'.($sequence->index + 1).'@example.test',
+        'district' => 'Cicendo',
+    ])->create();
+    $otherPpats->each(fn (User $ppat) => $ppat->assignRole('PPAT'));
+
+    $nonPpat = User::factory()->create([
+        'name' => 'Coblong Contact',
+        'district' => 'Coblong',
+    ]);
+    $nonPpat->assignRole('Seller');
+
+    $this->actingAs($admin)
+        ->getJson(route('property-review.ppats', $property))
+        ->assertOk()
+        ->assertJsonCount(6, 'data')
+        ->assertJsonPath('data.0.id', $localPpat->id)
+        ->assertJsonPath('current_page', 1)
+        ->assertJsonPath('has_more', true)
+        ->assertJsonMissing(['id' => $nonPpat->id]);
+
+    $this->getJson(route('property-review.ppats', [$property, 'page' => 2]))
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('current_page', 2)
+        ->assertJsonPath('has_more', false);
+
+    $this->getJson(route('property-review.ppats', [$property, 'search' => 'local-ppat@example.test']))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $localPpat->id)
+        ->assertJsonPath('has_more', false);
+});
+
+it('assigns and replaces a PPAT for admins and superadmins without duplicate assignments', function () {
+    $property = createReviewProperty();
+    $firstPpat = User::factory()->create(['name' => 'First PPAT']);
+    $firstPpat->assignRole('PPAT');
+    $secondPpat = User::factory()->create(['name' => 'Second PPAT']);
+    $secondPpat->assignRole('PPAT');
+
+    foreach (['Admin', 'Superadmin'] as $role) {
+        $reviewer = User::factory()->create();
+        $reviewer->assignRole($role);
+
+        $this->actingAs($reviewer)
+            ->postJson(route('property-review.assign-ppat', $property), ['ppat_id' => $firstPpat->id])
+            ->assertOk()
+            ->assertJsonPath('assigned.id', $firstPpat->id)
+            ->assertJsonPath('unchanged', false);
+
+        $this->assertDatabaseHas('properties', [
+            'id' => $property->id,
+            'assigned_ppat_id' => $firstPpat->id,
+        ]);
+        $this->get($role === 'Admin' ? route('admin.master-data-property') : route('superadmin.master-data-property'))
+            ->assertSee('First PPAT');
+        $this->getJson(route('property-review.ppats', $property))
+            ->assertOk()
+            ->assertJsonMissing(['id' => $firstPpat->id]);
+
+        $this->postJson(route('property-review.assign-ppat', $property), ['ppat_id' => $firstPpat->id])
+            ->assertOk()
+            ->assertJsonPath('unchanged', true);
+
+        $this->postJson(route('property-review.assign-ppat', $property), ['ppat_id' => $secondPpat->id])
+            ->assertOk()
+            ->assertJsonPath('assigned.id', $secondPpat->id)
+            ->assertJsonPath('unchanged', false);
+    }
+
+    $this->assertDatabaseHas('properties', [
+        'id' => $property->id,
+        'assigned_ppat_id' => $secondPpat->id,
+    ]);
+});
+
+it('rejects non-PPAT assignment and prevents unauthorized users from assigning PPATs', function () {
+    $property = createReviewProperty();
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $seller->assignRole('Seller');
+
+    $this->postJson(route('property-review.assign-ppat', $property), ['ppat_id' => $ppat->id])
+        ->assertUnauthorized();
+
+    $this->actingAs($seller)
+        ->postJson(route('property-review.assign-ppat', $property), ['ppat_id' => $ppat->id])
+        ->assertForbidden();
+
+    $admin = User::factory()->create();
+    $admin->assignRole('Admin');
+    $this->actingAs($admin)
+        ->postJson(route('property-review.assign-ppat', $property), ['ppat_id' => $seller->id])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('ppat_id');
+
+    $this->assertDatabaseHas('properties', [
+        'id' => $property->id,
+        'assigned_ppat_id' => null,
+    ]);
+});

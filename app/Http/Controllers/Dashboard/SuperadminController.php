@@ -107,7 +107,7 @@ class SuperadminController extends Controller
         ]);
         $search = trim($filters['search'] ?? '');
         $pendingProperties = Property::query()
-            ->with(['seller:id,name', 'photos', 'certificate'])
+            ->with(['seller:id,name', 'assignedPpat:id,name,email,phone,province,city,district', 'photos', 'certificate'])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('title', 'like', "%{$search}%")
@@ -122,12 +122,8 @@ class SuperadminController extends Controller
             ->latest()
             ->paginate(10)
             ->withQueryString();
-        $ppatUsers = User::role('PPAT')
-            ->select('id', 'name', 'phone', 'province', 'city', 'district')
-            ->orderBy('name')
-            ->get();
 
-        return view('dashboard.superadmin.master-data-property', compact('pendingProperties', 'ppatUsers'));
+        return view('dashboard.superadmin.master-data-property', compact('pendingProperties'));
     }
 
     public function configurationSystem()

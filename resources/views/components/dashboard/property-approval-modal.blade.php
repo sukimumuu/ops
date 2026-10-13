@@ -1,4 +1,4 @@
-@props(['property', 'ppatUsers'])
+@props(['property'])
 
 <x-drawer title="Persetujuan Properti" width="lg:w-2/5">
     <x-slot name="trigger">
@@ -89,7 +89,7 @@
         </div>
     </div>
 
-    <x-dashboard.ppat-profile-card :property="$property" :ppat-users="$ppatUsers" />
+    <x-dashboard.ppat-profile-card :property="$property" />
 
     <div class="wz-review-block">
         <div class="wz-review-header">

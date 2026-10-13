@@ -92,6 +92,10 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::middleware('role:Admin|Superadmin')->prefix('property-review')->name('property-review.')->group(function () {
+        Route::get('/properties/{property}/ppats', [PropertyReviewController::class, 'ppats'])
+            ->name('ppats');
+        Route::post('/properties/{property}/ppat', [PropertyReviewController::class, 'assignPpat'])
+            ->name('assign-ppat');
         Route::post('/properties/{property}/status', [PropertyReviewController::class, 'updateStatus'])
             ->name('status');
         Route::get('/files/{propertyPhoto}', [PropertyReviewController::class, 'showFile'])
