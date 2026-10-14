@@ -10,6 +10,7 @@ use App\Http\Controllers\Dashboard\SellerController;
 use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingWizardController;
+use App\Http\Controllers\ProfilePasswordController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'home'])->name('home');
@@ -26,9 +27,14 @@ Route::post('/masuk', [AuthController::class, 'login']);
 Route::post('/keluar', [AuthController::class, 'logout'])->name('logout');
 Route::post('/daftar', [AuthController::class, 'register'])->name('register');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profil', [DashboardController::class, 'profile'])->name('profile');
+    Route::put('/profil/password', [ProfilePasswordController::class, 'update'])
+        ->middleware('throttle:5,1')
+        ->name('profile.password.update');
+    Route::post('/profil/avatar', [DashboardController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::delete('/profil/avatar', [DashboardController::class, 'deleteAvatar'])->name('profile.avatar.delete');
     Route::get('/notifikasi', [DashboardController::class, 'detailNotif'])->name('detail-notif');
 
     Route::name('seller.')->group(function () {
@@ -60,7 +66,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/resi-balik-nama', [LandDeedController::class, 'transferForOwnership'])->name('transfer-for-ownership');
     });
 
-    Route::name('superadmin.')->group(function () {
+    Route::prefix('superadmin')->name('superadmin.')->group(function () {
         Route::middleware('role:Superadmin')->group(function () {
             Route::get('/manajemen-user', [SuperadminController::class, 'userManagement'])->name('user-management');
             Route::get('/manajemen-user/tambah', [SuperadminController::class, 'createUser'])->name('user-management.create');

@@ -192,7 +192,11 @@
             Transaksi & Escrow
         </a>
 
-        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
+        <a href="{{ route('profile') }}"
+           class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold
+                  {{ request()->routeIs('profile')
+                     ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                     : 'text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5' }}">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                  viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -252,7 +256,11 @@
             </svg>
             Rekening Pencairan
         </a>
-        <a href="#" class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
+        <a href="{{ route('profile') }}"
+           class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold
+                  {{ request()->routeIs('profile')
+                     ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                     : 'text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5' }}">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                  viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
