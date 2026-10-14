@@ -22,9 +22,11 @@ class ListingWizardController extends Controller
     /**
      * Show the listing wizard form.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('listing-wizard.create');
+        return view('listing-wizard.create', [
+            'initialForm' => $request->session()->get('listing_wizard.step_1', []),
+        ]);
     }
 
     /**

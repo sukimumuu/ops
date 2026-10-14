@@ -52,7 +52,7 @@ class AdminController extends Controller
         ]);
         $search = trim($filters['search'] ?? '');
         $pendingProperties = Property::query()
-            ->with(['seller:id,name', 'photos', 'certificate'])
+            ->with(['seller:id,name', 'assignedPpat:id,name,email,phone,province,city,district', 'photos', 'certificate'])
             ->where('status', 'pending_verification')
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {

@@ -89,6 +89,8 @@
         </div>
     </div>
 
+    <x-dashboard.ppat-profile-card :property="$property" />
+
     <div class="wz-review-block">
         <div class="wz-review-header">
             <h4>Foto & dokumen</h4>
@@ -118,8 +120,7 @@
                 <span class="wz-review-label">Sertifikat</span>
                 @forelse ($property->certificate as $certificate)
                     <div class="wz-review-cert-badge">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
-                            viewBox="0 0 24 24">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -139,19 +140,28 @@
 
     <x-slot name="footer">
         <div class="flex justify-end gap-3">
-            <x-button variant="secondary" @click="open = false">Batal</x-button>
-            <form method="POST" action="{{ route('property-review.status', $property) }}"
-                onsubmit="this.querySelector('button[type=submit]').disabled = true;">
-                @csrf
-                <input type="hidden" name="status" value="rejected">
-                <x-button type="submit" variant="danger">Tolak</x-button>
-            </form>
-            <form method="POST" action="{{ route('property-review.status', $property) }}"
-                onsubmit="this.querySelector('button[type=submit]').disabled = true;">
-                @csrf
-                <input type="hidden" name="status" value="published">
-                <x-button type="submit" variant="approve">Setujui</x-button>
-            </form>
+            @if ($property->status === 'pending_verification')
+                <x-button variant="secondary" @click="open = false">Batal</x-button>
+                <form method="POST" action="{{ route('property-review.status', $property) }}"
+                    onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+                    @csrf
+                    <input type="hidden" name="status" value="rejected">
+                    <x-button type="submit" variant="danger">Tolak</x-button>
+                </form>
+                <form method="POST" action="{{ route('property-review.status', $property) }}"
+                    onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+                    @csrf
+                    <input type="hidden" name="status" value="published">
+                    <x-button type="submit" variant="approve">Setujui</x-button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('property-review.status', $property) }}"
+                    onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+                    @csrf
+                    <input type="hidden" name="status" value="archived">
+                    <x-button type="submit" variant="secondary">Arsipkan</x-button>
+                </form>
+            @endif
         </div>
     </x-slot>
 </x-drawer>

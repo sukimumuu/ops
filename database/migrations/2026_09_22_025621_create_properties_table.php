@@ -16,12 +16,14 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->unsignedBigInteger('seller_id');
             $table->foreign('seller_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('assigned_ppat_id')->nullable();
+            $table->foreign('assigned_ppat_id')->nullable()->references('id')->on('users')->nullOnDelete();
 
             // Core Info
             $table->string('property_type'); // 'bangunan' or 'tanah'
             $table->string('type'); // 'rumah', 'apartemen', 'kavling', etc.
             $table->enum('category', ['sale', 'rent']);
-            $table->enum('status', ['draft', 'pending_verification', 'published', 'reserved', 'sold', 'archived'])->default('draft');
+            $table->enum('status', ['draft', 'pending_verification', 'published', 'rejected', 'reserved', 'sold', 'archived'])->default('draft');
             $table->string('title');
             $table->text('description');
 
@@ -31,8 +33,11 @@ return new class extends Migration
 
             // Location
             $table->string('province');
+            $table->string('province_code', 16)->nullable();
             $table->string('city');
+            $table->string('city_code', 16)->nullable();
             $table->string('district');
+            $table->string('district_code', 16)->nullable();
             $table->string('postal_code')->nullable();
             $table->text('address');
             $table->decimal('latitude', 10, 8)->nullable();

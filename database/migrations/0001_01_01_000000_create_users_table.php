@@ -21,6 +21,10 @@ return new class extends Migration
             $table->string('password');
             $table->enum('kyc_status', ['pending', 'verified', 'unverified'])->default('unverified');
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('province')->nullable();
+            $table->string('city')->nullable();
+            $table->string('district')->nullable();
+            $table->text('address')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
