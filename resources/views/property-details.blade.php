@@ -72,27 +72,27 @@
                 <!-- Image Gallery Grid -->
                 <div class="gallery-grid grid gap-2 rounded-2xl overflow-hidden" id="galleryGrid">
                     <!-- Main Image -->
-                    <div class="gallery-main relative {{ count($property->photo_urls) ? 'cursor-pointer group' : '' }}" @if (count($property->photo_urls)) onclick="openGallery(0)" @endif>
+                    <div class="gallery-main relative bg-gray-200 {{ count($property->photo_urls) ? 'cursor-pointer group' : '' }}" @if (count($property->photo_urls)) onclick="openGallery(0)" @endif>
                         @if (isset($property->photo_urls[0]))
-                            <img src="{{ $property->photo_urls[0] }}" alt="{{ $property->title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                            <img src="{{ $property->photo_urls[0] }}" alt="Foto properti: {{ $property->title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.remove()">
                         @else
                             <div class="h-full w-full bg-gray-200"></div>
                         @endif
                         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
                     </div>
                     <!-- Thumbnail 1 (top-right) -->
-                    <div class="gallery-thumb-1 relative {{ isset($property->photo_urls[1]) ? 'cursor-pointer group' : '' }} overflow-hidden" @if (isset($property->photo_urls[1])) onclick="openGallery(1)" @endif>
+                    <div class="gallery-thumb-1 relative {{ isset($property->photo_urls[1]) ? 'cursor-pointer group' : '' }} overflow-hidden bg-gray-200" @if (isset($property->photo_urls[1])) onclick="openGallery(1)" @endif>
                         @if (isset($property->photo_urls[1]))
-                            <img src="{{ $property->photo_urls[1] }}" alt="{{ $property->title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                            <img src="{{ $property->photo_urls[1] }}" alt="Foto properti: {{ $property->title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.remove()">
                         @else
                             <div class="h-full w-full bg-gray-200"></div>
                         @endif
                         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
                     </div>
                     <!-- Thumbnail 2 (bottom-right) -->
-                    <div class="gallery-thumb-2 relative {{ isset($property->photo_urls[2]) ? 'cursor-pointer group' : '' }} overflow-hidden" @if (isset($property->photo_urls[2])) onclick="openGallery(2)" @endif>
+                    <div class="gallery-thumb-2 relative {{ isset($property->photo_urls[2]) ? 'cursor-pointer group' : '' }} overflow-hidden bg-gray-200" @if (isset($property->photo_urls[2])) onclick="openGallery(2)" @endif>
                         @if (isset($property->photo_urls[2]))
-                            <img src="{{ $property->photo_urls[2] }}" alt="{{ $property->title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                            <img src="{{ $property->photo_urls[2] }}" alt="Foto properti: {{ $property->title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.remove()">
                         @else
                             <div class="h-full w-full bg-gray-200"></div>
                         @endif
@@ -615,6 +615,22 @@
         const rateDisplay = document.getElementById('rateDisplay');
         const monthlyPaymentEl = document.getElementById('monthlyPayment');
 
+        function updateRateSlider() {
+            const min = Number(rateSlider.min);
+            const max = Number(rateSlider.max);
+            const value = Number(rateSlider.value);
+            const thumbSize = parseFloat(getComputedStyle(rateSlider).getPropertyValue('--thumb-size'));
+            const trackWidth = rateSlider.clientWidth;
+            if (trackWidth <= 0 || !Number.isFinite(thumbSize)) {
+                return;
+            }
+
+            const ratio = max === min ? 0 : Math.min(1, Math.max(0, (value - min) / (max - min)));
+            const thumbCenter = thumbSize / 2 + ratio * (trackWidth - thumbSize);
+
+            rateSlider.style.setProperty('--value', `${(thumbCenter / trackWidth) * 100}%`);
+        }
+
         function calculateMortgage() {
             const priceStr = document.getElementById('mortgagePrice').value.replace(/\./g, '').replace(/,/g, '');
             const price = parseFloat(priceStr) || 0;
@@ -623,6 +639,7 @@
             const rate = parseFloat(rateSlider.value) || 7.5;
 
             rateDisplay.textContent = rate + '%';
+            updateRateSlider();
 
             const loanAmount = price * (1 - downPercent / 100);
             const monthlyRate = rate / 100 / 12;
@@ -640,6 +657,7 @@
         }
 
         rateSlider.addEventListener('input', calculateMortgage);
+        window.addEventListener('resize', updateRateSlider);
         document.getElementById('mortgageDown').addEventListener('input', calculateMortgage);
         document.getElementById('mortgageTenor').addEventListener('change', calculateMortgage);
         document.getElementById('mortgagePrice').addEventListener('input', calculateMortgage);

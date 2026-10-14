@@ -626,7 +626,7 @@
                 {{-- Foto Properti --}}
                 <div class="wizard-section">
                     <h3 class="wizard-section-title">Foto properti</h3>
-                    <p class="wizard-section-subtitle">Upload foto-foto terbaik properti Anda. Minimal 1 foto, maksimal 10 foto.</p>
+                    <p class="wizard-section-subtitle">Upload foto-foto terbaik properti Anda. Maks. 2MB per foto, minimal 1 dan maksimal 10 foto.</p>
 
                     <div class="wz-photo-grid mt-5" id="photo-preview-grid">
                         <template x-for="(photo, index) in photoPreviews" :key="index">
@@ -1908,8 +1908,14 @@ function listingWizard() {
             const toAdd = files.slice(0, remaining);
 
             toAdd.forEach(file => {
-                if (!file.type.match(/^image\/(jpeg|png|webp)$/)) return;
-                if (file.size > 5 * 1024 * 1024) return;
+                if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+                    this.errors.photos = 'Format yang didukung: JPEG, PNG, WebP.';
+                    return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                    this.errors.photos = 'Ukuran foto maksimal 2MB.';
+                    return;
+                }
 
                 this.photoFiles.push(file);
                 const reader = new FileReader();
@@ -1917,6 +1923,7 @@ function listingWizard() {
                     this.photoPreviews.push(e.target.result);
                 };
                 reader.readAsDataURL(file);
+                this.errors.photos = null;
             });
 
             event.target.value = '';
@@ -1981,9 +1988,12 @@ function listingWizard() {
                     if (data.errors) {
                         const flatErrors = {};
                         for (const [key, messages] of Object.entries(data.errors)) {
-                            flatErrors[key] = messages[0];
+                            const field = key.startsWith('photos.') ? 'photos' : key;
+                            flatErrors[field] ??= messages[0];
                         }
                         this.errors = flatErrors;
+                    } else {
+                        this.errors.photos = data.message || 'Foto gagal diproses. Silakan coba unggah kembali.';
                     }
                     return;
                 }

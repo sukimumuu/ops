@@ -139,35 +139,7 @@
                 </div>
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     @forelse ($properties as $property)
-                        <article
-                            class="overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-                            <div class="relative">
-                                @if ($property->image_url)
-                                    <img src="{{ $property->image_url }}" alt="{{ $property->title }}"
-                                        class="h-48 w-full object-cover">
-                                @else
-                                    <div class="flex h-48 w-full items-center justify-center bg-gray-100 text-xs font-semibold text-gray-400">
-                                        Foto belum tersedia
-                                    </div>
-                                @endif
-                                <span
-                                    class="absolute left-3 top-3 rounded-full {{ $property->category === 'rent' ? 'bg-blue-500' : 'bg-primary' }} px-3 py-1 text-[11px] font-extrabold uppercase text-white">{{ $property->category === 'rent' ? 'Disewa' : 'Dijual' }}</span>
-                            </div>
-                            <div class="p-4">
-                                <p class="mb-1 text-lg font-extrabold text-primary">Rp
-                                    {{ number_format((float) $property->price, 0, ',', '.') }}</p>
-                                <h3 class="mb-2 text-sm font-bold leading-5 text-secondary">{{ $property->title }}</h3>
-                                <p class="mb-3 text-xs text-gray-400">⌖ {{ $property->district }}, {{ $property->city }}
-                                </p>
-                                <div
-                                    class="flex gap-4 border-t border-gray-100 pt-3 text-xs font-semibold text-gray-500">
-                                    <span>⌂ {{ $property->rooms ?: '—' }}</span>
-                                    <span>▣
-                                        {{ number_format((float) ($property->building_area_sqm ?? $property->land_area_sqm), 0, ',', '.') }}
-                                        m²</span>
-                                </div>
-                            </div>
-                        </article>
+                        <x-property-card :property="$property" :compact="true" />
                     @empty
                         <p class="col-span-full rounded-2xl bg-white p-8 text-center text-sm text-gray-500">
                             {{ $propertiesUnavailable ? 'Properti belum dapat dimuat saat ini. Silakan coba kembali nanti.' : 'Belum ada properti tersedia saat ini.' }}

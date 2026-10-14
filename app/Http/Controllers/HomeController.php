@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Property;
+use App\Models\PropertyPhoto;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -28,7 +29,7 @@ class HomeController extends Controller
 
                 $property->setAttribute(
                     'image_url',
-                    $photo ? Storage::disk('local')->temporaryUrl($photo->file_path, now()->addHour()) : null,
+                    $photo ? $this->propertyPhotoUrl($photo) : null,
                 );
             });
         } catch (QueryException $exception) {
@@ -72,7 +73,7 @@ class HomeController extends Controller
                 $property->setAttribute('listing_specs', implode(' • ', $specs));
                 $property->setAttribute(
                     'image_url',
-                    $photo ? Storage::disk('local')->temporaryUrl($photo->file_path, now()->addHour()) : null,
+                    $photo ? $this->propertyPhotoUrl($photo) : null,
                 );
             });
         } catch (QueryException $exception) {
@@ -105,7 +106,7 @@ class HomeController extends Controller
         $property->setAttribute(
             'photo_urls',
             $property->photos
-                ->map(fn ($photo): string => Storage::disk('local')->temporaryUrl($photo->file_path, now()->addHour()))
+                ->map(fn (PropertyPhoto $photo): string => $this->propertyPhotoUrl($photo))
                 ->all(),
         );
 
@@ -148,7 +149,7 @@ class HomeController extends Controller
             $relatedProperty->setAttribute('listing_specs', implode(' • ', $specs));
             $relatedProperty->setAttribute(
                 'image_url',
-                $photo ? Storage::disk('local')->temporaryUrl($photo->file_path, now()->addHour()) : null,
+                $photo ? $this->propertyPhotoUrl($photo) : null,
             );
         });
 
@@ -175,6 +176,15 @@ class HomeController extends Controller
         $mapUrl = 'https://maps.google.com/maps?q='.urlencode($mapLocation).'&output=embed';
 
         return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications'));
+    }
+
+    private function propertyPhotoUrl(PropertyPhoto $photo): string
+    {
+        $publicDisk = Storage::disk('public');
+
+        return $publicDisk->exists($photo->file_path)
+            ? $publicDisk->url($photo->file_path)
+            : Storage::disk('local')->temporaryUrl($photo->file_path, now()->addHour());
     }
 
     public function taxCalculator()
