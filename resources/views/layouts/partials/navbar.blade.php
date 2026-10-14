@@ -151,7 +151,6 @@
                     class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.transaction-escrow')
                         ? 'border-b-6 border-b-primary text-primary'
                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
-                    <a href="{{ route('buyer.transaction-escrow') }}">Transaksi & Escrow</a>
                 </li>
             @endrole
             @role('Seller')

@@ -6,12 +6,16 @@ use App\Http\Requests\StoreListingStepOneRequest;
 use App\Http\Requests\StoreListingStepTwoRequest;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
+use App\Services\ImageWatermarkService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
 
 class ListingWizardController extends Controller
 {
@@ -43,21 +47,28 @@ class ListingWizardController extends Controller
     /**
      * Handle Step 2: Upload photos & certificate.
      */
-    public function storeStepTwo(StoreListingStepTwoRequest $request): JsonResponse
+    public function storeStepTwo(StoreListingStepTwoRequest $request, ImageWatermarkService $imageWatermarkService): JsonResponse
     {
         $sessionId = session()->getId();
         $photoPaths = [];
 
-        // Store property photos
-        if ($request->hasFile('photos')) {
+        try {
             foreach ($request->file('photos') as $index => $photo) {
-                $path = $photo->store("properties/tmp/{$sessionId}/photos", 'local');
+                $path = $imageWatermarkService->process($photo, "properties/tmp/{$sessionId}/photos");
 
                 $photoPaths[] = [
                     'path' => $path,
                     'order' => $index,
                 ];
             }
+        } catch (Throwable $exception) {
+            Storage::disk('public')->delete(array_column($photoPaths, 'path'));
+            report($exception);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Foto gagal diproses. Silakan coba unggah kembali.',
+            ], 500);
         }
 
         // Store certificate file
@@ -90,76 +101,106 @@ class ListingWizardController extends Controller
             return response()->json(['success' => false, 'message' => 'Data wizard tidak lengkap atau sesi telah berakhir.'], 400);
         }
 
-        // Map property_type and category
-        $propertyType = $step1['property_type'];
-        $type = $propertyType === 'bangunan' ? $step1['building_type'] : $step1['land_type'];
-        $category = $step1['transaction_type'] === 'dijual' ? 'sale' : 'rent';
+        $movedFiles = [];
 
-        $property = Property::create([
-            'uuid' => Str::uuid()->toString(),
-            'seller_id' => Auth::id(),
-            'property_type' => $propertyType,
-            'type' => $type,
-            'category' => $category,
-            'status' => 'pending_verification',
+        try {
+            $property = DB::transaction(function () use ($step1, $step2, &$movedFiles): Property {
+                $propertyType = $step1['property_type'];
+                $type = $propertyType === 'bangunan' ? $step1['building_type'] : $step1['land_type'];
+                $category = $step1['transaction_type'] === 'dijual' ? 'sale' : 'rent';
 
-            'title' => $step1['title'],
-            'description' => $step1['description'],
-            'price' => $step1['price'],
-            'negotiable' => $step1['negotiable'] ?? false,
-
-            'land_area_sqm' => $step1['land_area_sqm'],
-            'building_area_sqm' => $step1['building_area_sqm'] ?? null,
-
-            'rooms' => $step1['bedrooms'] ?? null,
-            'bathrooms' => $step1['bathrooms'] ?? null,
-            'floors' => $step1['floors'] ?? null,
-            'condition' => $step1['condition'] ?? null,
-
-            'front_width' => $step1['front_width'] ?? null,
-            'land_contour' => $step1['land_contour'] ?? null,
-            'road_access' => $step1['road_access'] ?? null,
-            'zone_type' => $step1['zone_type'] ?? null,
-
-            'certificate_type' => $step1['certificate_type'],
-
-            'province' => $step1['province'],
-            'province_code' => $step1['province_code'] ?? null,
-            'city' => $step1['city'],
-            'city_code' => $step1['city_code'] ?? null,
-            'district' => $step1['district'],
-            'district_code' => $step1['district_code'] ?? null,
-            'postal_code' => $step1['postal_code'] ?? null,
-            'address' => $step1['address'],
-            'latitude' => $step1['latitude'] ?? null,
-            'longitude' => $step1['longitude'] ?? null,
-            'url_maps' => $step1['url_maps'] ?? null,
-        ]);
-
-        if (isset($step2['photos']) && is_array($step2['photos'])) {
-            foreach ($step2['photos'] as $photo) {
-                $newPath = "properties/{$property->id}/photos/".basename($photo['path']);
-                Storage::disk('local')->move($photo['path'], $newPath);
-
-                PropertyPhoto::create([
-                    'property_id' => $property->id,
-                    'file_path' => $newPath,
-                    'type' => 'photo',
-                    'sort_order' => $photo['order'],
+                $property = Property::create([
+                    'uuid' => Str::uuid()->toString(),
+                    'seller_id' => Auth::id(),
+                    'property_type' => $propertyType,
+                    'type' => $type,
+                    'category' => $category,
+                    'status' => 'pending_verification',
+                    'title' => $step1['title'],
+                    'description' => $step1['description'],
+                    'price' => $step1['price'],
+                    'negotiable' => $step1['negotiable'] ?? false,
+                    'land_area_sqm' => $step1['land_area_sqm'],
+                    'building_area_sqm' => $step1['building_area_sqm'] ?? null,
+                    'rooms' => $step1['bedrooms'] ?? null,
+                    'bathrooms' => $step1['bathrooms'] ?? null,
+                    'floors' => $step1['floors'] ?? null,
+                    'condition' => $step1['condition'] ?? null,
+                    'front_width' => $step1['front_width'] ?? null,
+                    'land_contour' => $step1['land_contour'] ?? null,
+                    'road_access' => $step1['road_access'] ?? null,
+                    'zone_type' => $step1['zone_type'] ?? null,
+                    'certificate_type' => $step1['certificate_type'],
+                    'province' => $step1['province'],
+                    'city' => $step1['city'],
+                    'district' => $step1['district'],
+                    'postal_code' => $step1['postal_code'] ?? null,
+                    'address' => $step1['address'],
+                    'latitude' => $step1['latitude'] ?? null,
+                    'longitude' => $step1['longitude'] ?? null,
+                    'url_maps' => $step1['url_maps'] ?? null,
                 ]);
+
+                foreach ($step2['photos'] ?? [] as $photo) {
+                    $newPath = "properties/{$property->id}/photos/".basename($photo['path']);
+                    $disk = Storage::disk('public');
+
+                    if (! $disk->move($photo['path'], $newPath)) {
+                        throw new RuntimeException('A property photo could not be moved into permanent storage.');
+                    }
+
+                    $movedFiles[] = ['disk' => 'public', 'source' => $photo['path'], 'destination' => $newPath];
+
+                    PropertyPhoto::create([
+                        'property_id' => $property->id,
+                        'file_path' => $newPath,
+                        'type' => 'photo',
+                        'sort_order' => $photo['order'],
+                    ]);
+                }
+
+                if (filled($step2['certificate'] ?? null)) {
+                    $newCertPath = "properties/{$property->id}/certificates/".basename($step2['certificate']);
+                    $disk = Storage::disk('local');
+
+                    if (! $disk->move($step2['certificate'], $newCertPath)) {
+                        throw new RuntimeException('The property certificate could not be moved into permanent storage.');
+                    }
+
+                    $movedFiles[] = ['disk' => 'local', 'source' => $step2['certificate'], 'destination' => $newCertPath];
+
+                    PropertyPhoto::create([
+                        'property_id' => $property->id,
+                        'file_path' => $newCertPath,
+                        'type' => 'certificate',
+                        'sort_order' => 0,
+                    ]);
+                }
+
+                return $property;
+            });
+        } catch (Throwable $exception) {
+            foreach (array_reverse($movedFiles) as $movedFile) {
+                $disk = Storage::disk($movedFile['disk']);
+
+                try {
+                    if ($disk->exists($movedFile['destination']) && ! $disk->move($movedFile['destination'], $movedFile['source'])) {
+                        $disk->delete($movedFile['destination']);
+                        $request->session()->forget('listing_wizard.step_2');
+                    }
+                } catch (Throwable $rollbackException) {
+                    report($rollbackException);
+                    $disk->delete($movedFile['destination']);
+                    $request->session()->forget('listing_wizard.step_2');
+                }
             }
-        }
 
-        if (isset($step2['certificate']) && $step2['certificate']) {
-            $newCertPath = "properties/{$property->id}/certificates/".basename($step2['certificate']);
-            Storage::disk('local')->move($step2['certificate'], $newCertPath);
+            report($exception);
 
-            PropertyPhoto::create([
-                'property_id' => $property->id,
-                'file_path' => $newCertPath,
-                'type' => 'certificate',
-                'sort_order' => 0,
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Listing gagal disimpan. Silakan coba lagi.',
+            ], 500);
         }
 
         $request->session()->forget('listing_wizard');
@@ -186,7 +227,7 @@ class ListingWizardController extends Controller
         $photoUrls = [];
         if (isset($step2['photos'])) {
             foreach ($step2['photos'] as $photo) {
-                $photoUrls[] = Storage::disk('local')->temporaryUrl($photo['path'], now()->addMinutes(30));
+                $photoUrls[] = Storage::disk('public')->url($photo['path']);
             }
         }
 
@@ -214,10 +255,9 @@ class ListingWizardController extends Controller
         $property = $propertyPhoto->property;
         $this->authorizeOwnership($property);
 
-        $url = Storage::disk('local')->temporaryUrl(
-            $propertyPhoto->file_path,
-            now()->addMinutes(30)
-        );
+        $url = Storage::disk('public')->exists($propertyPhoto->file_path)
+            ? Storage::disk('public')->url($propertyPhoto->file_path)
+            : Storage::disk('local')->temporaryUrl($propertyPhoto->file_path, now()->addMinutes(30));
 
         return response()->json(['url' => $url]);
     }

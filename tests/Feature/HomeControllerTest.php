@@ -1,11 +1,57 @@
 <?php
 
 use App\Models\Property;
+use App\Models\PropertyPhoto;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
+
+it('renders public property photos on the landing, catalog, and detail pages', function () {
+    Storage::fake('public');
+
+    $seller = User::factory()->create();
+    $uuid = (string) Str::uuid();
+    $property = Property::query()->create([
+        'uuid' => $uuid,
+        'seller_id' => $seller->id,
+        'property_type' => 'bangunan',
+        'type' => 'rumah',
+        'category' => 'sale',
+        'status' => 'published',
+        'title' => 'Rumah dengan foto publik',
+        'description' => 'Foto properti telah diberi watermark.',
+        'price' => 1250000000,
+        'negotiable' => false,
+        'province' => 'Jawa Barat',
+        'city' => 'Bandung',
+        'district' => 'Coblong',
+        'postal_code' => '40132',
+        'address' => 'Jl. Merdeka No. 1',
+        'land_area_sqm' => 120,
+        'building_area_sqm' => 90,
+        'rooms' => '3',
+        'bathrooms' => '2',
+        'floors' => '1',
+        'condition' => 'siap_huni',
+        'certificate_type' => 'SHM',
+    ]);
+    $path = "properties/{$property->id}/photos/watermarked.jpg";
+    Storage::disk('public')->put($path, 'watermarked image');
+    PropertyPhoto::query()->create([
+        'property_id' => $property->id,
+        'file_path' => $path,
+        'type' => 'photo',
+        'sort_order' => 0,
+    ]);
+    $imageUrl = Storage::disk('public')->url($path);
+
+    $this->get(route('home'))->assertSee($imageUrl, false);
+    $this->get(route('properties'))->assertSee($imageUrl, false);
+    $this->get(route('property-details', ['uuid' => $uuid]))->assertSee($imageUrl, false);
+});
 
 it('shows only approved properties on the landing page', function () {
     $seller = User::factory()->create();

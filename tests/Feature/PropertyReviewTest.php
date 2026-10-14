@@ -179,6 +179,27 @@ it('returns not found when a private property file is missing', function () {
         ->assertNotFound();
 });
 
+it('serves watermarked public property photos through the reviewer file route', function () {
+    Storage::fake('local');
+    Storage::fake('public');
+
+    $admin = User::factory()->create();
+    $admin->assignRole('Admin');
+    $property = createReviewProperty();
+    $photo = PropertyPhoto::query()->create([
+        'property_id' => $property->id,
+        'file_path' => 'properties/'.$property->id.'/photos/watermarked.jpg',
+        'type' => 'photo',
+        'sort_order' => 0,
+    ]);
+    Storage::disk('public')->put($photo->file_path, 'watermarked image');
+
+    $this->actingAs($admin)
+        ->get(route('property-review.file', $photo))
+        ->assertOk()
+        ->assertHeader('X-Content-Type-Options', 'nosniff');
+});
+
 it('shows working private document links and fallbacks in both reviewer views', function () {
     Storage::fake('local');
 

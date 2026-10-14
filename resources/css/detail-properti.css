@@ -59,18 +59,32 @@
 .mortgage-range {
     -webkit-appearance: none;
     appearance: none;
-    height: 6px;
-    background: linear-gradient(to right, #FC4907 0%, #FC4907 50%, #e5e7eb 50%, #e5e7eb 100%);
-    border-radius: 999px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
     outline: none;
     cursor: pointer;
+    --thumb-size: 20px;
+    --value: 50%;
+}
+
+.mortgage-range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(to right, #FC4907 0, #FC4907 var(--value), #e5e7eb var(--value), #e5e7eb 100%);
 }
 
 .mortgage-range::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    box-sizing: border-box;
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    margin-top: calc((6px - var(--thumb-size)) / 2);
     border-radius: 50%;
     background: #FC4907;
     cursor: pointer;
@@ -84,13 +98,26 @@
 }
 
 .mortgage-range::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    box-sizing: border-box;
+    width: var(--thumb-size);
+    height: var(--thumb-size);
     border-radius: 50%;
     background: #FC4907;
     cursor: pointer;
     border: 3px solid white;
     box-shadow: 0 2px 8px rgb(252 73 7 / 30%);
+}
+
+.mortgage-range::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: #e5e7eb;
+}
+
+.mortgage-range::-moz-range-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: #FC4907;
 }
 
 /* === Visit Date Button Active State === */

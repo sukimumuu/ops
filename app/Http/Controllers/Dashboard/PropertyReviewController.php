@@ -130,8 +130,11 @@ class PropertyReviewController extends Controller
     {
         Gate::authorize('review', $propertyPhoto->property);
 
-        $disk = Storage::disk('local');
         $path = $propertyPhoto->file_path;
+        $publicDisk = Storage::disk('public');
+        $disk = $propertyPhoto->type === 'photo' && $publicDisk->exists($path)
+            ? $publicDisk
+            : Storage::disk('local');
 
         abort_unless(filled($path) && $disk->exists($path), 404);
 

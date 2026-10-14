@@ -128,7 +128,6 @@
 
         <x-card-dashboard title="Transaksi terbaru" subtitle="Pantau tahapan pembelian dan status escrow">
             <x-slot name="actions">
-                <a href="{{ route('buyer.transaction-escrow') }}" class="text-sm font-semibold text-primary hover:underline">
                     Lihat semua
                 </a>
             </x-slot>
