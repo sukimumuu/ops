@@ -5,20 +5,20 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class BuyerController extends Controller
+class UserController extends Controller
 {
     public function savedProperties()
     {
-        return view('dashboard.buyer.saved-properti');
+        return view('dashboard.user.saved-properti');
     }
 
     public function surveySchedule()
     {
-        return view('dashboard.buyer.survey-schedule');
+        return view('dashboard.user.survey-schedule');
     }
 
     public function transactionEscrow()
     {
-        return view('dashboard.buyer.transaction-and-escrow');
+        return view('dashboard.user.transaction-and-escrow');
     }
 }

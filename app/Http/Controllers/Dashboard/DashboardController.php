@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class DashboardController extends Controller
         $user = $request->user();
         $viewData = [];
 
-        if ($user !== null && $user->hasRole('Seller')) {
+        if ($user !== null && $user->hasRole('User')) {
             $viewData = [
                 'sellerName' => $user->name,
                 'sellerStats' => [
@@ -59,15 +60,20 @@ class DashboardController extends Controller
                     ->limit(5)
                     ->get(['id', 'property_id', 'buyer_id', 'scheduled_at', 'created_at']),
                 'recentTransactions' => Transaction::query()
-                    ->where('seller_id', $user->id)
-                    ->with(['property:id,title', 'buyer:id,name'])
+                    ->where(function (Builder $query) use ($user): void {
+                        $query->where('seller_id', $user->id)
+                            ->orWhere('buyer_id', $user->id);
+                    })
+                    ->with(['property:id,title,city,province', 'buyer:id,name', 'seller:id,name'])
                     ->latest()
                     ->orderByDesc('id')
                     ->limit(5)
-                    ->get(['id', 'property_id', 'buyer_id', 'total_property_amount', 'state', 'created_at']),
+                    ->get(['id', 'property_id', 'buyer_id', 'seller_id', 'total_property_amount', 'booking_fee_amount', 'state', 'created_at']),
             ];
-        } elseif ($user !== null && $user->hasRole('Buyer')) {
-            $viewData = [
+        }
+
+        if ($user !== null && $user->hasRole('User')) {
+            $viewData = array_merge($viewData, [
                 'buyerName' => $user->name,
                 'buyerStats' => [
                     'totalSurveys' => Appointment::query()
@@ -96,16 +102,8 @@ class DashboardController extends Controller
                     ->orderBy('id')
                     ->limit(5)
                     ->get(['id', 'property_id', 'seller_id', 'scheduled_at', 'status']),
-                'recentTransactions' => Transaction::query()
-                    ->where('buyer_id', $user->id)
-                    ->with(['property:id,title,city,province', 'seller:id,name'])
-                    ->latest()
-                    ->orderByDesc('id')
-                    ->limit(5)
-                    ->get(['id', 'property_id', 'seller_id', 'total_property_amount', 'booking_fee_amount', 'state', 'created_at']),
-            ];
+            ]);
         } else {
-            // Fallback untuk Admin / Superadmin / Role lainnya
             $activeTransactionStates = ['held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'];
 
             $viewData = [
@@ -191,8 +189,7 @@ class DashboardController extends Controller
             'superadmin' => 'Super Admin',
             'admin' => 'Admin',
             'ppat' => 'PPAT',
-            'seller' => 'Seller',
-            'buyer' => 'Buyer',
+            'user' => 'Pengguna',
             default => ucfirst($role),
         };
     }
@@ -205,8 +202,6 @@ class DashboardController extends Controller
         return match ($role) {
             'superadmin', 'admin' => ['label' => 'ID Admin', 'code' => 'ADM-'.$paddedId],
             'ppat' => ['label' => 'ID PPAT', 'code' => 'PPT-'.$paddedId],
-            'seller' => ['label' => 'ID Penjual', 'code' => 'SLR-'.$paddedId],
-            'buyer' => ['label' => 'ID Pembeli', 'code' => 'BYR-'.$paddedId],
             default => ['label' => 'ID Akun', 'code' => 'USR-'.$paddedId],
         };
     }

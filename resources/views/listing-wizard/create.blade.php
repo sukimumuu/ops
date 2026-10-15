@@ -1083,7 +1083,7 @@
                 <h3 class="wz-success-title">Listing Berhasil Dikirim!</h3>
                 <p class="wz-success-desc">Listing properti Anda sedang dalam proses verifikasi. Kami akan menghubungi Anda
                     segera.</p>
-                <a href="{{ route('dashboard') }}" class="wz-btn-primary mt-6">
+                <a href="{{ route('seller.listing') }}" class="wz-btn-primary mt-6">
                     Kembali ke Dashboard
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -1249,46 +1249,6 @@
         @media (min-width: 640px) {
             .wizard-step-connector {
                 width: 80px;
-        },
-
-        handlePhotoUpload(event) {
-            const files = Array.from(event.target.files);
-            const remaining = 10 - this.photoPreviews.length;
-            const toAdd = files.slice(0, remaining);
-
-            toAdd.forEach(file => {
-                if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
-                    this.errors.photos = 'Format yang didukung: JPEG, PNG, WebP.';
-                    return;
-                }
-                if (file.size > 2 * 1024 * 1024) {
-                    this.errors.photos = 'Ukuran foto maksimal 2MB.';
-                    return;
-                }
-
-                this.photoFiles.push(file);
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.photoPreviews.push(e.target.result);
-                };
-                reader.readAsDataURL(file);
-                this.errors.photos = null;
-            });
-
-            event.target.value = '';
-        },
-
-        removePhoto(index) {
-            this.photoFiles.splice(index, 1);
-            this.photoPreviews.splice(index, 1);
-        },
-
-        handleCertificateUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            if (file.size > 10 * 1024 * 1024) {
-                this.errors.certificate_file = 'Ukuran sertifikat maksimal 10MB.';
-                return;
             }
         }
 
@@ -1309,49 +1269,7 @@
             .wizard-card-body {
                 padding: 32px;
             }
-        },
-
-        saveDraft() {
-            this.hasDraft = true;
-            // Draft save logic would go here
-        },
-
-        async submitStepOne() {
-            this.errors = {};
-            this.isLoading = true;
-
-            const priceNumeric = this.form.price.replace(/\./g, '');
-
-            try {
-                const response = await fetch('{{ route("listing.step-one") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        ...this.form,
-                        price: priceNumeric,
-                        url_maps: this.osmUrl,
-                    }),
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    if (data.errors) {
-                        const flatErrors = {};
-                        for (const [key, messages] of Object.entries(data.errors)) {
-                            const field = key.startsWith('photos.') ? 'photos' : key;
-                            flatErrors[field] ??= messages[0];
-                        }
-                        this.errors = flatErrors;
-                    } else {
-                        this.errors.photos = data.message || 'Foto gagal diproses. Silakan coba unggah kembali.';
-                    }
-                    return;
-                }
+        }
 
         /* ===== CARD FOOTER ===== */
         .wizard-card-footer {
@@ -2606,7 +2524,7 @@
                     const query = this.locationQuery[queryKey].trim().toLocaleLowerCase('id');
 
                     return this.regionOptions[level].filter((region) => region.name.toLocaleLowerCase('id').includes(
-                    query));
+                        query));
                 },
 
                 openRegionOptions(level) {

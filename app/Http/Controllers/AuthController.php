@@ -60,7 +60,7 @@ class AuthController extends Controller
             'phone' => $validatedData['phone'],
             'password' => Hash::make($validatedData['password']),
         ]);
-        $user->assignRole('Buyer');
+        $user->assignRole('User');
 
         Auth::login($user);
 

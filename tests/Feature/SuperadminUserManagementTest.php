@@ -11,8 +11,7 @@ beforeEach(function () {
     Role::firstOrCreate(['name' => 'Superadmin']);
     Role::firstOrCreate(['name' => 'admin']);
     Role::firstOrCreate(['name' => 'PPAT']);
-    Role::firstOrCreate(['name' => 'Buyer']);
-    Role::firstOrCreate(['name' => 'Seller']);
+    Role::firstOrCreate(['name' => 'User']);
 });
 
 it('shows the add user form to a superadmin', function () {
@@ -26,8 +25,7 @@ it('shows the add user form to a superadmin', function () {
         ->assertSee('name="role"', false)
         ->assertSee('value="admin"', false)
         ->assertSee('value="ppat"', false)
-        ->assertSee('value="buyer"', false)
-        ->assertSee('value="seller"', false)
+        ->assertSee('value="user"', false)
         ->assertSee("x-show=\"role === 'ppat'\"", false)
         ->assertSee('name="province"', false)
         ->assertSee('name="city"', false)
@@ -44,8 +42,7 @@ it('creates a user and assigns each supported role', function () {
     foreach ([
         ['admin', 'admin', '08123456789'],
         ['ppat', 'PPAT', '08123456790'],
-        ['buyer', 'Buyer', '08123456791'],
-        ['seller', 'Seller', '08123456795'],
+        ['user', 'User', '08123456796'],
     ] as [$role, $assignedRole, $phone]) {
         $userData = [
             'name' => ucfirst($role).' Test',
@@ -111,21 +108,21 @@ it('requires and stores the selected location for PPAT users only', function () 
         ->and($ppat->district)->toBe('Pondok Aren');
 
     $this->post(route('superadmin.user-management.store'), [
-        'name' => 'Buyer Without Location',
-        'email' => 'buyer-location@example.test',
+        'name' => 'User Without Location',
+        'email' => 'user-location@example.test',
         'phone' => '08123456793',
         'password' => 'password123',
         'password_confirmation' => 'password123',
-        'role' => 'buyer',
+        'role' => 'user',
         'province' => 'Banten',
         'city' => 'Kota Tangerang Selatan',
         'district' => 'Pondok Aren',
     ])->assertRedirect(route('superadmin.user-management'));
 
-    $buyer = User::where('email', 'buyer-location@example.test')->firstOrFail();
-    expect($buyer->province)->toBeNull()
-        ->and($buyer->city)->toBeNull()
-        ->and($buyer->district)->toBeNull();
+    $user = User::where('email', 'user-location@example.test')->firstOrFail();
+    expect($user->province)->toBeNull()
+        ->and($user->city)->toBeNull()
+        ->and($user->district)->toBeNull();
 });
 
 it('rejects PPAT location codes outside the selected hierarchy', function () {
@@ -172,11 +169,25 @@ it('rejects invalid role and duplicate contact details', function () {
         ])
         ->assertRedirect(route('superadmin.user-management.create'))
         ->assertSessionHasErrors(['email', 'phone', 'role']);
+
+    foreach (['buyer', 'seller'] as $removedRole) {
+        $this->from(route('superadmin.user-management.create'))
+            ->post(route('superadmin.user-management.store'), [
+                'name' => 'Removed Role Test',
+                'email' => $removedRole.'-role@example.test',
+                'phone' => $removedRole === 'buyer' ? '08123456797' : '08123456798',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+                'role' => $removedRole,
+            ])
+            ->assertRedirect(route('superadmin.user-management.create'))
+            ->assertSessionHasErrors(['role']);
+    }
 });
 
 it('prevents non-superadmins from accessing user management', function () {
     $user = User::factory()->create();
-    $user->assignRole('Buyer');
+    $user->assignRole('User');
 
     $this->actingAs($user)
         ->get(route('superadmin.user-management.create'))

@@ -12,7 +12,7 @@ it('redirects unauthenticated guests to login when opening profile page', functi
 });
 
 it('dynamically displays the profile data of the currently logged-in user', function () {
-    $sellerRole = Role::create(['name' => 'Seller', 'guard_name' => 'web']);
+    $userRole = Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
         'name' => 'Budi Pratama',
@@ -22,7 +22,7 @@ it('dynamically displays the profile data of the currently logged-in user', func
         'kyc_status' => 'verified',
         'email_verified_at' => now(),
     ]);
-    $user->assignRole($sellerRole);
+    $user->assignRole($userRole);
 
     $response = $this->actingAs($user)->get(route('profile'));
 
@@ -30,9 +30,9 @@ it('dynamically displays the profile data of the currently logged-in user', func
         ->assertSee('Budi Pratama')
         ->assertSee('@budipratama')
         ->assertSee('budi.pratama@example.com')
-        ->assertSee('Seller')
-        ->assertSee('ID Penjual')
-        ->assertSee('SLR-'.str_pad((string) $user->id, 3, '0', STR_PAD_LEFT))
+        ->assertSee('Pengguna')
+        ->assertSee('ID Akun')
+        ->assertSee('USR-'.str_pad((string) $user->id, 3, '0', STR_PAD_LEFT))
         ->assertSee('Terverifikasi')
         ->assertSee('Email telah terverifikasi')
         ->assertDontSee('Surya Adinata')
@@ -40,7 +40,7 @@ it('dynamically displays the profile data of the currently logged-in user', func
 });
 
 it('ensures users can only access their own profile data', function () {
-    $role = Role::create(['name' => 'Buyer', 'guard_name' => 'web']);
+    $role = Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 
     $currentUser = User::factory()->create([
         'name' => 'Pengguna Aktif',

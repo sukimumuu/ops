@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +24,7 @@ class DatabaseSeeder extends Seeder
             'username' => 'superadmin',
             'email' => 'superadmin@mihom.id',
             'password' => Hash::make('password'),
-            'phone' => '997997997997'
+            'phone' => '997997997997',
         ]);
         $superadmin->assignRole('Superadmin');
 
@@ -35,7 +34,7 @@ class DatabaseSeeder extends Seeder
             'username' => 'admin',
             'email' => 'admin@mihom.id',
             'password' => Hash::make('password'),
-            'phone' => '991991991991'
+            'phone' => '991991991991',
         ]);
         $admin->assignRole('Admin');
 
@@ -45,28 +44,18 @@ class DatabaseSeeder extends Seeder
             'username' => 'ppat',
             'email' => 'ppat@mihom.id',
             'password' => Hash::make('password'),
-            'phone' => '998998998998'
+            'phone' => '998998998998',
         ]);
         $ppat->assignRole('PPAT');
 
-        $buyer = User::create([
+        $user = User::create([
             'uuid' => (string) Str::uuid(),
-            'name' => 'Buyer',
-            'username' => 'buyer',
-            'email' => 'buyer@mihom.id',
+            'name' => 'User',
+            'username' => 'user',
+            'email' => 'user@mihom.id',
             'password' => Hash::make('password'),
-            'phone' => '996996996996'
+            'phone' => '996996996996',
         ]);
-        $buyer->assignRole('Buyer');
-
-        $seller = User::create([
-            'uuid' => (string) Str::uuid(),
-            'name' => 'Seller',
-            'username' => 'seller',
-            'email' => 'seller@mihom.id',
-            'password' => Hash::make('password'),
-            'phone' => '995995995995'
-        ]);
-        $seller->assignRole('Seller');
+        $user->assignRole('User');
     }
 }

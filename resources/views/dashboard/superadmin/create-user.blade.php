@@ -27,8 +27,7 @@
                     <option selected value="">Pilih peran</option>
                     <option value="admin" @selected(old('role') === 'admin')>Admin</option>
                     <option value="ppat" @selected(old('role') === 'ppat')>PPAT</option>
-                    <option value="buyer" @selected(old('role') === 'buyer')>Buyer</option>
-                    <option value="seller" @selected(old('role') === 'seller')>Seller</option>
+                    <option value="user" @selected(old('role') === 'user')>User</option>
                 </x-form-select-dashboard>
 
                 <x-form-text-input-dashboard id="password" name="password" type="password" label="Kata Sandi"
@@ -263,7 +262,7 @@
 
                             const province = this.regionOptions.provinces.find((item) => item.name
                                 .toLocaleLowerCase('id') === this.locationQuery.province.toLocaleLowerCase('id')
-                                );
+                            );
                             if (!province) return;
                             this.selectRegion('provinces', province);
                             await this.loadRegionOptions('regencies');
@@ -276,7 +275,7 @@
 
                             const district = this.regionOptions.districts.find((item) => item.name
                                 .toLocaleLowerCase('id') === this.locationQuery.district.toLocaleLowerCase('id')
-                                );
+                            );
                             if (district) this.selectRegion('districts', district);
                         });
                     },
@@ -371,7 +370,7 @@
                         } [level];
                         const query = this.locationQuery[field].trim().toLocaleLowerCase('id');
                         return this.regionOptions[level].filter((region) => region.name.toLocaleLowerCase('id').includes(
-                        query));
+                            query));
                     },
 
                     openRegionOptions(level) {
@@ -392,7 +391,7 @@
 
                         if (level === 'provinces' && this.selected.provinceCode) {
                             const selected = this.regionCache.provinces.find((item) => item.code === this.selected
-                            .provinceCode);
+                                .provinceCode);
                             if (value.toLocaleLowerCase('id') !== selected.name.toLocaleLowerCase('id')) {
                                 this.selected.provinceCode = '';
                                 this.selected.regencyCode = '';

@@ -1,11 +1,8 @@
 @extends('layouts.app')
 @section('page-title', 'Dashboard')
 @section('content')
-    @role('Buyer')
-        @include('dashboard.buyer.index')
-    @endrole
-    @role('Seller')
-        @include('dashboard.seller.index')
+    @role('User')
+        @include('dashboard.user.index')
     @endrole
     @role('PPAT')
         @include('dashboard.land-deed.index')

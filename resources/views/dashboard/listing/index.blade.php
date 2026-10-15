@@ -1,3 +1,6 @@
+@extends('layouts.app')
+@section('page-title', 'Dashboard Listing')
+@section('content')
 <div class="space-y-8">
     <section class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -228,3 +231,4 @@
         </x-card-dashboard>
     </section>
 </div>
+@endsection

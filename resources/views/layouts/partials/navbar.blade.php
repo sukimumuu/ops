@@ -128,7 +128,7 @@
                     <a href="{{ route('land-deed.transfer-for-ownership') }}">Resi Balik Nama</a>
                 </li>
             @endrole
-            @role('Buyer')
+            @if (request()->routeIs('buyer.*') && request()->routeIs('dashboard'))
                 <li
                     class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
                         ? 'border-b-6 border-b-primary text-primary'
@@ -152,10 +152,10 @@
                         ? 'border-b-6 border-b-primary text-primary'
                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
                 </li>
-            @endrole
-            @role('Seller')
+            @endif
+            @if (request()->routeIs('seller.*'))
                 <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.listing')
                         ? 'border-b-6 border-b-primary text-primary'
                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                     <a href="{{ route('dashboard') }}">Dashboard</a>
@@ -184,13 +184,13 @@
                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                     <a href="{{ route('seller.disbursement-account') }}">Rekening Pencairan</a>
                 </li>
-            @endrole
+            @endif
         </nav>
         <div class="flex-1"></div>
-        @role('Buyer')
+        @role('User')
             <x-button type="button" variant="outline" class="hover:bg-primary hover:text-white">
-                <a href="">
-                    Pasang Iklan Properti
+                <a href="{{ request()->routeIs('seller.*') ? route('dashboard') : route('seller.listing') }}">
+                    {{ request()->routeIs('dashboard') ? 'Pasang Listing' : 'Kembali' }}
                 </a>
             </x-button>
         @endrole

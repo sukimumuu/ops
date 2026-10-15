@@ -11,7 +11,7 @@ uses(RefreshDatabase::class);
 it('filters users by search and role for admins and superadmins', function () {
     Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'Seller', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 
     $administrator = User::factory()->create();
     $administrator->assignRole('Superadmin');
@@ -24,7 +24,7 @@ it('filters users by search and role for admins and superadmins', function () {
         'name' => 'Bandung Property Seller',
         'phone' => '6281234567002',
     ]);
-    $otherUser->assignRole('Seller');
+    $otherUser->assignRole('User');
 
     $this->actingAs($administrator);
 
@@ -80,7 +80,7 @@ it('filters pending properties by search, type, and category for admins and supe
 it('renders PPAT search and assignment controls for each selected property', function () {
     Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'Seller', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 
     $administrator = User::factory()->create();
     $administrator->assignRole('Superadmin');
@@ -123,7 +123,7 @@ it('renders PPAT search and assignment controls for each selected property', fun
         'name' => 'Non PPAT Coblong',
         'district' => 'Coblong',
     ]);
-    $nonPpatUser->assignRole('Seller');
+    $nonPpatUser->assignRole('User');
 
     $this->actingAs($administrator);
 

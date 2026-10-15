@@ -11,28 +11,30 @@ use Spatie\Permission\Models\Role;
 uses(RefreshDatabase::class);
 
 it('shows only the signed-in seller properties and activity', function () {
-    $sellerRole = Role::create(['name' => 'Seller', 'guard_name' => 'web']);
+    $userRole = Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 
     $seller = User::factory()->create([
         'name' => 'Seller Dashboard',
         'phone' => '081234567801',
     ]);
-    $seller->assignRole($sellerRole);
+    $seller->assignRole($userRole);
 
     $otherSeller = User::factory()->create([
         'name' => 'Another Seller',
         'phone' => '081234567802',
     ]);
-    $otherSeller->assignRole($sellerRole);
+    $otherSeller->assignRole($userRole);
 
     $buyer = User::factory()->create([
         'name' => 'Calon Pembeli',
         'phone' => '081234567803',
     ]);
+    $buyer->assignRole($userRole);
     $otherBuyer = User::factory()->create([
         'name' => 'Pembeli Lain',
         'phone' => '081234567804',
     ]);
+    $otherBuyer->assignRole($userRole);
 
     $createProperty = function (User $owner, string $title): Property {
         return Property::query()->create([
@@ -101,40 +103,42 @@ it('shows only the signed-in seller properties and activity', function () {
     $response = $this->actingAs($seller)->get(route('dashboard'));
 
     $response
-        ->assertSee('Selamat datang, Seller Dashboard')
-        ->assertSee('Rumah Senja')
-        ->assertSee('Calon Pembeli')
-        ->assertDontSee('Properti Tetangga')
-        ->assertDontSee('Pembeli Lain')
+        ->assertOk()
+        ->assertSee('Dashboard Seller')
+        ->assertSee('Dashboard Pembeli')
         ->assertViewHas('sellerStats', fn (array $stats): bool => $stats === [
             'totalProperties' => 1,
             'publishedProperties' => 1,
             'pendingSurveys' => 1,
             'activeTransactions' => 1,
-        ]);
+        ])
+        ->assertViewHas('buyerStats', fn (array $stats): bool => $stats['totalSurveys'] === 0)
+        ->assertViewHas('recentProperties', fn ($properties): bool => $properties->pluck('title')->all() === ['Rumah Senja'])
+        ->assertViewMissing('metrics');
 });
 
 it('shows only the signed-in buyer surveys and transactions', function () {
     $this->travelTo('2026-10-09 09:00:00');
 
-    $buyerRole = Role::create(['name' => 'Buyer', 'guard_name' => 'web']);
+    $userRole = Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 
     $buyer = User::factory()->create([
         'name' => 'Buyer Dashboard',
         'phone' => '081234567805',
     ]);
-    $buyer->assignRole($buyerRole);
+    $buyer->assignRole($userRole);
 
     $otherBuyer = User::factory()->create([
         'name' => 'Another Buyer',
         'phone' => '081234567806',
     ]);
-    $otherBuyer->assignRole($buyerRole);
+    $otherBuyer->assignRole($userRole);
 
     $seller = User::factory()->create([
         'name' => 'Penjual Properti',
         'phone' => '081234567807',
     ]);
+    $seller->assignRole($userRole);
 
     $createProperty = function (User $owner, string $title): Property {
         return Property::query()->create([
@@ -214,16 +218,19 @@ it('shows only the signed-in buyer surveys and transactions', function () {
     $response = $this->actingAs($buyer)->get(route('dashboard'));
 
     $response
-        ->assertSee('Selamat datang, Buyer Dashboard')
-        ->assertSee('Rumah Pilihan Buyer')
-        ->assertSee('Penjual Properti')
-        ->assertDontSee('Properti Privat Pembeli Lain')
+        ->assertOk()
+        ->assertSee('Dashboard Seller')
+        ->assertSee('Dashboard Pembeli')
         ->assertViewHas('buyerStats', fn (array $stats): bool => $stats === [
             'totalSurveys' => 3,
             'upcomingSurveys' => 2,
             'activeTransactions' => 1,
             'completedTransactions' => 1,
-        ]);
+        ])
+        ->assertViewHas('sellerStats', fn (array $stats): bool => $stats['totalProperties'] === 0)
+        ->assertViewMissing('metrics')
+        ->assertViewHas('upcomingSurveys', fn ($surveys): bool => $surveys->count() === 2)
+        ->assertViewHas('recentTransactions', fn ($transactions): bool => $transactions->count() === 2);
 });
 
 it('redirects guests to login when opening the dashboard', function () {

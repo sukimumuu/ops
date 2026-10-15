@@ -2,16 +2,16 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Dashboard\AdminController;
-use App\Http\Controllers\Dashboard\BuyerController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\LandDeedController;
+use App\Http\Controllers\Dashboard\ListingController;
 use App\Http\Controllers\Dashboard\PropertyReviewController;
-use App\Http\Controllers\Dashboard\SellerController;
 use App\Http\Controllers\Dashboard\SuperadminController;
+use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingWizardController;
-use App\Http\Controllers\RegionDataController;
 use App\Http\Controllers\ProfilePasswordController;
+use App\Http\Controllers\RegionDataController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'home'])->name('home');
@@ -39,10 +39,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/notifikasi', [DashboardController::class, 'detailNotif'])->name('detail-notif');
 
     Route::name('seller.')->group(function () {
-        Route::get('/properti-saya', [SellerController::class, 'myProperties'])->name('my-properties');
-        Route::get('/permintaan-survei', [SellerController::class, 'requestSurvey'])->name('request-survey');
-        Route::get('/transaksi-penjualan', [SellerController::class, 'sellingTransaction'])->name('selling-transaction');
-        Route::get('/rekening-pencairan', [SellerController::class, 'disbursementAccount'])->name('disbursement-account');
+        Route::get('/listing', [ListingController::class, 'index'])->name('listing');
+        Route::get('/properti-saya', [ListingController::class, 'myProperties'])->name('my-properties');
+        Route::get('/permintaan-survei', [ListingController::class, 'requestSurvey'])->name('request-survey');
+        Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])->name('selling-transaction');
+        Route::get('/rekening-pencairan', [ListingController::class, 'disbursementAccount'])->name('disbursement-account');
     });
     Route::prefix('listing')->name('listing.')->group(function () {
         Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');
@@ -61,9 +62,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     });
 
     Route::name('buyer.')->group(function () {
-        Route::get('/properti-tersimpan', [BuyerController::class, 'savedProperties'])->name('saved-properties');
-        Route::get('/jadwal-survei', [BuyerController::class, 'surveySchedule'])->name('survey-schedule');
-        Route::get('/transaksi-escrow', [BuyerController::class, 'transactionEscrow'])->name('transaction-escrow');
+        Route::get('/properti-tersimpan', [UserController::class, 'savedProperties'])->name('saved-properties');
+        Route::get('/jadwal-survei', [UserController::class, 'surveySchedule'])->name('survey-schedule');
+        Route::get('/transaksi-escrow', [UserController::class, 'transactionEscrow'])->name('transaction-escrow');
     });
 
     Route::name('land-deed.')->group(function () {

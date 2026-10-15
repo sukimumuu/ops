@@ -14,7 +14,7 @@ beforeEach(function () {
     Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'Seller', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 });
 
 function createReviewProperty(string $status = 'pending_verification'): Property
@@ -117,7 +117,7 @@ it('requires an authenticated administrator to change property status', function
         ->assertRedirect(route('login'));
 
     $seller = User::factory()->create();
-    $seller->assignRole('Seller');
+    $seller->assignRole('User');
 
     $this->actingAs($seller)
         ->post(route('property-review.status', $property), ['status' => 'published'])
@@ -154,7 +154,7 @@ it('serves private certificate files only to authorized reviewers', function () 
         ->assertHeader('X-Content-Type-Options', 'nosniff');
 
     $seller = User::factory()->create();
-    $seller->assignRole('Seller');
+    $seller->assignRole('User');
 
     $this->actingAs($seller)
         ->get(route('property-review.file', $certificate))
@@ -282,7 +282,7 @@ it('returns PPAT search results in district priority with six users per page', f
         'name' => 'Coblong Contact',
         'district' => 'Coblong',
     ]);
-    $nonPpat->assignRole('Seller');
+    $nonPpat->assignRole('User');
 
     $this->actingAs($admin)
         ->getJson(route('property-review.ppats', $property))
@@ -354,7 +354,7 @@ it('rejects non-PPAT assignment and prevents unauthorized users from assigning P
     $ppat = User::factory()->create();
     $ppat->assignRole('PPAT');
     $seller = User::factory()->create();
-    $seller->assignRole('Seller');
+    $seller->assignRole('User');
 
     $this->postJson(route('property-review.assign-ppat', $property), ['ppat_id' => $ppat->id])
         ->assertUnauthorized();

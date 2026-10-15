@@ -17,8 +17,7 @@ class SuperadminController extends Controller
     private const USER_ROLES = [
         'admin' => 'admin',
         'ppat' => 'PPAT',
-        'buyer' => 'Buyer',
-        'seller' => 'Seller',
+        'user' => 'User',
     ];
 
     public function userManagement(Request $request): View

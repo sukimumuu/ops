@@ -208,7 +208,7 @@ class ListingWizardController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Listing berhasil disubmit untuk verifikasi.',
-            'redirect' => route('dashboard'),
+            'redirect' => route('seller.listing'),
         ]);
     }
 
