@@ -68,6 +68,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     });
 
     Route::name('land-deed.')->group(function () {
+        Route::get('/dashboard-antrian', [LandDeedController::class, 'index'])->name('index');
         Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])->name('bpn-check');
         Route::get('/penandatanganan-ajb', [LandDeedController::class, 'ajbSigning'])->name('ajb-signing');
         Route::get('/manajemen-akta', [LandDeedController::class, 'deedManagement'])->name('deed-management');
