@@ -19,9 +19,14 @@ use Illuminate\Support\Facades\Storage;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         $user = $request->user();
+
+        if ($user !== null && $user->hasRole('PPAT')) {
+            return redirect()->route('land-deed.index');
+        }
+
         $viewData = [];
 
         if ($user !== null && $user->hasRole('User')) {

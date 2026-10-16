@@ -5,7 +5,7 @@
         @include('dashboard.user.index')
     @endrole
     @role('PPAT')
-        @include('dashboard.land-deed.index')
+        {{-- PPAT is automatically redirected to land-deed.index --}}
     @endrole
     @role('Admin')
         @include('dashboard.admin.index')
