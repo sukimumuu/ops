@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Kalkulator Pajak Properti - Hitung estimasi PPh Final Penjual dan BPHTB Pembeli secara transparan dan akurat sesuai ketentuan perpajakan properti Indonesia.">
     <link rel="icon" href="{{ asset('assets/png/faviconblack.ico') }}" media="(prefers-color-scheme: light)">
     <link rel="icon" href="{{ asset('assets/png/faviconwhite.ico') }}" media="(prefers-color-scheme: dark)">
@@ -39,5 +40,6 @@
         hamburger.addEventListener('click', () => { const open = mobileNav.classList.toggle('open'); hamburger.classList.toggle('open', open); hamburger.setAttribute('aria-expanded', String(open)); });
         document.addEventListener('click', (event) => { if (!navbar.contains(event.target) && !mobileNav.contains(event.target)) closeMobileNav(); });
     </script>
+    @include('layouts.partials.chatbot')
 </body>
 </html>

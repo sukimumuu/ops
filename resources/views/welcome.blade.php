@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description"
         content="Mihom - Platform properti terpercaya untuk menemukan rumah impian Anda di Indonesia.">
     <link rel="icon" href="{{ asset('assets/png/favicongray.ico') }}" media="(prefers-color-scheme: light)">
@@ -300,6 +301,7 @@
             }
         }));
     </script>
+    @include('layouts.partials.chatbot')
 </body>
 
 </html>
