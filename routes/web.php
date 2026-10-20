@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\Dashboard\AdminController;
+use App\Http\Controllers\Dashboard\AppointmentController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\LandDeedController;
 use App\Http\Controllers\Dashboard\ListingController;
@@ -74,8 +75,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/transaksi-escrow', [UserController::class, 'transactionEscrow'])->name('transaction-escrow');
     });
 
+    Route::post('/jadwal-survei/{appointment}/status', [AppointmentController::class, 'updateStatus'])
+        ->name('appointments.status');
+
     Route::name('land-deed.')->group(function () {
         Route::get('/dashboard-antrian', [LandDeedController::class, 'index'])->name('index');
+        Route::post('/dashboard-antrian/{appointment}/status', [AppointmentController::class, 'updateStatus'])
+            ->name('appointments.status');
         Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])->name('bpn-check');
         Route::get('/penandatanganan-ajb', [LandDeedController::class, 'ajbSigning'])->name('ajb-signing');
         Route::get('/manajemen-akta', [LandDeedController::class, 'deedManagement'])->name('deed-management');

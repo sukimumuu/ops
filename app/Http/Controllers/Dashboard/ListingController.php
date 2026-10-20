@@ -83,9 +83,26 @@ class ListingController extends Controller
         return view('dashboard.listing.my-properties', compact('properties'));
     }
 
-    public function requestSurvey()
+    public function requestSurvey(Request $request): View
     {
-        return view('dashboard.listing.request-survey');
+        $user = $request->user();
+
+        $appointments = Appointment::query()
+            ->where('seller_id', $user->id)
+            ->with([
+                'property:id,title,city,province,address',
+                'buyer:id,name,email',
+            ])
+            ->orderByDesc('scheduled_at')
+            ->orderByDesc('id')
+            ->paginate(10);
+
+        $pendingSurveyCount = Appointment::query()
+            ->where('seller_id', $user->id)
+            ->where('status', Appointment::STATUS_REQUESTED)
+            ->count();
+
+        return view('dashboard.listing.request-survey', compact('appointments', 'pendingSurveyCount'));
     }
 
     public function sellingTransaction()

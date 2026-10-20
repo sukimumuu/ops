@@ -34,7 +34,7 @@ class LandDeedController extends Controller
             ->with([
                 'buyer:id,name,avatar_path',
                 'seller:id,name',
-                'property:id,title,address,city,district,certificate_type',
+                'property:id,title,address,city,district,certificate_type,assigned_ppat_id',
             ])
             ->orderBy('scheduled_at')
             ->get();
@@ -45,14 +45,10 @@ class LandDeedController extends Controller
             'avatar_url' => $appointment->buyer->avatar_url,
             'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
             'time' => $appointment->scheduled_at->format('H:i'),
-            'status' => match ($appointment->status) {
-                'requested' => 'Menunggu konfirmasi',
-                'confirmed' => 'Terjadwal',
-                'rejected' => 'Ditolak',
-                'completed' => 'Selesai',
-                'cancelled' => 'Dibatalkan',
-                default => 'Status tidak diketahui',
-            },
+            'status_key' => $appointment->status,
+            'status' => $appointment->statusLabel(),
+            'can_review' => $ppat->can('review', $appointment),
+            'status_url' => route('land-deed.appointments.status', $appointment),
             'notes' => $appointment->notes,
             'property_title' => $appointment->property->title,
             'property_certificate' => $appointment->property->certificate_type,
