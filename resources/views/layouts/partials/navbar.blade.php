@@ -128,63 +128,64 @@
                     <a href="{{ route('land-deed.transfer-for-ownership') }}">Resi Balik Nama</a>
                 </li>
             @endrole
-            @if (request()->routeIs('buyer.*') && request()->routeIs('dashboard'))
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
-                    <a href="{{ route('dashboard') }}">Dashboard</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.saved-properties')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
-                    <a href="{{ route('buyer.saved-properties') }}">Properti Tersimpan</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.survey-schedule')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
-                    <a href="{{ route('buyer.survey-schedule') }}">Jadwal Survei Saya</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.transaction-escrow')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
-                </li>
-            @endif
-            @if (request()->routeIs('seller.*'))
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.listing')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('dashboard') }}">Dashboard</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.my-properties') || request()->routeIs('listing.create')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('seller.my-properties') }}">Properti Saya</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.request-survey')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('seller.request-survey') }}">Permintaan Survei Masuk</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.selling-transaction')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('seller.selling-transaction') }}">Transaksi Penjualan</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.disbursement-account')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('seller.disbursement-account') }}">Rekening Pencairan</a>
-                </li>
-            @endif
+            @role('User')
+                @if (request()->routeIS('buyer.*') || request()->routeIs('dashboard'))
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.saved-properties')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                        <a href="{{ route('buyer.saved-properties') }}">Properti Tersimpan</a>
+                    </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.survey-schedule')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                        <a href="{{ route('buyer.survey-schedule') }}">Jadwal Survei Saya</a>
+                    </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('buyer.transaction-escrow')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
+                    </li>
+                @elseif (request()->routeIs('seller.*'))
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.listing')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.my-properties') || request()->routeIs('listing.create')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('seller.my-properties') }}">Properti Saya</a>
+                    </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.request-survey')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('seller.request-survey') }}">Permintaan Survei Masuk</a>
+                    </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.selling-transaction')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('seller.selling-transaction') }}">Transaksi Penjualan</a>
+                    </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.disbursement-account')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('seller.disbursement-account') }}">Rekening Pencairan</a>
+                    </li>
+                @endif
+            @endrole
         </nav>
         <div class="flex-1"></div>
         @role('User')

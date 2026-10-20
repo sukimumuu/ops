@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Transaction;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class TransactionLogs extends Model

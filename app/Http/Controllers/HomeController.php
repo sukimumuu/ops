@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 class HomeController extends Controller
@@ -197,7 +201,41 @@ class HomeController extends Controller
         return view('about');
     }
 
-    public function contact()
+    public function scheduleVisit(Request $request, string $uuid): RedirectResponse
+    {
+        if (! auth()->check()) {
+            return redirect()->route('login')->with('error', 'Silakan masuk terlebih dahulu untuk menjadwalkan kunjungan.');
+        }
+
+        $property = Property::query()
+            ->where('uuid', $uuid)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        if (auth()->id() === $property->seller_id) {
+            return back()->with('error', 'Anda tidak dapat menjadwalkan kunjungan pada properti Anda sendiri.');
+        }
+
+        $validated = $request->validate([
+            'scheduled_at' => ['required', 'date', 'after_or_equal:today'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $scheduledAt = Carbon::parse($validated['scheduled_at'])->setTime(10, 0, 0);
+
+        Appointment::query()->create([
+            'property_id' => $property->id,
+            'buyer_id' => auth()->id(),
+            'seller_id' => $property->seller_id,
+            'scheduled_at' => $scheduledAt,
+            'status' => 'requested',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return back()->with('success', 'Jadwal kunjungan berhasil diajukan! Pemilik properti akan segera mengonfirmasi jadwal Anda.');
+    }
+
+    public function contact(): View
     {
         return view('contact');
     }

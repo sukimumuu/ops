@@ -120,14 +120,18 @@
     background: #FC4907;
 }
 
-/* === Visit Date Button Active State === */
-.visit-date-btn.active {
-    border-color: #FC4907;
-    background-color: #fff5f1;
+/* === Visit Calendar Input Styling === */
+.visit-calendar-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(36%) sepia(85%) saturate(2250%) hue-rotate(357deg) brightness(99%) contrast(102%);
+    padding: 2px;
+    border-radius: 4px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-.visit-date-btn.active span:last-child {
-    color: #FC4907;
+.visit-calendar-input::-webkit-calendar-picker-indicator:hover {
+    transform: scale(1.15);
+    opacity: 0.85;
 }
 
 /* === Gallery Modal === */

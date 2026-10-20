@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
 use App\Models\User;
@@ -233,4 +234,124 @@ it('returns 404 when a property detail UUID belongs to an unapproved property', 
 
     $this->get(route('property-details', ['uuid' => $uuid]))
         ->assertNotFound();
+});
+
+it('redirects guests to login when attempting to schedule a visit', function () {
+    $seller = User::factory()->create();
+    $uuid = (string) Str::uuid();
+    Property::query()->create([
+        'uuid' => $uuid,
+        'seller_id' => $seller->id,
+        'property_type' => 'bangunan',
+        'type' => 'rumah',
+        'category' => 'sale',
+        'status' => 'published',
+        'title' => 'Rumah Kunjungan',
+        'description' => 'Siap dikunjungi.',
+        'price' => 1250000000,
+        'negotiable' => false,
+        'province' => 'Jawa Barat',
+        'city' => 'Bandung',
+        'district' => 'Coblong',
+        'postal_code' => '40132',
+        'address' => 'Jl. Merdeka No. 1',
+        'land_area_sqm' => 120,
+        'building_area_sqm' => 90,
+        'rooms' => '3',
+        'bathrooms' => '2',
+        'floors' => '1',
+        'condition' => 'siap_huni',
+        'certificate_type' => 'SHM',
+    ]);
+
+    $response = $this->post(route('property.schedule-visit', ['uuid' => $uuid]), [
+        'scheduled_at' => now()->addDays(2)->format('Y-m-d'),
+    ]);
+
+    $response->assertRedirect(route('login'));
+    expect(Appointment::query()->count())->toBe(0);
+});
+
+it('allows authenticated buyers to schedule a visit', function () {
+    $seller = User::factory()->create(['name' => 'Pemilik']);
+    $buyer = User::factory()->create(['name' => 'Calon Pembeli']);
+    $uuid = (string) Str::uuid();
+    $property = Property::query()->create([
+        'uuid' => $uuid,
+        'seller_id' => $seller->id,
+        'property_type' => 'bangunan',
+        'type' => 'rumah',
+        'category' => 'sale',
+        'status' => 'published',
+        'title' => 'Rumah Dijual Siap Huni',
+        'description' => 'Deskripsi.',
+        'price' => 1000000000,
+        'negotiable' => false,
+        'province' => 'Jawa Barat',
+        'city' => 'Bandung',
+        'district' => 'Coblong',
+        'postal_code' => '40132',
+        'address' => 'Jl. Dago No. 10',
+        'land_area_sqm' => 120,
+        'building_area_sqm' => 90,
+        'rooms' => '3',
+        'bathrooms' => '2',
+        'floors' => '1',
+        'condition' => 'siap_huni',
+        'certificate_type' => 'SHM',
+    ]);
+
+    $targetDate = now()->addDays(3)->format('Y-m-d');
+
+    $response = $this->actingAs($buyer)->post(route('property.schedule-visit', ['uuid' => $uuid]), [
+        'scheduled_at' => $targetDate,
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    $appointment = Appointment::query()->first();
+    expect($appointment)->not->toBeNull()
+        ->and($appointment->property_id)->toBe($property->id)
+        ->and($appointment->buyer_id)->toBe($buyer->id)
+        ->and($appointment->seller_id)->toBe($seller->id)
+        ->and($appointment->status)->toBe('requested')
+        ->and($appointment->scheduled_at->format('Y-m-d'))->toBe($targetDate);
+});
+
+it('prevents seller from scheduling a visit on their own property', function () {
+    $seller = User::factory()->create();
+    $uuid = (string) Str::uuid();
+    Property::query()->create([
+        'uuid' => $uuid,
+        'seller_id' => $seller->id,
+        'property_type' => 'bangunan',
+        'type' => 'rumah',
+        'category' => 'sale',
+        'status' => 'published',
+        'title' => 'Rumah Sendiri',
+        'description' => 'Deskripsi.',
+        'price' => 1000000000,
+        'negotiable' => false,
+        'province' => 'Jawa Barat',
+        'city' => 'Bandung',
+        'district' => 'Coblong',
+        'postal_code' => '40132',
+        'address' => 'Jl. Dago No. 10',
+        'land_area_sqm' => 120,
+        'building_area_sqm' => 90,
+        'rooms' => '3',
+        'bathrooms' => '2',
+        'floors' => '1',
+        'condition' => 'siap_huni',
+        'certificate_type' => 'SHM',
+    ]);
+
+    $response = $this->actingAs($seller)->post(route('property.schedule-visit', ['uuid' => $uuid]), [
+        'scheduled_at' => now()->addDays(1)->format('Y-m-d'),
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error');
+    expect(Appointment::query()->count())->toBe(0);
 });

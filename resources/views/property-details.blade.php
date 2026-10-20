@@ -390,29 +390,65 @@
                         </div>
 
                         <!-- Schedule Visit Card -->
-                        <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                        <div id="visit" class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm scroll-mt-24">
                             <h4 class="text-sm font-extrabold text-secondary mb-3 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 Jadwalkan Kunjungan
                             </h4>
                             <p class="text-xs text-gray-400 mb-4">Pilih tanggal untuk melihat properti ini secara langsung</p>
-                            <div id="visit" class="grid grid-cols-3 gap-2 mb-3">
-                                <button class="visit-date-btn bg-gray-50 border border-gray-200 rounded-lg py-2 text-center hover:border-primary hover:bg-[#fff5f1] transition active" data-date="today">
-                                    <span class="block text-[10px] text-gray-400 font-semibold">Hari ini</span>
-                                    <span class="block text-xs font-bold text-secondary">{{ now()->locale('id')->translatedFormat('d M') }}</span>
+
+                            @if (session('success'))
+                                <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-semibold text-green-700">
+                                    <svg class="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    <span>{{ session('success') }}</span>
+                                </div>
+                            @endif
+
+                            @if (session('error'))
+                                <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                                    <svg class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span>{{ session('error') }}</span>
+                                </div>
+                            @endif
+
+                            @if ($errors->has('scheduled_at'))
+                                <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                                    <svg class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span>{{ $errors->first('scheduled_at') }}</span>
+                                </div>
+                            @endif
+
+                            <form action="{{ route('property.schedule-visit', ['uuid' => $property->uuid]) }}" method="POST" id="scheduleVisitForm" class="space-y-3">
+                                @csrf
+                                <div>
+                                    <label for="visitDateInput" class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Pilih Tanggal Kunjungan</label>
+                                    <div class="relative">
+                                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary pointer-events-none">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        </span>
+                                        <input
+                                            type="date"
+                                            id="visitDateInput"
+                                            name="scheduled_at"
+                                            min="{{ now()->format('Y-m-d') }}"
+                                            value="{{ old('scheduled_at', now()->format('Y-m-d')) }}"
+                                            class="visit-calendar-input w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-11 pr-4 text-sm font-semibold text-secondary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition cursor-pointer"
+                                            required
+                                        >
+                                    </div>
+                                    <div class="mt-2 flex items-center justify-between text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">
+                                        <span class="flex items-center gap-1.5 font-medium">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+                                            <span id="visitDateFormatted">{{ now()->locale('id')->translatedFormat('l, d F Y') }}</span>
+                                        </span>
+                                        <span class="text-[10px] text-green-700 bg-green-50 font-bold px-2 py-0.5 rounded-full border border-green-200">Tersedia</span>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full bg-secondary hover:bg-secondary/90 text-white font-bold py-3 rounded-xl text-sm transition shadow-sm hover:shadow active:scale-[0.99]">
+                                    Atur Jadwal Kunjungan
                                 </button>
-                                <button class="visit-date-btn bg-gray-50 border border-gray-200 rounded-lg py-2 text-center hover:border-primary hover:bg-[#fff5f1] transition" data-date="tomorrow">
-                                    <span class="block text-[10px] text-gray-400 font-semibold">Besok</span>
-                                    <span class="block text-xs font-bold text-secondary">{{ now()->addDay()->locale('id')->translatedFormat('d M') }}</span>
-                                </button>
-                                <button class="visit-date-btn bg-gray-50 border border-gray-200 rounded-lg py-2 text-center hover:border-primary hover:bg-[#fff5f1] transition" data-date="dayafter">
-                                    <span class="block text-[10px] text-gray-400 font-semibold">Lusa</span>
-                                    <span class="block text-xs font-bold text-secondary">{{ now()->addDays(2)->locale('id')->translatedFormat('d M') }}</span>
-                                </button>
-                            </div>
-                            <button class="w-full bg-secondary hover:bg-secondary/90 text-white font-bold py-3 rounded-xl text-sm transition">
-                                Atur Jadwal Kunjungan
-                            </button>
+                            </form>
                         </div>
 
                         <!-- Quick Info Card -->
@@ -663,13 +699,44 @@
         document.getElementById('mortgagePrice').addEventListener('input', calculateMortgage);
         calculateMortgage();
 
-        // === Visit date selection ===
-        document.querySelectorAll('.visit-date-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.visit-date-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        // === Visit date calendar handling ===
+        const visitDateInput = document.getElementById('visitDateInput');
+        const visitDateFormatted = document.getElementById('visitDateFormatted');
+        const todayStr = '{{ now()->format("Y-m-d") }}';
+
+        function formatDisplayDate(dateStr) {
+            if (!dateStr || !visitDateFormatted) return;
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                visitDateFormatted.textContent = dateObj.toLocaleDateString('id-ID', options);
+            }
+        }
+
+        if (visitDateInput) {
+            visitDateInput.addEventListener('click', function () {
+                if (typeof this.showPicker === 'function') {
+                    try {
+                        this.showPicker();
+                    } catch (err) {}
+                }
             });
-        });
+
+            visitDateInput.addEventListener('change', function () {
+                if (this.value && this.value < todayStr) {
+                    this.value = todayStr;
+                }
+                formatDisplayDate(this.value);
+            });
+
+            visitDateInput.addEventListener('input', function () {
+                if (this.value && this.value < todayStr) {
+                    this.value = todayStr;
+                }
+                formatDisplayDate(this.value);
+            });
+        }
 
         // === Fade-in Observer ===
         const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) entry.target.classList.add('visible'); }), { threshold: 0.12 });
