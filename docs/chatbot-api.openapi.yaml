@@ -1,0 +1,209 @@
+openapi: 3.0.3
+info:
+  title: Mihom Chatbot API
+  version: 1.0.0
+  description: >-
+    Same-origin, session-backed chatbot endpoint for public Mihom pages.
+    Guest conversations are associated with the current Laravel session;
+    authenticated conversations are associated with the current user.
+servers:
+  - url: /
+paths:
+  /api/chat:
+    post:
+      operationId: sendChatMessage
+      summary: Send a message to the property assistant
+      description: >-
+        Rate-limited to 10 requests per minute per IP address. Send the
+        Laravel session cookie and the X-CSRF-TOKEN header from the rendered
+        page. No bearer token is used. The endpoint intentionally allows
+        guests; a conversation owned by a different user or session returns
+        404 to avoid confirming that it exists.
+      security:
+        - LaravelSession: []
+      parameters:
+        - in: header
+          name: X-CSRF-TOKEN
+          required: true
+          schema:
+            type: string
+          description: CSRF token rendered into the page's chatbot widget.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              firstMessage:
+                value:
+                  conversation_id: null
+                  message: Cari rumah di Banyumas di bawah 500 juta
+              followUp:
+                value:
+                  conversation_id: 2fe6693f-00e0-4c3c-ae13-87aeac99c41e
+                  message: Yang punya tiga kamar tidur
+      responses:
+        '200':
+          description: Assistant response and matching published properties.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              example:
+                conversation_id: 2fe6693f-00e0-4c3c-ae13-87aeac99c41e
+                message: Saya menemukan rumah di Banyumas yang sesuai dengan kriteria Anda.
+                properties:
+                  - id: 18c5f712-0143-40cf-b15d-1bf47dba38a1
+                    title: Rumah Minimalis Banyumas
+                    price: 450000000
+                    location: Purwokerto Timur, Banyumas, Jawa Tengah
+                    bedrooms: '3'
+                    url: /detail-properti/18c5f712-0143-40cf-b15d-1bf47dba38a1
+        '404':
+          description: Conversation does not exist or belongs to another owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Percakapan tidak ditemukan.
+                code: conversation_not_found
+        '419':
+          description: Session CSRF token is missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: CSRF token mismatch.
+        '422':
+          description: Invalid input or unsupported request fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                invalidMessage:
+                  value:
+                    message: Pesan wajib diisi.
+                    errors:
+                      message:
+                        - Pesan wajib diisi.
+                unsupportedField:
+                  value:
+                    message: Permintaan memuat field yang tidak didukung.
+                    errors:
+                      request:
+                        - Hapus field yang tidak didukung lalu coba lagi.
+        '429':
+          description: Request rate limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Too Many Attempts.
+        '503':
+          description: AI provider or conversation storage is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                providerUnavailable:
+                  value:
+                    message: Asisten sedang tidak tersedia. Silakan coba lagi sebentar.
+                    code: chatbot_unavailable
+                storageUnavailable:
+                  value:
+                    message: Percakapan tidak dapat disimpan saat ini. Silakan coba lagi.
+                    code: conversation_storage_unavailable
+components:
+  securitySchemes:
+    LaravelSession:
+      type: apiKey
+      in: cookie
+      name: laravel-session
+      description: Default Laravel session cookie; the name may be overridden by SESSION_COOKIE.
+  schemas:
+    ChatRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Omit or set null for a new conversation; reuse the returned ID for follow-ups.
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: User message in Indonesian or another supported language.
+    ChatResponse:
+      type: object
+      required:
+        - conversation_id
+        - message
+        - properties
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/PropertyResult'
+    PropertyResult:
+      type: object
+      required:
+        - id
+        - title
+        - price
+        - location
+        - bedrooms
+        - url
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        location:
+          type: string
+        bedrooms:
+          type: string
+          nullable: true
+        url:
+          type: string
+          format: uri-reference
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          required:
+            - errors
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string

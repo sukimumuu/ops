@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Katalog Properti - Mihom</title>
     
      @vite(['resources/css/app.css', 'resources/css/welcome.css', 'resources/js/app.js'])
@@ -200,5 +201,6 @@
         document.querySelectorAll('.fade-in').forEach((element) => observer.observe(element));
         document.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener('click', (event) => { const target = document.querySelector(link.getAttribute('href')); if (target) { event.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); } }));
     </script>
+    @include('layouts.partials.chatbot')
 </body>
 </html>
