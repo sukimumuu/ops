@@ -19,7 +19,7 @@ class ChatbotService
      */
     public function reply(string $message, Collection $history): array
     {
-        $apiKey = config('services.openai.api_key');
+        $apiKey = config('services.groq.api_key');
 
         if (! is_string($apiKey) || $apiKey === '') {
             Log::warning('Chatbot request rejected because the AI provider is not configured.');
@@ -73,9 +73,11 @@ class ChatbotService
                 ->timeout(25)
                 ->withToken($apiKey)
                 ->acceptJson()
-                ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => config('services.openai.chat_model'),
+                ->post(rtrim((string) config('services.groq.base_url'), '/').'/chat/completions', [
+                    'model' => config('services.groq.chat_model'),
                     'messages' => $messages,
+                    'temperature' => 0.4,
+                    'max_tokens' => 800,
                 ]);
         } catch (ConnectionException) {
             Log::warning('Chatbot request could not connect to the AI provider.');
@@ -86,6 +88,7 @@ class ChatbotService
         if (! $response->successful()) {
             Log::warning('Chatbot provider returned an unsuccessful response.', [
                 'status' => $response->status(),
+                'error_code' => $response->json('error.code'),
             ]);
 
             throw new ChatbotUnavailableException('Chatbot AI provider returned an error.');

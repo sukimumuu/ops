@@ -35,9 +35,10 @@ return [
         ],
     ],
 
-    'openai' => [
-        'api_key' => env('OPENAI_API_KEY'),
-        'chat_model' => env('OPENAI_CHAT_MODEL', 'gpt-4o-mini'),
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+        'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+        'chat_model' => env('GROQ_CHAT_MODEL', 'qwen/qwen3.8-27b'),
     ],
 
 ];

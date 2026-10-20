@@ -37,13 +37,13 @@ function createChatProperty(string $title, string $status, string $city, string 
 it('returns only published matching properties and stores the conversation', function () {
     Http::preventStrayRequests();
     Http::fake([
-        'https://api.openai.com/v1/chat/completions' => Http::response([
+        'https://api.groq.com/openai/v1/chat/completions' => Http::response([
             'choices' => [
                 ['message' => ['content' => 'Saya menemukan satu rumah yang sesuai.']],
             ],
         ]),
     ]);
-    config(['services.openai.api_key' => 'test-api-key']);
+    config(['services.groq.api_key' => 'test-api-key']);
 
     $matchingProperty = createChatProperty('Rumah Banyumas 3 Kamar', 'published', 'Banyumas', '450000000', '3');
     createChatProperty('Rumah belum disetujui', 'pending_verification', 'Banyumas', '400000000', '3');
@@ -75,11 +75,11 @@ it('returns only published matching properties and stores the conversation', fun
 it('uses saved context to filter follow-up property questions', function () {
     Http::preventStrayRequests();
     Http::fake([
-        'https://api.openai.com/v1/chat/completions' => Http::sequence()
+        'https://api.groq.com/openai/v1/chat/completions' => Http::sequence()
             ->push(['choices' => [['message' => ['content' => 'Ada beberapa pilihan.']]]])
             ->push(['choices' => [['message' => ['content' => 'Ini pilihan dengan tiga kamar.']]]]),
     ]);
-    config(['services.openai.api_key' => 'test-api-key']);
+    config(['services.groq.api_key' => 'test-api-key']);
 
     $matchingProperty = createChatProperty('Rumah Banyumas 3 Kamar', 'published', 'Banyumas', '450000000', '3');
     createChatProperty('Rumah Banyumas 2 Kamar', 'published', 'Banyumas', '400000000', '2');
@@ -173,11 +173,11 @@ it('returns 404 when a different user requests an existing conversation', functi
 it('returns 404 when another browser session requests a guest conversation', function () {
     Http::preventStrayRequests();
     Http::fake([
-        'https://api.openai.com/v1/chat/completions' => Http::response([
+        'https://api.groq.com/openai/v1/chat/completions' => Http::response([
             'choices' => [['message' => ['content' => 'Saya akan membantu mencari properti.']]],
         ]),
     ]);
-    config(['services.openai.api_key' => 'test-api-key']);
+    config(['services.groq.api_key' => 'test-api-key']);
 
     $firstResponse = $this->postJson(route('chatbot.reply'), [
         'message' => 'Cari properti di Banyumas',
@@ -198,7 +198,7 @@ it('returns 404 when another browser session requests a guest conversation', fun
 it('returns 503 and does not store a conversation when the provider is not configured', function () {
     Http::preventStrayRequests();
     Http::fake();
-    config(['services.openai.api_key' => null]);
+    config(['services.groq.api_key' => null]);
 
     $this->postJson(route('chatbot.reply'), [
         'message' => 'Cari rumah di Banyumas',
@@ -214,11 +214,11 @@ it('returns 503 and does not store a conversation when the provider is not confi
 it('returns 503 without exposing upstream errors when the provider fails', function () {
     Http::preventStrayRequests();
     Http::fake([
-        'https://api.openai.com/v1/chat/completions' => Http::response([
+        'https://api.groq.com/openai/v1/chat/completions' => Http::response([
             'error' => ['message' => 'private upstream diagnostic'],
         ], 500),
     ]);
-    config(['services.openai.api_key' => 'test-api-key']);
+    config(['services.groq.api_key' => 'test-api-key']);
 
     $this->postJson(route('chatbot.reply'), [
         'message' => 'Cari rumah di Banyumas',
