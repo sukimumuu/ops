@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="{{ $property->title }} - {{ $property->city }}, {{ $property->province }}">
     <link rel="icon" href="{{ asset('assets/png/favicongray.ico') }}" media="(prefers-color-scheme: light)">
     <link rel="icon" href="{{ asset('assets/png/faviconwhite.ico') }}" media="(prefers-color-scheme: dark)">
@@ -941,6 +942,7 @@
         });
         document.querySelectorAll('.fade-in').forEach((element) => observer.observe(element));
     </script>
+    @include('layouts.partials.chatbot')
 </body>
 
 </html>
