@@ -7,7 +7,6 @@ use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\Transaction;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -76,9 +75,11 @@ class ListingController extends Controller
             'properties' => $properties,
         ]);
     }
+
     public function myProperties()
     {
         $properties = Property::where('seller_id', Auth::user()->id)->paginate(10);
+
         return view('dashboard.listing.my-properties', compact('properties'));
     }
 

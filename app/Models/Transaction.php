@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Property;
-use App\Models\TransactionLogs;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 

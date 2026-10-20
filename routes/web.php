@@ -20,6 +20,9 @@ Route::get('/kalkulator-pajak', [HomeController::class, 'taxCalculator'])->name(
 Route::get('/detail-properti/{uuid}', [HomeController::class, 'propertyDetails'])
     ->whereUuid('uuid')
     ->name('property-details');
+Route::post('/detail-properti/{uuid}/jadwalkan', [HomeController::class, 'scheduleVisit'])
+    ->whereUuid('uuid')
+    ->name('property.schedule-visit');
 Route::get('/properti', [HomeController::class, 'property'])->name('properties');
 Route::get('/tentang', [HomeController::class, 'about'])->name('about');
 Route::get('/kontak', [HomeController::class, 'contact'])->name('contact');
