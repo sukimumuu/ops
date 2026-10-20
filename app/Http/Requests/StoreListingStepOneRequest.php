@@ -30,6 +30,7 @@ class StoreListingStepOneRequest extends FormRequest
             'building_type' => ['required_if:property_type,bangunan', 'string', 'nullable'],
             'land_type' => ['required_if:property_type,tanah', 'string', 'nullable'],
             'transaction_type' => ['required', 'in:dijual,disewakan'],
+            'rent_period' => ['nullable', 'required_if:transaction_type,disewakan', 'in:bulan,tahun'],
 
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:2000'],
@@ -77,6 +78,8 @@ class StoreListingStepOneRequest extends FormRequest
             'building_type.required_if' => 'Jenis bangunan wajib dipilih.',
             'land_type.required_if' => 'Jenis tanah wajib dipilih.',
             'transaction_type.required' => 'Tujuan transaksi wajib dipilih.',
+            'rent_period.required_if' => 'Periode sewa wajib dipilih saat properti disewakan.',
+            'rent_period.in' => 'Periode sewa harus berupa bulan atau tahun.',
             'title.required' => 'Judul properti wajib diisi.',
             'description.required' => 'Deskripsi properti wajib diisi.',
             'price.required' => 'Harga properti wajib diisi.',

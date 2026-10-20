@@ -29,6 +29,7 @@ return new class extends Migration
 
             // Price
             $table->decimal('price', 15, 2);
+            $table->string('rent_period')->nullable();
             $table->boolean('negotiable')->default(false);
 
             // Location

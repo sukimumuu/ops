@@ -207,15 +207,31 @@
                             <div class="wizard-section">
                                 <div class="wizard-field">
                                     <label class="wz-label">Harga properti <span class="wz-required">*</span></label>
-                                    <div class="wz-input-group">
-                                        <span class="wz-input-prefix">Rp</span>
-                                        <input type="text" x-model="form.price"
-                                            @input="form.price = formatCurrency($event.target.value)"
-                                            placeholder="1.850.000.000" class="wz-input has-prefix">
+                                    <div class="wz-price-input-group">
+                                        <div class="wz-price-input-shell">
+                                            <div class="wz-input-group">
+                                                <span class="wz-input-prefix">Rp</span>
+                                                <input type="text" x-model="form.price" name="price"
+                                                    @input="form.price = formatCurrency($event.target.value)"
+                                                    placeholder="1.850.000.000" class="wz-input has-prefix">
+                                            </div>
+                                        </div>
+                                        <div class="wz-rent-period-shell" x-show="isRentTransaction()" x-transition>
+                                            <select x-model="form.rent_period" name="rent_period"
+                                                x-bind:disabled="!isRentTransaction()" class="wz-input"
+                                                :class="{ 'opacity-50 cursor-not-allowed': !isRentTransaction() }">
+                                                <option value="">Pilih periode</option>
+                                                <option value="bulan">Bulan</option>
+                                                <option value="tahun">Tahun</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <p class="wz-helper">Masukkan harga total properti, bukan harga per meter persegi.</p>
                                     <template x-if="errors.price">
                                         <p class="wz-error" x-text="errors.price"></p>
+                                    </template>
+                                    <template x-if="errors.rent_period">
+                                        <p class="wz-error" x-text="errors.rent_period"></p>
                                     </template>
                                 </div>
                                 <label class="wz-checkbox-label mt-3">
@@ -461,15 +477,31 @@
                             <div class="wizard-section">
                                 <div class="wizard-field">
                                     <label class="wz-label">Harga properti <span class="wz-required">*</span></label>
-                                    <div class="wz-input-group">
-                                        <span class="wz-input-prefix">Rp</span>
-                                        <input type="text" x-model="form.price"
-                                            @input="form.price = formatCurrency($event.target.value)"
-                                            placeholder="750.000.000" class="wz-input has-prefix">
+                                    <div class="wz-price-input-group">
+                                        <div class="wz-price-input-shell">
+                                            <div class="wz-input-group">
+                                                <span class="wz-input-prefix">Rp</span>
+                                                <input type="text" x-model="form.price" name="price"
+                                                    @input="form.price = formatCurrency($event.target.value)"
+                                                    placeholder="750.000.000" class="wz-input has-prefix">
+                                            </div>
+                                        </div>
+                                        <div class="wz-rent-period-shell" x-show="isRentTransaction()" x-transition>
+                                            <select x-model="form.rent_period" name="rent_period"
+                                                x-bind:disabled="!isRentTransaction()" class="wz-input"
+                                                :class="{ 'opacity-50 cursor-not-allowed': !isRentTransaction() }">
+                                                <option value="">Pilih periode</option>
+                                                <option value="bulan">Bulan</option>
+                                                <option value="tahun">Tahun</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <p class="wz-helper">Masukkan harga total tanah, bukan harga per meter persegi.</p>
                                     <template x-if="errors.price">
                                         <p class="wz-error" x-text="errors.price"></p>
+                                    </template>
+                                    <template x-if="errors.rent_period">
+                                        <p class="wz-error" x-text="errors.rent_period"></p>
                                     </template>
                                 </div>
                                 <label class="wz-checkbox-label mt-3">
@@ -501,11 +533,6 @@
                                     properti Anda.</p>
 
                                 @include('listing-wizard.partials.location-fields')
-                                <div class="wizard-field mt-4">
-                                    <label class="wz-label">Kode pos</label>
-                                    <input type="text" x-model="form.postal_code" placeholder="15224"
-                                        class="wz-input">
-                                </div>
 
                                 <div class="wizard-field mt-4">
                                     <label class="wz-label">Alamat lengkap <span class="wz-required">*</span></label>
@@ -1554,6 +1581,33 @@
             padding-right: 40px;
         }
 
+        .wz-price-input-group {
+            display: flex;
+            align-items: stretch;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .wz-price-input-shell {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .wz-rent-period-shell {
+            width: 160px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 639px) {
+            .wz-price-input-group {
+                flex-direction: column;
+            }
+
+            .wz-rent-period-shell {
+                width: 100%;
+            }
+        }
+
         /* ===== HELPER TEXT ===== */
         .wz-helper {
             font-size: 12px;
@@ -2376,6 +2430,7 @@
                     building_type: '',
                     land_type: '',
                     transaction_type: '',
+                    rent_period: '',
                     title: '',
                     description: '',
                     price: '',
@@ -2414,6 +2469,16 @@
                     return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                 },
 
+                isRentTransaction() {
+                    return this.form.transaction_type === 'disewakan';
+                },
+
+                syncRentPeriodState() {
+                    if (!this.isRentTransaction()) {
+                        this.form.rent_period = '';
+                    }
+                },
+
                 formatFileSize(bytes) {
                     if (bytes < 1024) return bytes + ' B';
                     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
@@ -2436,6 +2501,12 @@
                             this.mapMarker = null;
                         }
                     });
+
+                    this.$watch('form.transaction_type', () => {
+                        this.syncRentPeriodState();
+                    });
+
+                    this.syncRentPeriodState();
 
                     this.loadRegionOptions('provinces');
                     if (this.form.province_code) {
