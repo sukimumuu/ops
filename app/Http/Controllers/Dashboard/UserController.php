@@ -3,6 +3,11 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Appointment;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
@@ -11,9 +16,64 @@ class UserController extends Controller
         return view('dashboard.user.saved-properti');
     }
 
-    public function surveySchedule()
+    public function surveySchedule(Request $request): View
     {
-        return view('dashboard.user.survey-schedule');
+        $buyer = $request->user();
+
+        $validated = $request->validate([
+            'month' => ['sometimes', 'date_format:Y-m'],
+        ]);
+        $month = Carbon::createFromFormat('!Y-m', $validated['month'] ?? now()->format('Y-m'));
+        $monthStart = $month->copy()->startOfMonth();
+        $monthEnd = $month->copy()->endOfMonth();
+
+        $appointments = Appointment::query()
+            ->where('buyer_id', $buyer->id)
+            ->whereBetween('scheduled_at', [$monthStart, $monthEnd])
+            ->with([
+                'seller:id,name,avatar_path',
+                'property:id,title,address,city,district,certificate_type',
+            ])
+            ->orderBy('scheduled_at')
+            ->get();
+
+        $calendarBookings = $appointments->map(fn (Appointment $appointment): array => [
+            'id' => $appointment->id,
+            'seller_name' => $appointment->seller->name,
+            'avatar_url' => $appointment->seller->avatar_url,
+            'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
+            'time' => $appointment->scheduled_at->format('H:i'),
+            'status_key' => $appointment->status,
+            'status' => $appointment->statusLabel(),
+            'notes' => $appointment->notes,
+            'property_title' => $appointment->property->title,
+            'property_certificate' => $appointment->property->certificate_type,
+            'property_address' => $appointment->property->address,
+            'property_location' => $appointment->property->district.', '.$appointment->property->city,
+        ])->values();
+
+        $appointmentsByDate = $appointments->groupBy(fn (Appointment $appointment): string => $appointment->scheduled_at->toDateString());
+        $calendarStart = $monthStart->copy()->startOfWeek(Carbon::SUNDAY);
+        $calendarEnd = $monthEnd->copy()->endOfWeek(Carbon::SATURDAY);
+        $calendarDays = CarbonPeriod::create($calendarStart, $calendarEnd);
+
+        $upcomingSurveys = Appointment::query()
+            ->where('buyer_id', $buyer->id)
+            ->whereIn('status', [Appointment::STATUS_REQUESTED, Appointment::STATUS_CONFIRMED])
+            ->where('scheduled_at', '>=', now())
+            ->with(['property:id,title,city,province', 'seller:id,name'])
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->get(['id', 'property_id', 'seller_id', 'scheduled_at', 'status']);
+
+        return view('dashboard.user.survey-schedule', compact(
+            'appointments',
+            'appointmentsByDate',
+            'calendarBookings',
+            'calendarDays',
+            'month',
+            'upcomingSurveys',
+        ));
     }
 
     public function transactionEscrow()

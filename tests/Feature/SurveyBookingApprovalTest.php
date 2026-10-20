@@ -212,3 +212,91 @@ it('shows only survey requests belonging to the signed-in seller', function () {
         ->assertSee('Tolak')
         ->assertViewHas('pendingSurveyCount', 1);
 });
+
+it('shows buyers a calendar and upcoming list for their own survey bookings only', function () {
+    $buyer = User::factory()->create(['name' => 'Pembeli Kalender']);
+    $buyer->assignRole('User');
+    $seller = User::factory()->create(['name' => 'Penjual Kalender']);
+    $otherSeller = User::factory()->create(['name' => 'Penjual Lain']);
+    $otherBuyer = User::factory()->create();
+
+    $month = now()->startOfMonth();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+    $appointment->update(['scheduled_at' => $month->copy()->addDays(2)->setTime(10, 0)]);
+
+    $otherProperty = createSurveyBookingProperty($otherSeller);
+    createSurveyBooking($otherSeller, $otherBuyer, $otherProperty)
+        ->update(['scheduled_at' => $month->copy()->addDays(3)->setTime(11, 0)]);
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.survey-schedule', ['month' => $month->format('Y-m')]))
+        ->assertOk()
+        ->assertSee('Jadwal survei mendatang')
+        ->assertSee('Penjual Kalender')
+        ->assertDontSee('Penjual Lain')
+        ->assertSee('bg-amber-500', false)
+        ->assertDontSee('Setujui survei')
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+            return $bookings->count() === 1
+                && $bookings->first()['id'] === $appointment->id
+                && $bookings->first()['status_key'] === 'requested'
+                && $bookings->first()['seller_name'] === 'Penjual Kalender';
+        });
+});
+
+it('scopes the buyer survey calendar to the selected month', function () {
+    $buyer = User::factory()->create();
+    $buyer->assignRole('User');
+    $seller = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+
+    $nextMonth = now()->addMonthNoOverflow()->startOfMonth();
+    $inside = createSurveyBooking($seller, $buyer, $property);
+    $inside->update(['scheduled_at' => $nextMonth->copy()->addDays(2)->setTime(9, 0)]);
+
+    $outside = createSurveyBooking($seller, $buyer, $property);
+    $outside->update(['scheduled_at' => $nextMonth->copy()->addMonthNoOverflow()->addDays(2)->setTime(9, 0)]);
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.survey-schedule', ['month' => $nextMonth->format('Y-m')]))
+        ->assertOk()
+        ->assertViewHas('calendarBookings', function ($bookings) use ($inside, $outside): bool {
+            $ids = $bookings->pluck('id')->all();
+
+            return $ids === [$inside->id] && ! in_array($outside->id, $ids, true);
+        });
+});
+
+it('lists only upcoming requested and confirmed surveys in the buyer schedule list', function () {
+    $buyer = User::factory()->create();
+    $buyer->assignRole('User');
+    $seller = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+
+    $upcomingRequested = createSurveyBooking($seller, $buyer, $property, 'requested');
+    $upcomingRequested->update(['scheduled_at' => now()->addDays(3)]);
+
+    $upcomingConfirmed = createSurveyBooking($seller, $buyer, $property, 'confirmed');
+    $upcomingConfirmed->update(['scheduled_at' => now()->addDays(5)]);
+
+    $rejected = createSurveyBooking($seller, $buyer, $property, 'rejected');
+    $rejected->update(['scheduled_at' => now()->addDays(4)]);
+
+    $past = createSurveyBooking($seller, $buyer, $property, 'completed');
+    $past->update(['scheduled_at' => now()->subDays(3)]);
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.survey-schedule'))
+        ->assertOk()
+        ->assertSee('Disetujui')
+        ->assertViewHas('upcomingSurveys', function ($surveys) use ($upcomingRequested, $upcomingConfirmed, $rejected, $past): bool {
+            $ids = $surveys->pluck('id')->all();
+
+            return count($ids) === 2
+                && in_array($upcomingRequested->id, $ids, true)
+                && in_array($upcomingConfirmed->id, $ids, true)
+                && ! in_array($rejected->id, $ids, true)
+                && ! in_array($past->id, $ids, true);
+        });
+});
