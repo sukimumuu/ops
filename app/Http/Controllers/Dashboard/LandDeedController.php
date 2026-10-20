@@ -3,146 +3,76 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Appointment;
+use App\Models\User;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 
 class LandDeedController extends Controller
 {
     /**
      * Page 1: Dashboard Antrian
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $metrics = [
-            'total' => [
-                'title' => 'Total Antrian',
-                'count' => 24,
-                'unit' => 'berkas',
-                'description' => 'Seluruh berkas tercatat',
-                'descriptionClass' => 'text-slate-500',
-                'icon' => 'folder',
-            ],
-            'waiting_check' => [
-                'title' => 'Menunggu Pengecekan',
-                'count' => 6,
-                'unit' => 'berkas',
-                'description' => 'Termasuk 1 perlu perbaikan',
-                'descriptionClass' => 'text-slate-500',
-                'icon' => 'document',
-            ],
-            'waiting_tax' => [
-                'title' => 'Menunggu Validasi Pajak',
-                'count' => 5,
-                'unit' => 'berkas',
-                'description' => '1 berkas belum lengkap',
-                'descriptionClass' => 'text-slate-500',
-                'icon' => 'clipboard',
-            ],
-            'waiting_sign' => [
-                'title' => 'Menunggu Penandatanganan',
-                'count' => 7,
-                'unit' => 'berkas',
-                'description' => '3 jadwal hari ini',
-                'descriptionClass' => 'text-slate-500',
-                'icon' => 'calendar',
-            ],
-            'completed' => [
-                'title' => 'Transaksi Selesai',
-                'count' => 6,
-                'unit' => 'berkas',
-                'description' => 'Administrasi kantor selesai',
-                'descriptionClass' => 'text-emerald-600 font-medium',
-                'icon' => 'check-circle',
-            ],
-        ];
+        $ppat = $request->user();
+        abort_unless($ppat instanceof User && $ppat->hasRole('PPAT'), 403);
 
-        $queueItems = [
-            [
-                'queue_no' => 'A-024',
-                'trx_id' => 'TRX-2026-0152',
-                'client' => 'Rina Kartika',
-                'client_type' => 'Klien perorangan',
-                'trx_type' => 'Jual beli',
-                'property_title' => 'SHM 08231 · Pondok Aren',
-                'property_desc' => 'Jl. Merpati No. 12 · 120 m²',
-                'date' => '16 Okt 2026',
-                'time' => '08.15 WIB',
-                'status' => 'Menunggu Pengecekan',
-                'status_variant' => 'amber',
-                'note' => null,
-            ],
-            [
-                'queue_no' => 'A-023',
-                'trx_id' => 'TRX-2026-0151',
-                'client' => 'Budi Santoso',
-                'client_type' => 'Klien perorangan',
-                'trx_type' => 'Jual beli',
-                'property_title' => 'SHM 04108 · Serpong',
-                'property_desc' => 'Jl. Anggrek No. 8 · 180 m²',
-                'date' => '15 Okt 2026',
-                'time' => '14.20 WIB',
-                'status' => 'Menunggu Pengecekan',
-                'status_variant' => 'amber',
-                'note' => 'BPN: dalam proses',
-            ],
-            [
-                'queue_no' => 'A-022',
-                'trx_id' => 'TRX-2026-0150',
-                'client' => 'Dewi Lestari',
-                'client_type' => 'Klien perorangan',
-                'trx_type' => 'Hibah',
-                'property_title' => 'SHM 06742 · Pamulang',
-                'property_desc' => 'Jl. Kenanga No. 21 · 150 m²',
-                'date' => '14 Okt 2026',
-                'time' => '10.05 WIB',
-                'status' => 'Menunggu Pengecekan',
-                'status_variant' => 'amber',
-                'note' => 'Perbaikan dokumen diperlukan',
-            ],
-            [
-                'queue_no' => 'A-021',
-                'trx_id' => 'TRX-2026-0149',
-                'client' => 'Ahmad Fauzi',
-                'client_type' => 'Klien perorangan',
-                'trx_type' => 'Jual beli',
-                'property_title' => 'SHM 03216 · Ciputat',
-                'property_desc' => 'Jl. Melati No. 6 · 96 m²',
-                'date' => '13 Okt 2026',
-                'time' => '09.40 WIB',
-                'status' => 'Menunggu Validasi Pajak',
-                'status_variant' => 'blue',
-                'note' => null,
-            ],
-            [
-                'queue_no' => 'A-014',
-                'trx_id' => 'TRX-2026-0142',
-                'client' => 'Andi Pratama',
-                'client_type' => 'Klien perorangan',
-                'trx_type' => 'Jual beli',
-                'property_title' => 'SHM 01245 · Pondok Aren',
-                'property_desc' => 'Jl. Bintaro Blok H No. 12 · 120 m²',
-                'date' => '02 Okt 2026',
-                'time' => '13.10 WIB',
-                'status' => 'Menunggu Penandatanganan',
-                'status_variant' => 'purple',
-                'note' => 'Jadwal hari ini - perlu diatur ulang',
-            ],
-            [
-                'queue_no' => 'A-011',
-                'trx_id' => 'TRX-2026-0139',
-                'client' => 'Nur Aisyah',
-                'client_type' => 'Klien perorangan',
-                'trx_type' => 'Jual beli',
-                'property_title' => 'SHM 01973 · Pamulang',
-                'property_desc' => 'Jl. Salak No. 9 · 140 m²',
-                'date' => '29 Sep 2026',
-                'time' => '11.30 WIB',
-                'status' => 'Transaksi Selesai',
-                'status_variant' => 'emerald',
-                'note' => 'Administrasi PPAT - BPN dipantau terpisah',
-            ],
-        ];
+        $validated = $request->validate([
+            'month' => ['sometimes', 'date_format:Y-m'],
+        ]);
+        $month = Carbon::createFromFormat('!Y-m', $validated['month'] ?? now()->format('Y-m'));
+        $monthStart = $month->copy()->startOfMonth();
+        $monthEnd = $month->copy()->endOfMonth();
 
-        return view('dashboard.land-deed.index', compact('metrics', 'queueItems'));
+        $appointments = Appointment::query()
+            ->whereHas('property', fn (Builder $query): Builder => $query->where('assigned_ppat_id', $ppat->id))
+            ->whereBetween('scheduled_at', [$monthStart, $monthEnd])
+            ->with([
+                'buyer:id,name,avatar_path',
+                'seller:id,name',
+                'property:id,title,address,city,district,certificate_type',
+            ])
+            ->orderBy('scheduled_at')
+            ->get();
+
+        $calendarBookings = $appointments->map(fn (Appointment $appointment): array => [
+            'id' => $appointment->id,
+            'client_name' => $appointment->buyer->name,
+            'avatar_url' => $appointment->buyer->avatar_url,
+            'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
+            'time' => $appointment->scheduled_at->format('H:i'),
+            'status' => match ($appointment->status) {
+                'requested' => 'Menunggu konfirmasi',
+                'confirmed' => 'Terjadwal',
+                'rejected' => 'Ditolak',
+                'completed' => 'Selesai',
+                'cancelled' => 'Dibatalkan',
+                default => 'Status tidak diketahui',
+            },
+            'notes' => $appointment->notes,
+            'property_title' => $appointment->property->title,
+            'property_certificate' => $appointment->property->certificate_type,
+            'property_address' => $appointment->property->address,
+            'property_location' => $appointment->property->district.', '.$appointment->property->city,
+            'seller_name' => $appointment->seller->name,
+        ])->values();
+
+        $appointmentsByDate = $appointments->groupBy(fn (Appointment $appointment): string => $appointment->scheduled_at->toDateString());
+        $calendarStart = $monthStart->copy()->startOfWeek(Carbon::SUNDAY);
+        $calendarEnd = $monthEnd->copy()->endOfWeek(Carbon::SATURDAY);
+        $calendarDays = CarbonPeriod::create($calendarStart, $calendarEnd);
+
+        return view('dashboard.land-deed.index', compact(
+            'appointments',
+            'appointmentsByDate',
+            'calendarBookings',
+            'calendarDays',
+            'month',
+        ));
     }
 
     /**

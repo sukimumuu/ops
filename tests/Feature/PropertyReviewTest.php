@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
 use App\Models\User;
@@ -374,4 +375,49 @@ it('rejects non-PPAT assignment and prevents unauthorized users from assigning P
         'id' => $property->id,
         'assigned_ppat_id' => null,
     ]);
+});
+
+it('shows only survey appointments for properties assigned to the signed-in PPAT', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $otherPpat = User::factory()->create();
+    $otherPpat->assignRole('PPAT');
+    $buyer = User::factory()->create(['name' => 'Assigned Survey Client']);
+    $otherBuyer = User::factory()->create(['name' => 'Private Survey Client']);
+
+    $assignedProperty = createReviewProperty();
+    $assignedProperty->update(['assigned_ppat_id' => $ppat->id]);
+    $privateProperty = createReviewProperty();
+    $privateProperty->update(['assigned_ppat_id' => $otherPpat->id]);
+
+    $assignedAppointment = Appointment::query()->create([
+        'property_id' => $assignedProperty->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $assignedProperty->seller_id,
+        'scheduled_at' => '2026-10-19 10:00:00',
+        'status' => 'confirmed',
+    ]);
+    Appointment::query()->create([
+        'property_id' => $privateProperty->id,
+        'buyer_id' => $otherBuyer->id,
+        'seller_id' => $privateProperty->seller_id,
+        'scheduled_at' => '2026-10-19 11:00:00',
+        'status' => 'confirmed',
+    ]);
+
+    $this->actingAs($ppat)
+        ->get(route('land-deed.index', ['month' => '2026-10']))
+        ->assertOk()
+        ->assertSee('Assigned Survey Client')
+        ->assertDontSee('Private Survey Client')
+        ->assertViewHas('appointments', fn ($appointments): bool => $appointments->modelKeys() === [$assignedAppointment->id]);
+});
+
+it('denies non-PPAT users access to the survey calendar', function () {
+    $user = User::factory()->create();
+    $user->assignRole('User');
+
+    $this->actingAs($user)
+        ->get(route('land-deed.index'))
+        ->assertForbidden();
 });

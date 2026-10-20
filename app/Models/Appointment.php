@@ -2,14 +2,19 @@
 
 namespace App\Models;
 
-use App\Models\Property;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Appointment extends Model
 {
     protected $guarded = ['id'];
+
+    protected function casts(): array
+    {
+        return [
+            'scheduled_at' => 'datetime',
+        ];
+    }
 
     public function property(): BelongsTo
     {
