@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\Dashboard\AdminController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\LandDeedController;
@@ -25,6 +26,9 @@ Route::post('/detail-properti/{uuid}/jadwalkan', [HomeController::class, 'schedu
 Route::get('/properti', [HomeController::class, 'property'])->name('properties');
 Route::get('/tentang', [HomeController::class, 'about'])->name('about');
 Route::get('/kontak', [HomeController::class, 'contact'])->name('contact');
+Route::post('/api/chat', [ChatbotController::class, 'ask'])
+    ->middleware('throttle:10,1')
+    ->name('chatbot.reply');
 
 Route::get('/masuk', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/masuk', [AuthController::class, 'login']);

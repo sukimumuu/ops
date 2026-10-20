@@ -46,5 +46,6 @@
 </div>
 
 @stack('scripts')
+@include('layouts.partials.chatbot')
 </body>
 </html>
