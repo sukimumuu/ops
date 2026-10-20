@@ -149,3 +149,32 @@ it('persists selected region codes with the existing region names', function () 
         ->and($property->district)->toBe('Pondok Aren')
         ->and($property->district_code)->toBe('36.74.03');
 });
+
+it('accepts a rent period when the transaction type is disewakan', function () {
+    $this->actingAs(User::factory()->create())
+        ->postJson(route('listing.step-one'), [
+            'property_type' => 'bangunan',
+            'building_type' => 'rumah',
+            'transaction_type' => 'disewakan',
+            'rent_period' => 'bulan',
+            'title' => 'Rumah disewakan di BSD',
+            'description' => 'Hunian nyaman siap sewa.',
+            'price' => 15000000,
+            'negotiable' => false,
+            'land_area_sqm' => 120,
+            'building_area_sqm' => 90,
+            'bedrooms' => 3,
+            'bathrooms' => 2,
+            'floors' => 1,
+            'condition' => 'siap_huni',
+            'certificate_type' => 'SHM',
+            'province' => 'Banten',
+            'province_code' => '36',
+            'city' => 'Kota Tangerang Selatan',
+            'city_code' => '36.74',
+            'district' => 'Pondok Aren',
+            'district_code' => '36.74.03',
+            'address' => 'Jl. Contoh No. 1',
+        ])
+        ->assertOk();
+});
