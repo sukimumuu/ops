@@ -48,6 +48,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const properties = chatbot?.querySelector('[data-chatbot-properties]');
     const suggestions = chatbot?.querySelectorAll('[data-chatbot-question]') || [];
     const chatForm = chatInput.closest('form');
+    const formFillEnabled = chatbot.dataset.formFill === 'true';
+    const wizardRoot = formFillEnabled
+        ? document.querySelector('[x-data^="listingWizard"]')
+        : null;
     let isSending = false;
 
     if (!document.querySelector('meta[name="csrf-token"]')) {
@@ -113,6 +117,266 @@ document.addEventListener('DOMContentLoaded', function () {
         scrollToLatestMessage();
     }
 
+    const FORM_FILL_SUCCESS_MESSAGE = 'Baik, saya telah mengisi formulir sesuai data Anda. Silakan diperiksa kembali.';
+
+    const FORM_FILL_ENUMS = {
+        property_type: ['bangunan', 'tanah'],
+        building_type: ['rumah', 'apartemen', 'ruko', 'villa', 'gudang', 'kantor'],
+        land_type: ['kavling', 'sawah', 'kebun', 'komersial', 'industri'],
+        transaction_type: ['dijual', 'disewakan'],
+        rent_period: ['bulan', 'tahun'],
+        condition: ['baru', 'siap_huni', 'butuh_renovasi'],
+        certificate_type: ['SHM', 'SHGB', 'GIRIK', 'AJB', 'OTHER'],
+        land_contour: ['datar', 'miring', 'berbukit'],
+        road_access: ['jalan_utama', 'jalan_lingkungan', 'gang'],
+        zone_type: ['perumahan', 'komersial', 'industri', 'pertanian', 'campuran'],
+    };
+
+    const FORM_FILL_TEXT_LIMITS = {
+        title: 255,
+        description: 2000,
+        address: 500,
+    };
+
+    const FORM_FILL_NUMBERS = {
+        land_area_sqm: false,
+        building_area_sqm: false,
+        front_width: false,
+        bedrooms: true,
+        bathrooms: true,
+        floors: true,
+    };
+
+    const FORM_FILL_LABELS = {
+        property_type: 'tipe properti',
+        building_type: 'jenis bangunan',
+        land_type: 'jenis tanah',
+        transaction_type: 'tujuan transaksi',
+        rent_period: 'periode sewa',
+        title: 'judul properti',
+        description: 'deskripsi',
+        price: 'harga',
+        negotiable: 'status nego',
+        land_area_sqm: 'luas tanah',
+        building_area_sqm: 'luas bangunan',
+        bedrooms: 'kamar tidur',
+        bathrooms: 'kamar mandi',
+        floors: 'jumlah lantai',
+        condition: 'kondisi bangunan',
+        certificate_type: 'sertifikat',
+        address: 'alamat',
+        front_width: 'lebar depan',
+        land_contour: 'kontur tanah',
+        road_access: 'akses jalan',
+        zone_type: 'peruntukan zona',
+    };
+
+    function getWizardState() {
+        if (!wizardRoot || !window.Alpine || typeof window.Alpine.$data !== 'function') {
+            return null;
+        }
+
+        try {
+            const state = window.Alpine.$data(wizardRoot);
+
+            return state && typeof state === 'object' && state.form ? state : null;
+        } catch {
+            return null;
+        }
+    }
+
+    function applyFormFill(payload) {
+        const state = getWizardState();
+
+        if (!state || !payload || typeof payload !== 'object' || Array.isArray(payload)) {
+            return null;
+        }
+
+        const applied = [];
+        const skipped = [];
+        const markApplied = (key) => {
+            if (!applied.includes(key)) {
+                applied.push(key);
+            }
+        };
+        const markSkipped = (key) => {
+            if (!skipped.includes(key)) {
+                skipped.push(key);
+            }
+        };
+
+        const requestedType = FORM_FILL_ENUMS.property_type.includes(payload.property_type)
+            ? payload.property_type
+            : null;
+        const inferredType = requestedType
+            || (payload.building_type !== undefined ? 'bangunan' : null)
+            || (payload.land_type !== undefined ? 'tanah' : null);
+
+        if (inferredType !== null) {
+            state.form.property_type = inferredType;
+            markApplied('property_type');
+        }
+
+        const propertyType = state.form.property_type;
+
+        if (FORM_FILL_ENUMS.transaction_type.includes(payload.transaction_type)) {
+            state.form.transaction_type = payload.transaction_type;
+            markApplied('transaction_type');
+        } else if (payload.transaction_type !== undefined) {
+            markSkipped('transaction_type');
+        }
+
+        const setEnum = (key) => {
+            const value = payload[key];
+
+            if (value === undefined) {
+                return;
+            }
+
+            if (FORM_FILL_ENUMS[key].includes(value)) {
+                state.form[key] = value;
+                markApplied(key);
+            } else {
+                markSkipped(key);
+            }
+        };
+
+        const setText = (key) => {
+            const value = payload[key];
+
+            if (value === undefined) {
+                return;
+            }
+
+            if (typeof value !== 'string') {
+                markSkipped(key);
+                return;
+            }
+
+            const trimmed = value.trim();
+
+            if (trimmed === '' || trimmed.length > FORM_FILL_TEXT_LIMITS[key]) {
+                markSkipped(key);
+                return;
+            }
+
+            state.form[key] = trimmed;
+            markApplied(key);
+        };
+
+        const setNumber = (key) => {
+            const value = payload[key];
+
+            if (value === undefined) {
+                return;
+            }
+
+            const number = Number(value);
+            const minimum = key === 'floors' ? 1 : 0;
+
+            if (!Number.isFinite(number) || number < minimum) {
+                markSkipped(key);
+                return;
+            }
+
+            state.form[key] = FORM_FILL_NUMBERS[key] ? Math.round(number) : number;
+            markApplied(key);
+        };
+
+        setEnum('building_type');
+        setEnum('land_type');
+
+        ['condition', 'certificate_type', 'land_contour', 'road_access', 'zone_type']
+            .forEach(setEnum);
+
+        Object.keys(FORM_FILL_TEXT_LIMITS).forEach(setText);
+        Object.keys(FORM_FILL_NUMBERS).forEach(setNumber);
+
+        if (payload.price !== undefined) {
+            const price = Number(payload.price);
+
+            if (Number.isFinite(price) && price >= 0) {
+                state.form.price = state.formatCurrency(String(Math.round(price)));
+                markApplied('price');
+            } else {
+                markSkipped('price');
+            }
+        }
+
+        if (typeof payload.negotiable === 'boolean') {
+            state.form.negotiable = payload.negotiable;
+            markApplied('negotiable');
+        } else if (payload.negotiable !== undefined) {
+            markSkipped('negotiable');
+        }
+
+        if (payload.rent_period !== undefined) {
+            if (state.form.transaction_type === 'disewakan'
+                && FORM_FILL_ENUMS.rent_period.includes(payload.rent_period)) {
+                state.form.rent_period = payload.rent_period;
+                markApplied('rent_period');
+            } else {
+                markSkipped('rent_period');
+            }
+        }
+
+        const knownFields = new Set([
+            ...Object.keys(FORM_FILL_ENUMS),
+            ...Object.keys(FORM_FILL_TEXT_LIMITS),
+            ...Object.keys(FORM_FILL_NUMBERS),
+            'price',
+            'negotiable',
+        ]);
+
+        Object.keys(payload).forEach((key) => {
+            if (!knownFields.has(key)) {
+                markSkipped(key);
+            }
+        });
+
+        if (typeof state.syncRentPeriodState === 'function') {
+            state.syncRentPeriodState();
+        }
+
+        if (applied.length > 0) {
+            if (state.errors && typeof state.errors === 'object') {
+                applied.forEach((key) => {
+                    delete state.errors[key];
+                });
+            }
+
+            if (state.currentStep !== 1) {
+                state.currentStep = 1;
+            }
+        }
+
+        return {
+            applied,
+            skipped,
+            propertyType,
+        };
+    }
+
+    function formFillMessages(outcome) {
+        if (outcome.applied.length === 0) {
+            return [
+                'Maaf, saya belum dapat mengisi formulir dari deskripsi tersebut. Coba sebutkan tipe properti, harga, dan lokasinya.',
+            ];
+        }
+
+        const messages = [FORM_FILL_SUCCESS_MESSAGE];
+
+        if (outcome.skipped.length > 0) {
+            const fields = [...new Set(outcome.skipped)]
+                .map((key) => FORM_FILL_LABELS[key] || key)
+                .join(', ');
+
+            messages.push(`Catatan: ${fields} belum dapat diterapkan otomatis. Silakan lengkapi manual.`);
+        }
+
+        return messages;
+    }
+
     async function sendMessage() {
         const message = chatInput.value.trim();
 
@@ -144,6 +408,12 @@ document.addEventListener('DOMContentLoaded', function () {
         loadingBubble.classList.add('animate-pulse', 'text-slate-500');
 
         try {
+            const requestBody = { message };
+
+            if (formFillEnabled && wizardRoot) {
+                requestBody.context = 'listing_create';
+            }
+
             const response = await fetch(endpoint, {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -153,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'X-CSRF-TOKEN': csrfToken,
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({ message }),
+                body: JSON.stringify(requestBody),
             });
             const result = await response.json();
 
@@ -161,6 +431,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (!response.ok) {
                 throw new Error('Maaf, server sedang sibuk. Silakan coba lagi.');
+            }
+
+            if (result.type === 'form_fill') {
+                const outcome = applyFormFill(result.data);
+
+                if (outcome === null) {
+                    addMessage(
+                        'bot',
+                        'Maaf, data formulir dari asisten tidak dapat diterapkan. Silakan isi formulir secara manual.',
+                    );
+
+                    return;
+                }
+
+                formFillMessages(outcome).forEach((replyMessage) => addMessage('bot', replyMessage));
+
+                if (outcome.applied.length > 0 && wizardRoot) {
+                    wizardRoot.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+                return;
             }
 
             const reply = result.message

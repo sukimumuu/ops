@@ -9,7 +9,9 @@ use App\Services\Chatbot\ChatbotUnavailableException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -19,7 +21,14 @@ class ChatbotController extends Controller
 
     public function ask(Request $request): JsonResponse
     {
-        $unexpectedFields = array_diff(array_keys($request->all()), ['message', 'conversation_id']);
+        if (Gate::denies('use-chatbot')) {
+            return response()->json([
+                'message' => 'Anda tidak memiliki akses ke asisten ini.',
+                'code' => 'chatbot_forbidden',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $unexpectedFields = array_diff(array_keys($request->all()), ['message', 'conversation_id', 'context']);
 
         if ($unexpectedFields !== []) {
             return response()->json([
@@ -33,11 +42,13 @@ class ChatbotController extends Controller
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:2000'],
             'conversation_id' => ['nullable', 'uuid'],
+            'context' => ['nullable', 'string', Rule::in(['listing_create'])],
         ], [
             'message.required' => 'Pesan wajib diisi.',
             'message.string' => 'Pesan wajib berupa teks.',
             'message.max' => 'Pesan maksimal 2000 karakter.',
             'conversation_id.uuid' => 'ID percakapan tidak valid.',
+            'context.in' => 'Konteks percakapan tidak didukung.',
         ]);
 
         $conversation = null;
@@ -64,8 +75,11 @@ class ChatbotController extends Controller
                 ->sortBy('id')
                 ->values();
 
+        $allowFormFill = ($validated['context'] ?? null) === 'listing_create'
+            && Gate::allows('fill-property-form');
+
         try {
-            $reply = $this->chatbotService->reply($validated['message'], $history);
+            $reply = $this->chatbotService->reply($validated['message'], $history, $allowFormFill);
         } catch (ChatbotUnavailableException) {
             return response()->json([
                 'message' => 'Asisten sedang tidak tersedia. Silakan coba lagi sebentar.',
@@ -108,7 +122,7 @@ class ChatbotController extends Controller
 
         $request->session()->put('mihom_chat_conversation_id', $conversation->uuid);
 
-        return response()->json([
+        $payload = [
             'conversation_id' => $conversation->uuid,
             'message' => $reply['message'],
             'properties' => $reply['properties']
@@ -123,7 +137,14 @@ class ChatbotController extends Controller
                     'url' => route('property-details', $property->uuid),
                 ])
                 ->values(),
-        ]);
+        ];
+
+        if ($reply['form_fill'] !== null) {
+            $payload['type'] = 'form_fill';
+            $payload['data'] = $reply['form_fill'];
+        }
+
+        return response()->json($payload);
     }
 
     private function ownsConversation(ChatConversation $conversation, Request $request): bool

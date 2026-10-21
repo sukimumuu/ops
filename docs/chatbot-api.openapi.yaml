@@ -43,23 +43,48 @@ paths:
                 value:
                   conversation_id: 2fe6693f-00e0-4c3c-ae13-87aeac99c41e
                   message: Yang punya tiga kamar tidur
+              listingCreation:
+                value:
+                  conversation_id: null
+                  context: listing_create
+                  message: Saya mau jual rumah 3 lantai di Bintaro harganya 1.8 miliar.
       responses:
         '200':
-          description: Assistant response and matching published properties.
+          description: >-
+            Assistant response and matching published properties. When the
+            assistant calls the `fill_property_form` tool, `type` is
+            `form_fill` and `data` contains the validated listing wizard
+            values. The listing is never saved by this endpoint.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatResponse'
-              example:
-                conversation_id: 2fe6693f-00e0-4c3c-ae13-87aeac99c41e
-                message: Saya menemukan rumah di Banyumas yang sesuai dengan kriteria Anda.
-                properties:
-                  - id: 18c5f712-0143-40cf-b15d-1bf47dba38a1
-                    title: Rumah Minimalis Banyumas
-                    price: 450000000
-                    location: Purwokerto Timur, Banyumas, Jawa Tengah
-                    bedrooms: '3'
-                    url: /detail-properti/18c5f712-0143-40cf-b15d-1bf47dba38a1
+              examples:
+                conversation:
+                  value:
+                    conversation_id: 2fe6693f-00e0-4c3c-ae13-87aeac99c41e
+                    message: Saya menemukan rumah di Banyumas yang sesuai dengan kriteria Anda.
+                    properties:
+                      - id: 18c5f712-0143-40cf-b15d-1bf47dba38a1
+                        title: Rumah Minimalis Banyumas
+                        price: 450000000
+                        location: Purwokerto Timur, Banyumas, Jawa Tengah
+                        bedrooms: '3'
+                        url: /detail-properti/18c5f712-0143-40cf-b15d-1bf47dba38a1
+                formFill:
+                  value:
+                    conversation_id: 2fe6693f-00e0-4c3c-ae13-87aeac99c41e
+                    type: form_fill
+                    message: Baik, saya telah mengisi formulir sesuai data Anda. Silakan diperiksa kembali.
+                    properties: []
+                    data:
+                      property_type: bangunan
+                      building_type: rumah
+                      transaction_type: dijual
+                      title: Rumah 3 Lantai di Bintaro
+                      price: 1800000000
+                      floors: 3
+                      address: Bintaro
         '404':
           description: Conversation does not exist or belongs to another owner.
           content:
@@ -69,6 +94,15 @@ paths:
               example:
                 message: Percakapan tidak ditemukan.
                 code: conversation_not_found
+        '403':
+          description: The authenticated user has a privileged role that cannot use the assistant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: Anda tidak memiliki akses ke asisten ini.
+                code: chatbot_forbidden
         '419':
           description: Session CSRF token is missing or invalid.
           content:
@@ -143,6 +177,14 @@ components:
           minLength: 1
           maxLength: 2000
           description: User message in Indonesian or another supported language.
+        context:
+          type: string
+          nullable: true
+          enum:
+            - listing_create
+          description: >-
+            Set to `listing_create` only from the listing creation page. Enables
+            the `fill_property_form` tool for authenticated, non-privileged users.
     ChatResponse:
       type: object
       required:
@@ -159,6 +201,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PropertyResult'
+        type:
+          type: string
+          enum:
+            - form_fill
+          description: Present only when validated listing form values are returned.
+        data:
+          type: object
+          description: >-
+            Validated listing wizard values. Every key is optional and unknown
+            or invalid values are dropped server-side.
+          additionalProperties: true
     PropertyResult:
       type: object
       required:

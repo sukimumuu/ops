@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -241,4 +242,183 @@ it('returns 429 after ten chatbot requests in one minute from the same IP', func
 
     $this->postJson(route('chatbot.reply'), [])
         ->assertTooManyRequests();
+});
+
+it('fills the listing form from a groq tool call with validated values', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://api.groq.com/openai/v1/chat/completions' => Http::response([
+            'choices' => [
+                [
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => null,
+                        'tool_calls' => [
+                            [
+                                'id' => 'call_fill_form',
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => 'fill_property_form',
+                                    'arguments' => json_encode([
+                                        'property_type' => 'bangunan',
+                                        'building_type' => 'rumah',
+                                        'transaction_type' => 'dijual',
+                                        'title' => 'Rumah 3 Lantai di Bintaro',
+                                        'price' => '1,8 miliar',
+                                        'floors' => 3,
+                                        'bedrooms' => 4,
+                                        'address' => 'Bintaro',
+                                        'certificate_type' => 'shm',
+                                        'unexpected_field' => 'ignored',
+                                    ]),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    ]);
+    config(['services.groq.api_key' => 'test-api-key']);
+
+    $response = $this->actingAs(User::factory()->create())
+        ->postJson(route('chatbot.reply'), [
+            'message' => 'Saya mau jual rumah 3 lantai di Bintaro harganya 1.8 miliar.',
+            'context' => 'listing_create',
+        ]);
+
+    $response->assertOk()
+        ->assertJsonPath('type', 'form_fill')
+        ->assertJsonPath('message', 'Baik, saya telah mengisi formulir sesuai data Anda. Silakan diperiksa kembali.')
+        ->assertJsonPath('data.property_type', 'bangunan')
+        ->assertJsonPath('data.building_type', 'rumah')
+        ->assertJsonPath('data.transaction_type', 'dijual')
+        ->assertJsonPath('data.price', 1800000000)
+        ->assertJsonPath('data.floors', 3)
+        ->assertJsonPath('data.certificate_type', 'SHM')
+        ->assertJsonMissingPath('data.unexpected_field');
+
+    Http::assertSent(fn (Request $request): bool => $request['tools'][0]['function']['name'] === 'fill_property_form'
+        && $request['tool_choice'] === 'auto');
+});
+
+it('does not offer the form-fill tool without an authenticated listing flow', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://api.groq.com/openai/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => 'Halo, ada yang bisa saya bantu?']]],
+        ]),
+    ]);
+    config(['services.groq.api_key' => 'test-api-key']);
+
+    $response = $this->postJson(route('chatbot.reply'), [
+        'message' => 'Saya mau jual rumah di Bintaro.',
+        'context' => 'listing_create',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('message', 'Halo, ada yang bisa saya bantu?')
+        ->assertJsonMissingPath('type')
+        ->assertJsonMissingPath('data');
+
+    Http::assertSent(fn (Request $request): bool => ! isset($request['tools']));
+});
+
+it('falls back to a conversational reply when tool arguments are malformed', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://api.groq.com/openai/v1/chat/completions' => Http::sequence()
+            ->push([
+                'choices' => [[
+                    'message' => [
+                        'content' => null,
+                        'tool_calls' => [[
+                            'type' => 'function',
+                            'function' => [
+                                'name' => 'fill_property_form',
+                                'arguments' => '{"property_type": "kapal", "price": "gratis"}',
+                            ],
+                        ]],
+                    ],
+                ]],
+            ])
+            ->push([
+                'choices' => [[
+                    'message' => [
+                        'content' => null,
+                        'tool_calls' => [[
+                            'type' => 'function',
+                            'function' => [
+                                'name' => 'fill_property_form',
+                                'arguments' => 'not-json',
+                            ],
+                        ]],
+                    ],
+                ]],
+            ]),
+    ]);
+    config(['services.groq.api_key' => 'test-api-key']);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson(route('chatbot.reply'), [
+            'message' => 'Saya mau jual properti.',
+            'context' => 'listing_create',
+        ])
+        ->assertOk()
+        ->assertJsonMissingPath('type')
+        ->assertJsonPath('message', 'Maaf, saya belum dapat memahami detail properti tersebut. Coba sebutkan tipe properti, harga, dan lokasinya.');
+
+    $this->actingAs($user)
+        ->postJson(route('chatbot.reply'), [
+            'message' => 'Saya mau jual properti lagi.',
+            'context' => 'listing_create',
+        ])
+        ->assertOk()
+        ->assertJsonMissingPath('type');
+});
+
+it('hides the chatbot and blocks the endpoint for privileged roles', function (string $roleName) {
+    Http::preventStrayRequests();
+    Http::fake();
+    config(['services.groq.api_key' => 'test-api-key']);
+
+    $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('home'))
+        ->assertOk()
+        ->assertDontSee('data-chatbot', false);
+
+    $this->actingAs($user)
+        ->get(route('listing.create'))
+        ->assertOk()
+        ->assertDontSee('data-chatbot', false);
+
+    $this->actingAs($user)
+        ->postJson(route('chatbot.reply'), ['message' => 'Cari rumah di Banyumas'])
+        ->assertForbidden()
+        ->assertJsonPath('code', 'chatbot_forbidden');
+
+    Http::assertNothingSent();
+})->with(['Superadmin', 'Admin', 'PPAT']);
+
+it('renders the chatbot for regular users and guests', function () {
+    Http::preventStrayRequests();
+    Http::fake();
+
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertSee('data-chatbot', false);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('listing.create'))
+        ->assertOk()
+        ->assertSee('data-chatbot', false)
+        ->assertSee('data-form-fill="true"', false);
 });

@@ -11,6 +11,7 @@ use App\Http\Controllers\Dashboard\PropertyReviewController;
 use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ListingAiController;
 use App\Http\Controllers\ListingWizardController;
 use App\Http\Controllers\ProfilePasswordController;
 use App\Http\Controllers\RegionDataController;
@@ -64,6 +65,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->name('regions.districts');
         Route::post('/langkah-1', [ListingWizardController::class, 'storeStepOne'])->name('step-one');
         Route::post('/langkah-2', [ListingWizardController::class, 'storeStepTwo'])->name('step-two');
+        Route::post('/ai/ekstrak', [ListingAiController::class, 'extract'])
+            ->middleware('throttle:10,1')
+            ->name('ai.extract');
+        Route::post('/ai/deskripsi', [ListingAiController::class, 'description'])
+            ->middleware('throttle:10,1')
+            ->name('ai.description');
         Route::get('/tinjau-ulang', [ListingWizardController::class, 'review'])->name('review');
         Route::post('/buat', [ListingWizardController::class, 'submit'])->name('submit');
         Route::get('/photo-url/{propertyPhoto}', [ListingWizardController::class, 'signedPhotoUrl'])->name('photo-url');

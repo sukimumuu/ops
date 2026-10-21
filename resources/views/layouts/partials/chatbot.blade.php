@@ -1,8 +1,11 @@
+{{-- Centralized visibility rule: privileged roles never receive the widget. --}}
+@can('use-chatbot')
 <div
     data-chatbot
     data-endpoint="{{ route('chatbot.reply') }}"
     data-csrf-token="{{ csrf_token() }}"
     data-conversation-id="{{ session('mihom_chat_conversation_id', '') }}"
+    data-form-fill="{{ Gate::allows('fill-property-form') && request()->routeIs('listing.create') ? 'true' : 'false' }}"
     class="font-sans"
 >
     <button
@@ -153,3 +156,4 @@
         </form>
     </section>
 </div>
+@endcan
