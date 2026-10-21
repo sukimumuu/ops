@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -238,5 +239,69 @@ class HomeController extends Controller
     public function contact(): View
     {
         return view('contact');
+    }
+
+    public function userDetails(Request $request, string $uuid): View
+    {
+        $user = User::query()
+            ->where('uuid', $uuid)
+            ->firstOrFail();
+
+        $sort = $request->query('sort', 'terbaru');
+        $category = $request->query('category');
+        $type = $request->query('type');
+
+        $query = Property::query()
+            ->where('seller_id', $user->id)
+            ->where('status', 'published')
+            ->with(['photos' => fn ($q) => $q->limit(1)]);
+
+        if (filled($category) && in_array($category, ['sale', 'rent'])) {
+            $query->where('category', $category);
+        }
+
+        if (filled($type)) {
+            $query->where('type', $type);
+        }
+
+        match ($sort) {
+            'termurah' => $query->orderBy('price', 'asc'),
+            'termahal' => $query->orderByDesc('price'),
+            default => $query->orderByDesc('created_at')->orderByDesc('id'),
+        };
+
+        $properties = $query->paginate(6)->withQueryString();
+
+        $properties->getCollection()->each(function (Property $property): void {
+            $photo = $property->photos->first();
+            $area = $property->building_area_sqm ?? $property->land_area_sqm;
+            $specs = [];
+
+            if ($property->rooms) {
+                $specs[] = "{$property->rooms} KT";
+            }
+
+            if ($property->bathrooms) {
+                $specs[] = "{$property->bathrooms} KM";
+            }
+
+            if ($area) {
+                $specs[] = number_format((float) $area, 0, ',', '.').' m²';
+            }
+
+            $property->setAttribute('listing_specs', implode(' • ', $specs));
+            $property->setAttribute(
+                'image_url',
+                $photo ? $this->propertyPhotoUrl($photo) : null,
+            );
+        });
+
+        $totalProperties = Property::query()->where('seller_id', $user->id)->where('status', 'published')->count();
+        $totalRent = Property::query()->where('seller_id', $user->id)->where('status', 'published')->where('category', 'rent')->count();
+        $totalSale = Property::query()->where('seller_id', $user->id)->where('status', 'published')->where('category', 'sale')->count();
+        $availableTypes = Property::query()->where('seller_id', $user->id)->where('status', 'published')->pluck('type')->unique()->filter()->values();
+        $cities = Property::query()->where('seller_id', $user->id)->where('status', 'published')->pluck('city')->unique()->filter()->values();
+
+        return view('user-details', compact('user', 'properties', 'sort', 'category', 'type', 'totalProperties', 'totalRent', 'totalSale', 'availableTypes', 'cities'));
     }
 }
