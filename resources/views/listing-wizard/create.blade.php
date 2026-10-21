@@ -18,7 +18,8 @@
 @endpush
 
 @section('content')
-    <div class="wizard-page" x-data="listingWizard()" x-cloak>
+    <div class="wizard-page" x-data="listingWizard()" x-cloak
+        x-effect="document.body.style.overflow = (showAiModal || showDescriptionConfirm) ? 'hidden' : ''">
 
         {{-- ===== PAGE HEADER ===== --}}
         <div class="wizard-page-header">
@@ -90,6 +91,49 @@
             x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
             x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 -translate-y-4">
+
+            {{-- ===== AI AUTO-FILL BANNER ===== --}}
+            <div class="mb-6 rounded-2xl border border-secondary/20 bg-white shadow-sm">
+                <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                    <div class="flex items-start gap-4">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7L12 3zM18.5 15l.9 2.4 2.1.9-2.1.9-.9 2.4-.9-2.4-2.1-.9 2.1-.9.9-2.4z" />
+                            </svg>
+                        </span>
+                        <div>
+                            <h2 class="font-display text-lg font-bold tracking-tight text-secondary sm:text-xl">
+                                Isi data iklan dalam hitungan detik!
+                            </h2>
+                            <p class="mt-1 max-w-xl text-sm leading-relaxed text-slate-500">
+                                Tempel informasi properti Anda, lalu biarkan AI mengisi kolom yang relevan. Data yang tidak
+                                disebutkan tidak akan diisi.
+                            </p>
+                        </div>
+                    </div>
+                    <button x-ref="aiTrigger" type="button" @click="openAiModal()"
+                        aria-label="✨ Gunakan AI" aria-haspopup="dialog" aria-controls="ai-auto-fill-modal"
+                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#e04006] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:scale-[.99]">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7L12 3zM18.5 15l.9 2.4 2.1.9-2.1.9-.9 2.4-.9-2.4-2.1-.9 2.1-.9.9-2.4z" />
+                        </svg>
+                        Gunakan AI
+                    </button>
+                </div>
+            </div>
+
+            <div x-show="aiNotice" x-cloak x-transition role="status" aria-live="polite"
+                class="mb-6 flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                <p class="leading-relaxed" x-text="aiNotice"></p>
+                <button type="button" @click="aiNotice = ''" aria-label="Tutup notifikasi"
+                    class="shrink-0 rounded-md p-1 text-emerald-600 transition hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
             <div class="wizard-card">
                 <div class="wizard-card-body">
@@ -243,11 +287,20 @@
                             {{-- Deskripsi Properti --}}
                             <div class="wizard-section">
                                 <div class="wizard-field">
-                                    <label class="wz-label">Deskripsi properti <span class="wz-required">*</span></label>
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <label class="wz-label">Deskripsi properti <span class="wz-required">*</span></label>
+                                        @include('listing-wizard.partials.ai-description-button')
+                                    </div>
                                     <textarea x-model="form.description" rows="5"
                                         placeholder="Rumah modern siap huni dengan pencahayaan alam, ruang keluarga yang luas, dan taman pribadi. Berada di lingkungan yang tenang dengan keamanan 24 jam. Dekat sekolah, pusat perbelanjaan, dan akses tol bintaro."
                                         class="wz-input wz-textarea"></textarea>
                                     <p class="wz-helper">Cantumkan kondisi, keunggulan, dan akses di sekitar properti.</p>
+                                    <div x-show="descriptionNotice" x-cloak role="status" aria-live="polite"
+                                        class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium leading-relaxed text-emerald-700"
+                                        x-text="descriptionNotice"></div>
+                                    <div x-show="descriptionError" x-cloak role="alert"
+                                        class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium leading-relaxed text-red-600"
+                                        x-text="descriptionError"></div>
                                     <template x-if="errors.description">
                                         <p class="wz-error" x-text="errors.description"></p>
                                     </template>
@@ -513,12 +566,21 @@
                             {{-- Deskripsi Properti --}}
                             <div class="wizard-section">
                                 <div class="wizard-field">
-                                    <label class="wz-label">Deskripsi properti <span class="wz-required">*</span></label>
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <label class="wz-label">Deskripsi properti <span class="wz-required">*</span></label>
+                                        @include('listing-wizard.partials.ai-description-button')
+                                    </div>
                                     <textarea x-model="form.description" rows="5"
                                         placeholder="Tanah kavling siap bangun dengan akses jalan lebar. Cocok untuk hunian atau investasi. Lokasi strategis dekat dengan fasilitas publik dan akses tol."
                                         class="wz-input wz-textarea"></textarea>
                                     <p class="wz-helper">Cantumkan kondisi tanah, topografi, akses jalan, dan potensi
                                         pengembangan.</p>
+                                    <div x-show="descriptionNotice" x-cloak role="status" aria-live="polite"
+                                        class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium leading-relaxed text-emerald-700"
+                                        x-text="descriptionNotice"></div>
+                                    <div x-show="descriptionError" x-cloak role="alert"
+                                        class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium leading-relaxed text-red-600"
+                                        x-text="descriptionError"></div>
                                     <template x-if="errors.description">
                                         <p class="wz-error" x-text="errors.description"></p>
                                     </template>
@@ -1090,6 +1152,99 @@
                             stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===== AI AUTO-FILL MODAL ===== --}}
+        <div x-show="showAiModal" x-cloak id="ai-auto-fill-modal"
+            class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+            role="dialog" aria-modal="true" aria-labelledby="ai-modal-title"
+            @keydown.escape.window="showAiModal && closeAiModal()">
+            <div class="absolute inset-0 bg-secondary/50 backdrop-blur-sm" @click="closeAiModal()"></div>
+
+            <div class="relative w-full max-w-lg overflow-hidden rounded-2xl border border-secondary/20 bg-white shadow-2xl"
+                @click.stop>
+                <div class="border-b border-slate-100 px-5 py-4 sm:px-6">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 id="ai-modal-title" class="font-display text-xl font-bold text-secondary">
+                                Isi Form dengan AI
+                            </h3>
+                            <p class="mt-1 text-sm leading-relaxed text-slate-500">
+                                Tempel informasi properti Anda. AI akan mengekstrak data yang disebutkan dan mengisi
+                                formulir secara otomatis.
+                            </p>
+                        </div>
+                        <button type="button" @click="closeAiModal()" :disabled="aiLoading"
+                            aria-label="Tutup modal"
+                            class="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="max-h-[calc(100dvh-14rem)] overflow-y-auto px-5 py-4 sm:px-6">
+                    <label for="ai-property-text" class="wz-label">Informasi properti</label>
+                    <textarea id="ai-property-text" x-ref="aiTextarea" x-model="aiInput" rows="7" maxlength="5000"
+                        :disabled="aiLoading" @keydown.ctrl.enter.prevent="submitAiExtraction()"
+                        @keydown.meta.enter.prevent="submitAiExtraction()"
+                        placeholder="Contoh: Dijual rumah 2 lantai di Bintaro, luas bangunan 120 meter persegi, luas tanah 150 meter persegi, harga 1,8 miliar, terdiri dari 3 kamar tidur dan 2 kamar mandi."
+                        class="wz-input wz-textarea min-h-[160px] resize-y"></textarea>
+                    <p class="wz-helper">Minimal 10 karakter. Data yang tidak disebutkan tidak akan diisi.</p>
+
+                    <div x-show="aiError" x-cloak role="alert"
+                        class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium leading-relaxed text-red-600"
+                        x-text="aiError"></div>
+                </div>
+
+                <div
+                    class="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+                    <button type="button" @click="closeAiModal()" :disabled="aiLoading"
+                        class="wz-btn-draft justify-center sm:justify-start">
+                        Batal
+                    </button>
+                    <button type="button" @click="submitAiExtraction()" :disabled="aiLoading"
+                        class="wz-btn-primary justify-center disabled:translate-y-0 disabled:shadow-none sm:justify-start">
+                        <svg x-show="aiLoading" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <span x-text="aiLoading ? 'Mengekstrak...' : 'Ekstrak Data'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===== DESCRIPTION REPLACEMENT CONFIRMATION ===== --}}
+        <div x-show="showDescriptionConfirm" x-cloak class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+            role="dialog" aria-modal="true" aria-labelledby="description-confirm-title"
+            @keydown.escape.window="showDescriptionConfirm && cancelDescriptionReplacement()">
+            <div class="absolute inset-0 bg-secondary/50 backdrop-blur-sm" @click="cancelDescriptionReplacement()"></div>
+
+            <div class="relative w-full max-w-lg overflow-hidden rounded-2xl border border-secondary/20 bg-white shadow-2xl"
+                @click.stop>
+                <div class="px-5 py-5 sm:px-6">
+                    <h3 id="description-confirm-title" class="font-display text-xl font-bold text-secondary">
+                        Ganti deskripsi yang sudah ada?
+                    </h3>
+                    <p class="mt-1 text-sm leading-relaxed text-slate-500">
+                        Deskripsi Anda saat ini akan diganti dengan hasil AI. Anda tetap dapat mengeditnya setelahnya.
+                    </p>
+                    <div class="mt-4 max-h-48 overflow-y-auto whitespace-pre-line rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-secondary"
+                        x-text="pendingDescription"></div>
+                </div>
+
+                <div class="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+                    <button type="button" @click="cancelDescriptionReplacement()" class="wz-btn-draft justify-center">
+                        Batal
+                    </button>
+                    <button type="button" x-ref="descriptionConfirmButton" @click="confirmDescriptionReplacement()"
+                        class="wz-btn-primary justify-center">
+                        Ganti deskripsi
                     </button>
                 </div>
             </div>
@@ -2370,6 +2525,44 @@
                 agreedTerms: false,
                 hasDraft: false,
 
+                // AI auto-fill state
+                showAiModal: false,
+                aiInput: '',
+                aiLoading: false,
+                aiError: '',
+                aiNotice: '',
+                aiExtractEndpoint: @json(route('listing.ai.extract')),
+                aiFieldLabels: {
+                    title: 'Judul properti',
+                    price: 'Harga',
+                    property_type: 'Tipe properti',
+                    building_type: 'Jenis bangunan',
+                    land_type: 'Jenis tanah',
+                    transaction_type: 'Tujuan transaksi',
+                    rent_period: 'Periode sewa',
+                    address: 'Alamat',
+                    land_area_sqm: 'Luas tanah',
+                    building_area_sqm: 'Luas bangunan',
+                    bedrooms: 'Kamar tidur',
+                    bathrooms: 'Kamar mandi',
+                    floors: 'Jumlah lantai',
+                    condition: 'Kondisi bangunan',
+                    certificate_type: 'Sertifikat',
+                    negotiable: 'Harga nego',
+                    front_width: 'Lebar depan',
+                    land_contour: 'Kontur tanah',
+                    road_access: 'Akses jalan',
+                    zone_type: 'Zona',
+                },
+
+                // AI description state
+                isGeneratingDescription: false,
+                descriptionError: '',
+                descriptionNotice: '',
+                descriptionEndpoint: @json(route('listing.ai.description')),
+                showDescriptionConfirm: false,
+                pendingDescription: '',
+
                 // Search state
                 searchQuery: '',
                 isSearching: false,
@@ -2477,6 +2670,347 @@
                     if (!this.isRentTransaction()) {
                         this.form.rent_period = '';
                     }
+                },
+
+                openAiModal() {
+                    this.aiError = '';
+                    this.showAiModal = true;
+                    this.$nextTick(() => this.$refs.aiTextarea?.focus());
+                },
+
+                closeAiModal() {
+                    if (this.aiLoading || !this.showAiModal) return;
+
+                    this.showAiModal = false;
+                    this.$nextTick(() => this.$refs.aiTrigger?.focus());
+                },
+
+                async submitAiExtraction() {
+                    if (this.aiLoading) return;
+
+                    const text = this.aiInput.trim();
+
+                    if (text.length < 10) {
+                        this.aiError = 'Tuliskan informasi properti minimal 10 karakter.';
+                        return;
+                    }
+
+                    this.aiLoading = true;
+                    this.aiError = '';
+
+                    try {
+                        const response = await fetch(this.aiExtractEndpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify({
+                                text
+                            }),
+                        });
+
+                        const payload = await response.json().catch(() => null);
+
+                        if (!response.ok) {
+                            this.aiError = this.apiErrorMessage(payload,
+                                'Data properti gagal diekstrak. Silakan coba lagi.');
+                            return;
+                        }
+
+                        const data = payload?.data;
+
+                        if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length === 0) {
+                            this.aiError = 'Tidak ada data properti yang dapat dikenali. Coba sebutkan tipe, lokasi, luas, atau harga properti.';
+                            return;
+                        }
+
+                        this.applyAiExtraction(data);
+
+                        const fields = Array.isArray(payload.fields) ? payload.fields : Object.keys(data);
+                        const labels = fields.map((field) => this.aiFieldLabels[field]).filter(Boolean);
+
+                        this.aiNotice = labels.length > 0 ?
+                            `${labels.length} data berhasil diisi: ${labels.join(', ')}. Periksa kembali dan lengkapi kolom yang belum terisi.` :
+                            'Data properti berhasil diisi. Periksa kembali dan lengkapi kolom yang belum terisi.';
+
+                        this.showAiModal = false;
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                        this.$nextTick(() => this.$refs.aiTrigger?.focus());
+                    } catch (error) {
+                        console.error('AI extraction error:', error);
+                        this.aiError = 'Terjadi kesalahan koneksi. Silakan coba lagi.';
+                    } finally {
+                        this.aiLoading = false;
+                    }
+                },
+
+                applyAiExtraction(data) {
+                    const allowedFields = [
+                        'title',
+                        'price',
+                        'property_type',
+                        'building_type',
+                        'land_type',
+                        'transaction_type',
+                        'rent_period',
+                        'address',
+                        'land_area_sqm',
+                        'building_area_sqm',
+                        'bedrooms',
+                        'bathrooms',
+                        'floors',
+                        'condition',
+                        'certificate_type',
+                        'negotiable',
+                        'front_width',
+                        'land_contour',
+                        'road_access',
+                        'zone_type',
+                    ];
+                    const priorityFields = [
+                        'property_type',
+                        'building_type',
+                        'land_type',
+                        'transaction_type',
+                        'rent_period',
+                    ];
+                    const orderedFields = [
+                        ...priorityFields,
+                        ...allowedFields.filter((field) => !priorityFields.includes(field)),
+                    ];
+                    const appliedFields = [];
+
+                    orderedFields.forEach((field) => {
+                        if (!Object.prototype.hasOwnProperty.call(data, field)) return;
+
+                        if (field === 'price') {
+                            const price = Number(data[field]);
+
+                            if (!Number.isFinite(price)) return;
+
+                            this.form.price = this.formatCurrency(String(Math.round(price)));
+                        } else if (field === 'negotiable') {
+                            this.form.negotiable = data[field] === true || data[field] === 1 || data[field] === '1';
+                        } else {
+                            this.form[field] = data[field];
+                        }
+
+                        appliedFields.push(field);
+                    });
+
+                    appliedFields.forEach((field) => {
+                        delete this.errors[field];
+                    });
+
+                    this.syncRentPeriodState();
+                    this.currentStep = 1;
+
+                    this.$nextTick(() => this.dispatchFieldEvents(appliedFields));
+                },
+
+                dispatchFieldEvents(fields) {
+                    fields.forEach((field) => {
+                        const controls = document.querySelectorAll(`[x-model="form.${field}"]`);
+                        const value = this.form[field];
+
+                        controls.forEach((element) => {
+                            if (element.type === 'radio') {
+                                if (element.value !== String(value ?? '')) return;
+                            } else if (element.type === 'checkbox') {
+                                element.checked = Boolean(value);
+                            } else if (element.tagName === 'SELECT') {
+                                element.value = String(value ?? '');
+                            } else if (element.type !== 'file') {
+                                element.value = String(value ?? '');
+                            }
+
+                            element.dispatchEvent(new Event('input', {
+                                bubbles: true
+                            }));
+                            element.dispatchEvent(new Event('change', {
+                                bubbles: true
+                            }));
+                        });
+                    });
+                },
+
+                collectDescriptionPayload() {
+                    const fields = [
+                        'property_type',
+                        'building_type',
+                        'land_type',
+                        'transaction_type',
+                        'rent_period',
+                        'title',
+                        'price',
+                        'negotiable',
+                        'land_area_sqm',
+                        'building_area_sqm',
+                        'front_width',
+                        'bedrooms',
+                        'bathrooms',
+                        'floors',
+                        'condition',
+                        'certificate_type',
+                        'land_contour',
+                        'road_access',
+                        'zone_type',
+                        'address',
+                        'province',
+                        'city',
+                        'district',
+                    ];
+                    const payload = {};
+
+                    fields.forEach((field) => {
+                        let value = this.form[field];
+
+                        if (field === 'price') {
+                            value = String(value ?? '').replace(/\D/g, '');
+                        }
+
+                        if (field === 'negotiable' && value !== true) return;
+                        if (value === null || value === undefined || value === '') return;
+
+                        payload[field] = value;
+                    });
+
+                    if (!payload.property_type) {
+                        if (payload.building_type) {
+                            payload.property_type = 'bangunan';
+                        } else if (payload.land_type) {
+                            payload.property_type = 'tanah';
+                        }
+                    }
+
+                    if (payload.property_type === 'bangunan') {
+                        ['land_type', 'front_width', 'land_contour', 'road_access', 'zone_type'].forEach((field) => {
+                            delete payload[field];
+                        });
+                    }
+
+                    if (payload.property_type === 'tanah') {
+                        ['building_type', 'building_area_sqm', 'bedrooms', 'bathrooms', 'floors', 'condition']
+                        .forEach((field) => {
+                            delete payload[field];
+                        });
+                    }
+
+                    return payload;
+                },
+
+                async generateDescription() {
+                    if (this.isGeneratingDescription) return;
+
+                    const payload = this.collectDescriptionPayload();
+
+                    const hasUsefulData = payload.title || payload.price || payload.building_type || payload.land_type ||
+                        payload.address;
+
+                    if (!hasUsefulData) {
+                        this.descriptionError =
+                            'Isi minimal judul, harga, jenis, atau lokasi properti sebelum membuat deskripsi.';
+                        return;
+                    }
+
+                    this.isGeneratingDescription = true;
+                    this.descriptionError = '';
+                    this.descriptionNotice = '';
+
+                    try {
+                        const response = await fetch(this.descriptionEndpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify(payload),
+                        });
+
+                        const result = await response.json().catch(() => null);
+
+                        if (!response.ok) {
+                            this.descriptionError = this.apiErrorMessage(result,
+                                'Deskripsi gagal dibuat. Silakan coba lagi.');
+                            return;
+                        }
+
+                        const description = typeof result?.description === 'string' ? result.description.trim() : '';
+
+                        if (description === '') {
+                            this.descriptionError =
+                                'AI belum dapat membuat deskripsi. Lengkapi data properti lalu coba lagi.';
+                            return;
+                        }
+
+                        if (this.form.description.trim() !== '') {
+                            this.pendingDescription = description;
+                            this.showDescriptionConfirm = true;
+                            this.$nextTick(() => this.$refs.descriptionConfirmButton?.focus());
+                            return;
+                        }
+
+                        this.applyGeneratedDescription(description);
+                    } catch (error) {
+                        console.error('AI description error:', error);
+                        this.descriptionError = 'Terjadi kesalahan koneksi. Silakan coba lagi.';
+                    } finally {
+                        this.isGeneratingDescription = false;
+                    }
+                },
+
+                applyGeneratedDescription(description) {
+                    this.form.description = description;
+                    this.descriptionNotice =
+                        'Deskripsi berhasil dibuat. Periksa dan sesuaikan sebelum melanjutkan.';
+                    this.descriptionError = '';
+                    delete this.errors.description;
+
+                    this.$nextTick(() => {
+                        document.querySelectorAll('[x-model="form.description"]').forEach((element) => {
+                            element.dispatchEvent(new Event('input', {
+                                bubbles: true
+                            }));
+                        });
+                    });
+                },
+
+                confirmDescriptionReplacement() {
+                    if (this.pendingDescription === '') return;
+
+                    this.applyGeneratedDescription(this.pendingDescription);
+                    this.pendingDescription = '';
+                    this.showDescriptionConfirm = false;
+                },
+
+                cancelDescriptionReplacement() {
+                    if (!this.showDescriptionConfirm) return;
+
+                    this.pendingDescription = '';
+                    this.showDescriptionConfirm = false;
+                },
+
+                apiErrorMessage(payload, fallback) {
+                    if (payload && typeof payload.message === 'string' && payload.message !== '' &&
+                        payload.message !== 'The given data was invalid.') {
+                        return payload.message;
+                    }
+
+                    if (payload && payload.errors && typeof payload.errors === 'object') {
+                        const firstError = Object.values(payload.errors)[0];
+
+                        if (Array.isArray(firstError) && typeof firstError[0] === 'string') {
+                            return firstError[0];
+                        }
+                    }
+
+                    return fallback;
                 },
 
                 formatFileSize(bytes) {
