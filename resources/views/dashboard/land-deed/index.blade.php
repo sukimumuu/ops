@@ -125,7 +125,8 @@
                                     <span
                                         class="inline-flex size-7 items-center justify-center rounded-full text-xs {{ $day->isToday() ? 'bg-primary font-bold text-white' : ($day->month === $month->month ? 'font-medium text-slate-700' : 'text-slate-400') }}">{{ $day->day }}</span>
                                     @if ($dayAppointments->isNotEmpty())
-                                        <span class="text-[10px] font-medium text-slate-400">{{ $dayAppointments->count() }}
+                                        <span
+                                            class="text-[10px] font-medium text-slate-400">{{ $dayAppointments->count() }}
                                             jadwal</span>
                                     @endif
                                 </div>
@@ -202,6 +203,14 @@
                                             x-text="selectedAppointment.date"></span>, pukul <span
                                             x-text="selectedAppointment.time"></span> WIB</dd>
                                 </div>
+                                <template x-if="selectedAppointment.reschedule_date">
+                                    <div class="px-4 py-3">
+                                        <dt class="text-xs text-slate-500">Saran jadwal pengganti</dt>
+                                        <dd class="mt-1 text-sm font-semibold text-primary"><span
+                                                x-text="selectedAppointment.reschedule_date"></span>, pukul <span
+                                                x-text="selectedAppointment.reschedule_time"></span> WIB</dd>
+                                    </div>
+                                </template>
                                 <div class="px-4 py-3">
                                     <dt class="text-xs text-slate-500">Status</dt>
                                     <dd class="mt-1">
@@ -238,32 +247,85 @@
                             </dl>
                         </div>
                         <div class="border-t border-slate-200 px-5 py-4">
-                            <template x-if="selectedAppointment.can_review && selectedAppointment.status_key === 'requested'">
-                                <div class="space-y-3">
+                            <template
+                                x-if="selectedAppointment.can_review && selectedAppointment.status_key === 'requested'">
+                                <div class="space-y-3" x-data="{ rejecting: false }">
                                     <p class="text-xs leading-relaxed text-slate-500">Setujui untuk mengonfirmasi jadwal
-                                        survei, atau tolak jika jadwal tidak memungkinkan.</p>
-                                    <form method="POST" x-bind:action="selectedAppointment.status_url"
-                                        class="flex flex-col gap-2 sm:flex-row">
-                                        @csrf
-                                        <button type="submit" name="status" value="confirmed"
-                                            class="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
-                                            <svg class="size-4" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="m5 13 4 4L19 7" />
-                                            </svg>
-                                            Setujui survei
-                                        </button>
-                                        <button type="submit" name="status" value="rejected"
-                                            x-on:click="if (! confirm('Tolak pengajuan survei ini?')) $event.preventDefault()"
+                                        survei, atau tolak dan tawarkan jadwal pengganti kepada pembeli.</p>
+
+                                    <div class="flex flex-col gap-2 sm:flex-row" x-show="! rejecting">
+                                        <form method="POST" x-bind:action="selectedAppointment.status_url"
+                                            class="flex-1">
+                                            @csrf
+                                            <button type="submit" name="status" value="confirmed"
+                                                class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+                                                <svg class="size-4" viewBox="0 0 24 24" fill="none"
+                                                    stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="m5 13 4 4L19 7" />
+                                                </svg>
+                                                Setujui survei
+                                            </button>
+                                        </form>
+                                        <button type="button" x-on:click="rejecting = true"
                                             class="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2">
                                             <svg class="size-4" viewBox="0 0 24 24" fill="none"
                                                 stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
                                                     d="m6 6 12 12M18 6 6 18" />
                                             </svg>
-                                            Tolak
+                                            Tolak &amp; atur jadwal
                                         </button>
+                                    </div>
+
+                                    <form x-show="rejecting" method="POST" x-bind:action="selectedAppointment.status_url"
+                                        class="space-y-3 rounded-md border border-rose-200 bg-rose-50/50 p-3">
+                                        @csrf
+                                        <input type="hidden" name="status" value="rejected">
+
+                                        <div>
+                                            <label for="suggested-date"
+                                                class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Tanggal
+                                                pengganti</label>
+                                            <input type="date" id="suggested-date" name="suggested_date"
+                                                min="{{ now()->format('Y-m-d') }}" required
+                                                class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                        </div>
+
+                                        <div>
+                                            <span
+                                                class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Waktu
+                                                pengganti</span>
+                                            <div class="mt-1 grid grid-cols-3 gap-2" role="radiogroup"
+                                                aria-label="Pilih waktu jadwal pengganti">
+                                                @foreach ($timeSlots as $slot)
+                                                    <label class="cursor-pointer">
+                                                        <input type="radio" name="suggested_time"
+                                                            value="{{ $slot }}" class="peer sr-only" required>
+                                                        <span
+                                                            class="flex flex-col items-center gap-0.5 rounded-md border border-slate-300 bg-white px-2 py-2 text-center text-sm font-extrabold text-secondary transition hover:border-primary/50 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30">
+                                                            {{ str_replace(':', '.', $slot) }}
+                                                            <span
+                                                                class="text-[10px] font-semibold uppercase tracking-wider opacity-60">WIB</span>
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                        </div>
+
+                                        <p class="text-xs leading-relaxed text-slate-500">Jadwal pengganti akan dikirim ke
+                                            pembeli untuk dikonfirmasi.</p>
+
+                                        <div class="flex flex-col gap-2 sm:flex-row">
+                                            <button type="submit"
+                                                class="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2">
+                                                Kirim jadwal pengganti
+                                            </button>
+                                            <button type="button" x-on:click="rejecting = false"
+                                                class="inline-flex flex-1 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                                                Batal
+                                            </button>
+                                        </div>
                                     </form>
                                 </div>
                             </template>
@@ -274,7 +336,7 @@
                                     pengajuan ini.</span>
                             </p>
                             <button type="button" x-on:click="selectedAppointment = null"
-                                class="w-full rounded-md bg-secondary px-4 py-2.5 text-sm font-semibold text-white hover:bg-secondary/90">Tutup
+                                class="w-full rounded-md bg-secondary px-4 py-2.5 text-sm font-semibold text-white hover:bg-secondary/90 mt-3">Tutup
                                 rincian</button>
                         </div>
                     </div>

@@ -53,6 +53,29 @@
             </p>
         </header>
 
+        @if (session('status'))
+            <div role="status"
+                class="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                <svg class="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7" />
+                </svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
+
+        @if ($errors->has('reschedule'))
+            <div role="alert"
+                class="flex items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+                <svg class="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <span>{{ $errors->first('reschedule') }}</span>
+            </div>
+        @endif
+
         <section aria-label="Kalender jadwal survei"
             class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xs">
             <div
@@ -136,6 +159,72 @@
                     {{ $pendingSurveyCount }} menunggu persetujuan</span>
             </footer>
         </section>
+
+        @if ($rescheduleRequests->isNotEmpty())
+            <x-card-dashboard title="Persetujuan jadwal pengganti"
+                subtitle="PPAT mengusulkan jadwal baru untuk survei Anda. Setujui untuk langsung mengonfirmasi jadwal tersebut, atau tolak saran.">
+                <x-slot name="actions">
+                    <span
+                        class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                        {{ $rescheduleRequests->count() }} menunggu persetujuan
+                    </span>
+                </x-slot>
+
+                <x-table>
+                    <x-slot name="head">
+                        <x-table.cell>Properti</x-table.cell>
+                        <x-table.cell>Jadwal awal</x-table.cell>
+                        <x-table.cell>Saran jadwal baru</x-table.cell>
+                        <x-table.cell>Aksi</x-table.cell>
+                    </x-slot>
+
+                    @foreach ($rescheduleRequests as $rescheduleRequest)
+                        <x-table.row striped>
+                            <x-table.data>
+                                <span class="font-bold text-secondary">{{ $rescheduleRequest->property->title }}</span>
+                                <span class="mt-1 block text-xs text-slate-500">{{ $rescheduleRequest->property->city }},
+                                    {{ $rescheduleRequest->property->province }}</span>
+                            </x-table.data>
+                            <x-table.data>
+                                {{ $rescheduleRequest->scheduled_at->locale('id')->translatedFormat('d M Y') }}
+                                <span
+                                    class="mt-1 block text-xs text-slate-500">{{ $rescheduleRequest->scheduled_at->format('H:i') }}
+                                    WIB</span>
+                            </x-table.data>
+                            <x-table.data>
+                                <span
+                                    class="font-bold text-primary">{{ $rescheduleRequest->reschedule_suggested_at->locale('id')->translatedFormat('d M Y') }}</span>
+                                <span
+                                    class="mt-1 block text-xs text-slate-500">{{ $rescheduleRequest->reschedule_suggested_at->format('H:i') }}
+                                    WIB</span>
+                            </x-table.data>
+                            <x-table.data>
+                                <div class="flex flex-wrap gap-2">
+                                    <form method="POST"
+                                        action="{{ route('buyer.survey-schedule.reschedule', $rescheduleRequest) }}">
+                                        @csrf
+                                        <input type="hidden" name="decision" value="accepted">
+                                        <button type="submit"
+                                            class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">
+                                            Setujui jadwal
+                                        </button>
+                                    </form>
+                                    <form method="POST"
+                                        action="{{ route('buyer.survey-schedule.reschedule', $rescheduleRequest) }}">
+                                        @csrf
+                                        <input type="hidden" name="decision" value="declined">
+                                        <button type="submit"
+                                            class="inline-flex items-center justify-center rounded-md border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">
+                                            Tolak saran
+                                        </button>
+                                    </form>
+                                </div>
+                            </x-table.data>
+                        </x-table.row>
+                    @endforeach
+                </x-table>
+            </x-card-dashboard>
+        @endif
 
         <x-card-dashboard title="Jadwal survei mendatang"
             subtitle="Survei properti yang akan datang atau menunggu persetujuan">
@@ -223,6 +312,14 @@
                                             x-text="selectedAppointment.date"></span>, pukul <span
                                             x-text="selectedAppointment.time"></span> WIB</dd>
                                 </div>
+                                <template x-if="selectedAppointment.reschedule_date">
+                                    <div class="px-4 py-3">
+                                        <dt class="text-xs text-slate-500">Saran jadwal pengganti</dt>
+                                        <dd class="mt-1 text-sm font-semibold text-primary"><span
+                                                x-text="selectedAppointment.reschedule_date"></span>, pukul <span
+                                                x-text="selectedAppointment.reschedule_time"></span> WIB</dd>
+                                    </div>
+                                </template>
                                 <div class="px-4 py-3">
                                     <dt class="text-xs text-slate-500">Status</dt>
                                     <dd class="mt-1">
@@ -254,6 +351,35 @@
                             </dl>
                         </div>
                         <div class="border-t border-slate-200 px-5 py-4">
+                            <template x-if="selectedAppointment.has_reschedule">
+                                <div class="mb-3 space-y-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
+                                    <p class="text-xs leading-relaxed text-slate-600">
+                                        PPAT mengusulkan jadwal pengganti. Setujui untuk langsung mengonfirmasi jadwal
+                                        baru, atau tolak saran tersebut.
+                                    </p>
+                                    <div class="flex flex-col gap-2 sm:flex-row">
+                                        <form method="POST" x-bind:action="selectedAppointment.reschedule_url"
+                                            class="flex-1">
+                                            @csrf
+                                            <input type="hidden" name="decision" value="accepted">
+                                            <button type="submit"
+                                                class="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+                                                Setujui jadwal
+                                            </button>
+                                        </form>
+                                        <form method="POST" x-bind:action="selectedAppointment.reschedule_url"
+                                            class="flex-1">
+                                            @csrf
+                                            <input type="hidden" name="decision" value="declined">
+                                            <button type="submit"
+                                                x-on:click="if (! confirm('Tolak saran jadwal pengganti ini?')) $event.preventDefault()"
+                                                class="inline-flex w-full items-center justify-center rounded-md border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2">
+                                                Tolak saran
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </template>
                             <button type="button" x-on:click="selectedAppointment = null"
                                 class="w-full rounded-md bg-secondary px-4 py-2.5 text-sm font-semibold text-white hover:bg-secondary/90">Tutup
                                 rincian</button>

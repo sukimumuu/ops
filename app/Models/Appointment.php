@@ -40,6 +40,13 @@ class Appointment extends Model
         self::STATUS_REJECTED,
     ];
 
+    /**
+     * Available time slots for a property visit.
+     *
+     * @var list<string>
+     */
+    public const TIME_SLOTS = ['09:00', '13:00', '15:30'];
+
     protected $guarded = ['id'];
 
     /**
@@ -51,6 +58,7 @@ class Appointment extends Model
     {
         return [
             'scheduled_at' => 'datetime',
+            'reschedule_suggested_at' => 'datetime',
         ];
     }
 
@@ -74,6 +82,11 @@ class Appointment extends Model
     public function isAwaitingReview(): bool
     {
         return $this->status === self::STATUS_REQUESTED;
+    }
+
+    public function hasPendingReschedule(): bool
+    {
+        return $this->status === self::STATUS_REJECTED && $this->reschedule_suggested_at !== null;
     }
 
     public function property(): BelongsTo
