@@ -45,6 +45,8 @@ class LandDeedController extends Controller
             'avatar_url' => $appointment->buyer->avatar_url,
             'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
             'time' => $appointment->scheduled_at->format('H:i'),
+            'reschedule_date' => $appointment->reschedule_suggested_at?->locale('id')->translatedFormat('l, d F Y'),
+            'reschedule_time' => $appointment->reschedule_suggested_at?->format('H:i'),
             'status_key' => $appointment->status,
             'status' => $appointment->statusLabel(),
             'can_review' => $ppat->can('review', $appointment),
@@ -62,12 +64,15 @@ class LandDeedController extends Controller
         $calendarEnd = $monthEnd->copy()->endOfWeek(Carbon::SATURDAY);
         $calendarDays = CarbonPeriod::create($calendarStart, $calendarEnd);
 
+        $timeSlots = Appointment::TIME_SLOTS;
+
         return view('dashboard.land-deed.index', compact(
             'appointments',
             'appointmentsByDate',
             'calendarBookings',
             'calendarDays',
             'month',
+            'timeSlots',
         ));
     }
 

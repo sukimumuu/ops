@@ -81,6 +81,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::name('buyer.')->group(function () {
         Route::get('/properti-tersimpan', [UserController::class, 'savedProperties'])->name('saved-properties');
         Route::get('/jadwal-survei', [UserController::class, 'surveySchedule'])->name('survey-schedule');
+        Route::post('/jadwal-survei/{appointment}/jadwal-pengganti', [AppointmentController::class, 'respondToReschedule'])
+            ->name('survey-schedule.reschedule');
         Route::get('/transaksi-escrow', [UserController::class, 'transactionEscrow'])->name('transaction-escrow');
     });
 

@@ -43,6 +43,10 @@ class UserController extends Controller
             'avatar_url' => $appointment->seller->avatar_url,
             'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
             'time' => $appointment->scheduled_at->format('H:i'),
+            'reschedule_date' => $appointment->reschedule_suggested_at?->locale('id')->translatedFormat('l, d F Y'),
+            'reschedule_time' => $appointment->reschedule_suggested_at?->format('H:i'),
+            'has_reschedule' => $appointment->hasPendingReschedule(),
+            'reschedule_url' => route('buyer.survey-schedule.reschedule', $appointment),
             'status_key' => $appointment->status,
             'status' => $appointment->statusLabel(),
             'notes' => $appointment->notes,
@@ -56,6 +60,17 @@ class UserController extends Controller
         $calendarStart = $monthStart->copy()->startOfWeek(Carbon::SUNDAY);
         $calendarEnd = $monthEnd->copy()->endOfWeek(Carbon::SATURDAY);
         $calendarDays = CarbonPeriod::create($calendarStart, $calendarEnd);
+
+        $rescheduleRequests = Appointment::query()
+            ->where('buyer_id', $buyer->id)
+            ->where('status', Appointment::STATUS_REJECTED)
+            ->whereNotNull('reschedule_suggested_at')
+            ->with([
+                'seller:id,name',
+                'property:id,title,address,city,district,certificate_type',
+            ])
+            ->orderBy('reschedule_suggested_at')
+            ->get();
 
         $upcomingSurveys = Appointment::query()
             ->where('buyer_id', $buyer->id)
@@ -73,6 +88,7 @@ class UserController extends Controller
             'calendarDays',
             'month',
             'upcomingSurveys',
+            'rescheduleRequests',
         ));
     }
 

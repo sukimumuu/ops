@@ -58,6 +58,7 @@ class Appointment extends Model
     {
         return [
             'scheduled_at' => 'datetime',
+            'reschedule_suggested_at' => 'datetime',
         ];
     }
 
@@ -81,6 +82,11 @@ class Appointment extends Model
     public function isAwaitingReview(): bool
     {
         return $this->status === self::STATUS_REQUESTED;
+    }
+
+    public function hasPendingReschedule(): bool
+    {
+        return $this->status === self::STATUS_REJECTED && $this->reschedule_suggested_at !== null;
     }
 
     public function property(): BelongsTo
