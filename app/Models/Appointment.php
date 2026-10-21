@@ -40,6 +40,13 @@ class Appointment extends Model
         self::STATUS_REJECTED,
     ];
 
+    /**
+     * Available time slots for a property visit.
+     *
+     * @var list<string>
+     */
+    public const TIME_SLOTS = ['09:00', '13:00', '15:30'];
+
     protected $guarded = ['id'];
 
     /**
