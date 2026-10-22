@@ -20,6 +20,7 @@ return new class extends Migration
             $table->unsignedBigInteger('seller_id');
             $table->foreign('seller_id')->references('id')->on('users');
             $table->dateTime('scheduled_at');
+            $table->dateTime('reschedule_suggested_at')->nullable();
             $table->enum('status', ['requested', 'confirmed', 'rejected', 'completed', 'cancelled'])->default('requested');
             $table->text('notes')->nullable();
             $table->timestamps();

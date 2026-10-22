@@ -13,6 +13,7 @@ use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingAiController;
 use App\Http\Controllers\ListingWizardController;
+use App\Http\Controllers\PanelAuthController;
 use App\Http\Controllers\ProfilePasswordController;
 use App\Http\Controllers\RegionDataController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,14 @@ Route::get('/masuk', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/masuk', [AuthController::class, 'login']);
 Route::post('/keluar', [AuthController::class, 'logout'])->name('logout');
 Route::post('/daftar', [AuthController::class, 'register'])->name('register');
+
+Route::prefix('panel')->name('panel.')->group(function () {
+    Route::get('/', [PanelAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/', [PanelAuthController::class, 'login'])
+        ->middleware('throttle:6,1')
+        ->name('login.store');
+    Route::post('/keluar', [PanelAuthController::class, 'logout'])->name('logout');
+});
 
 Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -82,6 +91,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::name('buyer.')->group(function () {
         Route::get('/properti-tersimpan', [UserController::class, 'savedProperties'])->name('saved-properties');
         Route::get('/jadwal-survei', [UserController::class, 'surveySchedule'])->name('survey-schedule');
+        Route::post('/jadwal-survei/{appointment}/jadwal-pengganti', [AppointmentController::class, 'respondToReschedule'])
+            ->name('survey-schedule.reschedule');
         Route::get('/transaksi-escrow', [UserController::class, 'transactionEscrow'])->name('transaction-escrow');
     });
 

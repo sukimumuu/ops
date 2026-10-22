@@ -626,7 +626,7 @@
                                 </svg>
                                 Jadwalkan Kunjungan
                             </h4>
-                            <p class="text-xs text-gray-400 mb-4">Pilih tanggal untuk melihat properti ini secara langsung</p>
+                            <p class="text-xs text-gray-400 mb-4">Pilih tanggal dan waktu untuk melihat properti ini secara langsung</p>
 
                             @if (session('success'))
                                 <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-semibold text-green-700">
@@ -649,6 +649,36 @@
                                 </div>
                             @endif
 
+                            @if ($activeAppointment)
+                                @php($isConfirmed = $activeAppointment->status === \App\Models\Appointment::STATUS_CONFIRMED)
+                                <div class="rounded-xl border {{ $isConfirmed ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50' }} p-3">
+                                    <div class="flex items-center gap-2 text-xs font-extrabold {{ $isConfirmed ? 'text-green-700' : 'text-amber-700' }}">
+                                        @if ($isConfirmed)
+                                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                        @else
+                                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        @endif
+                                        {{ $isConfirmed ? 'Jadwal Dikonfirmasi' : 'Menunggu Konfirmasi' }}
+                                    </div>
+                                    <p class="mt-1.5 text-xs font-semibold {{ $isConfirmed ? 'text-green-700' : 'text-amber-700' }}">
+                                        {{ $activeAppointment->scheduled_at->locale('id')->translatedFormat('l, d F Y') }}
+                                        &middot; {{ $activeAppointment->scheduled_at->format('H:i') }} WIB
+                                    </p>
+                                </div>
+
+                                <button type="button" disabled
+                                    class="mt-3 w-full cursor-not-allowed rounded-xl bg-gray-300 py-3 text-sm font-bold text-gray-600">
+                                    {{ $isConfirmed ? 'Jadwal Dikonfirmasi' : 'Menunggu Konfirmasi' }}
+                                </button>
+
+                                <a href="{{ route('buyer.survey-schedule') }}"
+                                    class="mt-2.5 flex items-center justify-center gap-1.5 text-xs font-bold text-primary transition hover:underline">
+                                    Lihat detail jadwal kunjungan
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </a>
+                            @else
                             <form action="{{ route('property.schedule-visit', ['uuid' => $property->uuid]) }}" method="POST" id="scheduleVisitForm" class="space-y-3">
                                 @csrf
                                 <div>
@@ -672,14 +702,42 @@
                                             <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
                                             <span id="visitDateFormatted">{{ now()->locale('id')->translatedFormat('l, d F Y') }}</span>
                                         </span>
-                                        <span class="text-[10px] text-green-700 bg-green-50 font-bold px-2 py-0.5 rounded-full border border-green-200">Tersedia</span>
+                                        <span id="visitTimeFormatted" class="text-[10px] text-primary bg-primary/10 font-bold px-2 py-0.5 rounded-full border border-primary/20">
+                                            {{ str_replace(':', '.', old('scheduled_time', $timeSlots[0])) }} WIB
+                                        </span>
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Pilih Waktu Kunjungan</label>
+                                    <div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Pilih waktu kunjungan">
+                                        @foreach ($timeSlots as $slot)
+                                            <label class="cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="scheduled_time"
+                                                    value="{{ $slot }}"
+                                                    class="peer sr-only"
+                                                    @checked(old('scheduled_time', $timeSlots[0]) === $slot)
+                                                    required
+                                                >
+                                                <span class="flex flex-col items-center gap-0.5 rounded-xl border border-gray-200 bg-gray-50 px-2 py-2.5 text-center text-sm font-extrabold text-secondary transition hover:border-primary/40 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30">
+                                                    {{ str_replace(':', '.', $slot) }}
+                                                    <span class="text-[10px] font-semibold uppercase tracking-wider opacity-60">WIB</span>
+                                                </span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                    @if ($errors->has('scheduled_time'))
+                                        <p class="mt-2 text-xs font-semibold text-red-600">{{ $errors->first('scheduled_time') }}</p>
+                                    @endif
                                 </div>
 
                                 <button type="submit" class="w-full bg-secondary hover:bg-secondary/90 text-white font-bold py-3 rounded-xl text-sm transition shadow-sm hover:shadow active:scale-[0.99]">
                                     Atur Jadwal Kunjungan
                                 </button>
                             </form>
+                            @endif
                         </div>
 
                         <!-- Quick Info Card -->
@@ -1030,6 +1088,17 @@
                 formatDisplayDate(this.value);
             });
         }
+
+        // === Visit time slots ===
+        const visitTimeInputs = document.querySelectorAll('input[name="scheduled_time"]');
+        const visitTimeFormatted = document.getElementById('visitTimeFormatted');
+
+        visitTimeInputs.forEach((input) => {
+            input.addEventListener('change', function () {
+                if (!this.checked || !visitTimeFormatted) return;
+                visitTimeFormatted.textContent = `${this.value.replace(':', '.')} WIB`;
+            });
+        });
 
         // === Fade-in Observer ===
         const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {

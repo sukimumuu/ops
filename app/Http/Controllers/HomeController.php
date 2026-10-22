@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class HomeController extends Controller
 {
@@ -180,7 +181,19 @@ class HomeController extends Controller
             : "{$property->address}, {$property->city}, {$property->province}";
         $mapUrl = 'https://maps.google.com/maps?q='.urlencode($mapLocation).'&output=embed';
 
-        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications'));
+        $timeSlots = Appointment::TIME_SLOTS;
+
+        $activeAppointment = auth()->check()
+            ? Appointment::query()
+                ->where('property_id', $property->id)
+                ->where('buyer_id', auth()->id())
+                ->whereIn('status', [Appointment::STATUS_REQUESTED, Appointment::STATUS_CONFIRMED])
+                ->where('scheduled_at', '>=', now())
+                ->latest('scheduled_at')
+                ->first()
+            : null;
+
+        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications', 'timeSlots', 'activeAppointment'));
     }
 
     private function propertyPhotoUrl(PropertyPhoto $photo): string
@@ -217,12 +230,27 @@ class HomeController extends Controller
             return back()->with('error', 'Anda tidak dapat menjadwalkan kunjungan pada properti Anda sendiri.');
         }
 
+        $hasActiveAppointment = Appointment::query()
+            ->where('property_id', $property->id)
+            ->where('buyer_id', auth()->id())
+            ->whereIn('status', [Appointment::STATUS_REQUESTED, Appointment::STATUS_CONFIRMED])
+            ->where('scheduled_at', '>=', now())
+            ->exists();
+
+        if ($hasActiveAppointment) {
+            return back()->with('error', 'Anda sudah memiliki jadwal kunjungan aktif untuk properti ini.');
+        }
+
         $validated = $request->validate([
             'scheduled_at' => ['required', 'date', 'after_or_equal:today'],
+            'scheduled_time' => ['required', 'string', Rule::in(Appointment::TIME_SLOTS)],
             'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'scheduled_time.required' => 'Pilih waktu kunjungan.',
+            'scheduled_time.in' => 'Waktu kunjungan yang dipilih tidak valid.',
         ]);
 
-        $scheduledAt = Carbon::parse($validated['scheduled_at'])->setTime(10, 0, 0);
+        $scheduledAt = Carbon::parse($validated['scheduled_at'])->setTimeFromTimeString($validated['scheduled_time']);
 
         Appointment::query()->create([
             'property_id' => $property->id,

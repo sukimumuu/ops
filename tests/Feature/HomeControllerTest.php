@@ -266,6 +266,7 @@ it('redirects guests to login when attempting to schedule a visit', function () 
 
     $response = $this->post(route('property.schedule-visit', ['uuid' => $uuid]), [
         'scheduled_at' => now()->addDays(2)->format('Y-m-d'),
+        'scheduled_time' => '09:00',
     ]);
 
     $response->assertRedirect(route('login'));
@@ -305,6 +306,7 @@ it('allows authenticated buyers to schedule a visit', function () {
 
     $response = $this->actingAs($buyer)->post(route('property.schedule-visit', ['uuid' => $uuid]), [
         'scheduled_at' => $targetDate,
+        'scheduled_time' => '13:00',
     ]);
 
     $response->assertRedirect();
@@ -316,7 +318,8 @@ it('allows authenticated buyers to schedule a visit', function () {
         ->and($appointment->buyer_id)->toBe($buyer->id)
         ->and($appointment->seller_id)->toBe($seller->id)
         ->and($appointment->status)->toBe('requested')
-        ->and($appointment->scheduled_at->format('Y-m-d'))->toBe($targetDate);
+        ->and($appointment->scheduled_at->format('Y-m-d'))->toBe($targetDate)
+        ->and($appointment->scheduled_at->format('H:i'))->toBe('13:00');
 });
 
 it('prevents seller from scheduling a visit on their own property', function () {
@@ -349,6 +352,7 @@ it('prevents seller from scheduling a visit on their own property', function () 
 
     $response = $this->actingAs($seller)->post(route('property.schedule-visit', ['uuid' => $uuid]), [
         'scheduled_at' => now()->addDays(1)->format('Y-m-d'),
+        'scheduled_time' => '15:30',
     ]);
 
     $response->assertRedirect();
