@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 
 class HomeController extends Controller
 {
-    public function home(): View
+    public function home(Request $request): View
     {
         $propertiesUnavailable = false;
 
@@ -43,10 +43,16 @@ class HomeController extends Controller
             $propertiesUnavailable = true;
         }
 
-        return view('welcome', compact('properties', 'propertiesUnavailable'));
+        $savedPropertyIds = $this->savedPropertyIdsFor($request);
+
+        return view('welcome', compact(
+            'properties',
+            'propertiesUnavailable',
+            'savedPropertyIds',
+        ));
     }
 
-    public function property(): View
+    public function property(Request $request): View
     {
         $propertiesUnavailable = false;
 
@@ -96,16 +102,21 @@ class HomeController extends Controller
             $propertiesUnavailable = true;
         }
 
-        return view('properties', compact('properties', 'propertiesUnavailable'));
+        $savedPropertyIds = $this->savedPropertyIdsFor($request);
+
+        return view('properties', compact('properties', 'propertiesUnavailable', 'savedPropertyIds'));
     }
 
-    public function propertyDetails(string $uuid): View
+    public function propertyDetails(Request $request, string $uuid): View
     {
         $property = Property::query()
             ->where('uuid', $uuid)
             ->where('status', 'published')
             ->with(['photos', 'seller'])
             ->firstOrFail();
+
+        $isSaved = $request->user() !== null
+            && $request->user()->savedProperties()->whereKey($property->getKey())->exists();
 
         $property->setAttribute(
             'photo_urls',
@@ -179,7 +190,26 @@ class HomeController extends Controller
             : "{$property->address}, {$property->city}, {$property->province}";
         $mapUrl = 'https://maps.google.com/maps?q='.urlencode($mapLocation).'&output=embed';
 
-        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications'));
+        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications', 'isSaved'));
+    }
+
+    /**
+     * Return the saved property identifiers once so every card can render its
+     * initial heart state without querying the database individually.
+     *
+     * @return array<int, int>
+     */
+    private function savedPropertyIdsFor(Request $request): array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return [];
+        }
+
+        return $user->savedProperties()
+            ->pluck('properties.id')
+            ->all();
     }
 
     private function propertyPhotoUrl(PropertyPhoto $photo): string
