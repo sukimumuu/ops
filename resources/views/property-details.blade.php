@@ -521,20 +521,40 @@
 
                     <!-- Agent / Advisor -->
                     <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                        <h3 class="font-outfit text-xl font-extrabold text-secondary mb-5">Pemilik Properti</h3>
-                        <div class="flex items-center gap-4">
-                            <div
-                                class="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-extrabold ring-2 ring-primary/20 ring-offset-2">
-                                {{ strtoupper(substr($property->seller->name, 0, 1)) }}</div>
-                            <div class="flex-1">
-                                <h4 class="text-base font-extrabold text-secondary">{{ $property->seller->name }}</h4>
+                        <div class="flex items-center justify-between mb-5">
+                            <h3 class="font-outfit text-xl font-extrabold text-secondary">Pemilik Properti</h3>
+                            <a href="{{ route('user-details', ['uuid' => $property->seller->uuid]) }}"
+                                class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-[#df3f05] transition">
+                                <span>Lihat Profil &amp; Katalog</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+                        <a href="{{ route('user-details', ['uuid' => $property->seller->uuid]) }}"
+                            class="group flex items-center gap-4 p-2 -mx-2 rounded-xl hover:bg-gray-50 transition">
+                            <div class="relative flex-shrink-0">
+                                @if ($property->seller->avatar_path)
+                                    <img src="{{ $property->seller->avatar_url }}" alt="{{ $property->seller->name }}"
+                                        class="w-16 h-16 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2">
+                                @else
+                                    <div
+                                        class="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-extrabold ring-2 ring-primary/20 ring-offset-2 group-hover:scale-105 transition-transform">
+                                        {{ strtoupper(substr($property->seller->name, 0, 1)) }}
+                                    </div>
+                                @endif
+                                <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-base font-extrabold text-secondary group-hover:text-primary transition truncate">{{ $property->seller->name }}</h4>
                                 <p class="text-xs text-gray-400">Pemilik properti</p>
                                 <div class="flex items-center gap-3 mt-2">
-                                    <span class="text-[11px] text-gray-400 font-semibold">Informasi kontak tersedia
-                                        melalui pemilik</span>
+                                    <span class="text-[11px] text-primary font-semibold flex items-center gap-1">
+                                        Buka halaman profil &amp; katalog penjualan &rarr;
+                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     </div>
                 </div>
 
@@ -543,19 +563,33 @@
                     <div class="sticky top-20 space-y-5">
                         <!-- Agent Card -->
                         <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                            <div class="flex items-center gap-3 mb-4">
-                                <div
-                                    class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold ring-2 ring-primary/20">
-                                    {{ strtoupper(substr($property->seller->name, 0, 1)) }}</div>
-                                <div>
-                                    <h4 class="text-sm font-extrabold text-secondary">
+                            <a href="{{ route('user-details', ['uuid' => $property->seller->uuid]) }}"
+                                class="group flex items-center gap-3 mb-4 p-1.5 -mx-1.5 rounded-xl hover:bg-gray-50 transition">
+                                <div class="relative flex-shrink-0">
+                                    @if ($property->seller->avatar_path)
+                                        <img src="{{ $property->seller->avatar_url }}" alt="{{ $property->seller->name }}"
+                                            class="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20">
+                                    @else
+                                        <div
+                                            class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold ring-2 ring-primary/20 group-hover:scale-105 transition-transform">
+                                            {{ strtoupper(substr($property->seller->name, 0, 1)) }}
+                                        </div>
+                                    @endif
+                                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-extrabold text-secondary group-hover:text-primary transition truncate">
                                         {{ $property->seller->name }}
                                     </h4>
                                     <p class="text-xs text-gray-400">Pemilik properti</p>
                                 </div>
-                            </div>
+                                <svg class="w-4 h-4 text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
 
                             <a href="https://wa.me/{{ $property->seller->phone }}"
+                                target="_blank" rel="noopener noreferrer"
                                 class="flex items-center justify-center gap-2 w-full bg-primary hover:bg-[#df3f05] text-white font-bold py-3 rounded-xl text-sm transition mb-2.5">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                     <path
@@ -566,12 +600,19 @@
                                 Hubungi via WhatsApp
                             </a>
                             <a href="tel:+{{ $property->seller->phone }}"
-                                class="flex items-center justify-center gap-2 w-full border-2 border-secondary text-secondary hover:bg-secondary hover:text-white font-bold py-3 rounded-xl text-sm transition">
+                                class="flex items-center justify-center gap-2 w-full border-2 border-secondary text-secondary hover:bg-secondary hover:text-white font-bold py-3 rounded-xl text-sm transition mb-2.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                 </svg>
                                 Telepon Pemilik
+                            </a>
+                            <a href="{{ route('user-details', ['uuid' => $property->seller->uuid]) }}"
+                                class="flex items-center justify-center gap-2 w-full bg-gray-50 hover:bg-gray-100 text-secondary hover:text-primary font-bold py-2.5 rounded-xl text-xs transition border border-gray-100">
+                                <span>Lihat Profil &amp; Katalog Penjualan</span>
+                                <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
                             </a>
                         </div>
 

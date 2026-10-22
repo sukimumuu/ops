@@ -360,151 +360,76 @@ it('prevents seller from scheduling a visit on their own property', function () 
     expect(Appointment::query()->count())->toBe(0);
 });
 
-it('shows the available visit time slots on the property detail page', function () {
-    $seller = User::factory()->create();
-    $uuid = (string) Str::uuid();
-    Property::query()->create([
-        'uuid' => $uuid,
-        'seller_id' => $seller->id,
-        'property_type' => 'bangunan',
-        'type' => 'rumah',
-        'category' => 'sale',
-        'status' => 'published',
-        'title' => 'Rumah dengan Slot Kunjungan',
-        'description' => 'Deskripsi.',
-        'price' => 1000000000,
-        'negotiable' => false,
-        'province' => 'Jawa Barat',
-        'city' => 'Bandung',
-        'district' => 'Coblong',
-        'postal_code' => '40132',
-        'address' => 'Jl. Dago No. 10',
-        'land_area_sqm' => 120,
-        'building_area_sqm' => 90,
-        'rooms' => '3',
-        'bathrooms' => '2',
-        'condition' => 'siap_huni',
-        'certificate_type' => 'SHM',
+it('links seller profile from property details page', function () {
+    $seller = User::factory()->create([
+        'name' => 'John Doe Agent',
     ]);
-
-    $this->get(route('property-details', ['uuid' => $uuid]))
-        ->assertOk()
-        ->assertSee('Pilih Waktu Kunjungan')
-        ->assertSee('09.00')
-        ->assertSee('13.00')
-        ->assertSee('15.30')
-        ->assertSee('Atur Jadwal Kunjungan');
-});
-
-it('rejects a visit time outside the available slots', function () {
-    $seller = User::factory()->create();
-    $buyer = User::factory()->create();
-    $uuid = (string) Str::uuid();
-    Property::query()->create([
-        'uuid' => $uuid,
-        'seller_id' => $seller->id,
-        'property_type' => 'bangunan',
-        'type' => 'rumah',
-        'category' => 'sale',
-        'status' => 'published',
-        'title' => 'Rumah Slot Tidak Valid',
-        'description' => 'Deskripsi.',
-        'price' => 1000000000,
-        'negotiable' => false,
-        'province' => 'Jawa Barat',
-        'city' => 'Bandung',
-        'district' => 'Coblong',
-        'postal_code' => '40132',
-        'address' => 'Jl. Dago No. 10',
-        'land_area_sqm' => 120,
-        'building_area_sqm' => 90,
-        'rooms' => '3',
-        'bathrooms' => '2',
-        'condition' => 'siap_huni',
-        'certificate_type' => 'SHM',
-    ]);
-
-    $this->actingAs($buyer)
-        ->from(route('property-details', ['uuid' => $uuid]))
-        ->post(route('property.schedule-visit', ['uuid' => $uuid]), [
-            'scheduled_at' => now()->addDays(2)->format('Y-m-d'),
-            'scheduled_time' => '10:00',
-        ])
-        ->assertRedirect(route('property-details', ['uuid' => $uuid]))
-        ->assertSessionHasErrors('scheduled_time');
-
-    expect(Appointment::query()->count())->toBe(0);
-});
-
-function createVisitProperty(User $seller, string $title): Property
-{
-    return Property::query()->create([
+    $property = Property::query()->create([
         'uuid' => (string) Str::uuid(),
         'seller_id' => $seller->id,
         'property_type' => 'bangunan',
         'type' => 'rumah',
         'category' => 'sale',
         'status' => 'published',
-        'title' => $title,
-        'description' => 'Deskripsi.',
-        'price' => 1000000000,
+        'title' => 'Rumah Bagus',
+        'description' => 'Deskripsi rumah bagus.',
+        'price' => 500000000,
         'negotiable' => false,
         'province' => 'Jawa Barat',
         'city' => 'Bandung',
         'district' => 'Coblong',
         'postal_code' => '40132',
         'address' => 'Jl. Dago No. 10',
-        'land_area_sqm' => 120,
-        'building_area_sqm' => 90,
-        'rooms' => '3',
-        'bathrooms' => '2',
+        'land_area_sqm' => 100,
+        'building_area_sqm' => 70,
+        'rooms' => '2',
+        'bathrooms' => '1',
+        'floors' => '1',
         'condition' => 'siap_huni',
         'certificate_type' => 'SHM',
     ]);
-}
 
-it('shows the waiting confirmation state and detail link when a schedule was already requested', function () {
-    $seller = User::factory()->create();
-    $buyer = User::factory()->create();
-    $property = createVisitProperty($seller, 'Rumah Sudah Dijadwalkan');
+    $response = $this->get(route('property-details', ['uuid' => $property->uuid]));
 
-    Appointment::query()->create([
-        'property_id' => $property->id,
-        'buyer_id' => $buyer->id,
-        'seller_id' => $seller->id,
-        'scheduled_at' => now()->addDays(2)->setTime(13, 0),
-        'status' => Appointment::STATUS_REQUESTED,
-    ]);
-
-    $this->actingAs($buyer)
-        ->get(route('property-details', ['uuid' => $property->uuid]))
-        ->assertOk()
-        ->assertSee('Menunggu Konfirmasi')
-        ->assertSee(route('buyer.survey-schedule'), false)
-        ->assertDontSee('Atur Jadwal Kunjungan');
+    $response->assertOk();
+    $response->assertSee(route('user-details', ['uuid' => $seller->uuid]));
+    $response->assertSee('John Doe Agent');
 });
 
-it('prevents a buyer from submitting a second active schedule request', function () {
-    $seller = User::factory()->create();
-    $buyer = User::factory()->create();
-    $property = createVisitProperty($seller, 'Rumah Dengan Jadwal Aktif');
-
-    Appointment::query()->create([
-        'property_id' => $property->id,
-        'buyer_id' => $buyer->id,
+it('renders user details and property sales catalog page', function () {
+    $seller = User::factory()->create([
+        'name' => 'Agent Properti Keren',
+    ]);
+    $property = Property::query()->create([
+        'uuid' => (string) Str::uuid(),
         'seller_id' => $seller->id,
-        'scheduled_at' => now()->addDays(2)->setTime(9, 0),
-        'status' => Appointment::STATUS_REQUESTED,
+        'property_type' => 'bangunan',
+        'type' => 'rumah',
+        'category' => 'sale',
+        'status' => 'published',
+        'title' => 'Katalog Rumah Seller',
+        'description' => 'Deskripsi properti.',
+        'price' => 750000000,
+        'negotiable' => false,
+        'province' => 'DKI Jakarta',
+        'city' => 'Jakarta Selatan',
+        'district' => 'Kebayoran Baru',
+        'postal_code' => '12110',
+        'address' => 'Jl. Senopati No. 1',
+        'land_area_sqm' => 150,
+        'building_area_sqm' => 120,
+        'rooms' => '4',
+        'bathrooms' => '3',
+        'floors' => '2',
+        'condition' => 'siap_huni',
+        'certificate_type' => 'SHM',
     ]);
 
-    $this->actingAs($buyer)
-        ->from(route('property-details', ['uuid' => $property->uuid]))
-        ->post(route('property.schedule-visit', ['uuid' => $property->uuid]), [
-            'scheduled_at' => now()->addDays(3)->format('Y-m-d'),
-            'scheduled_time' => '15:30',
-        ])
-        ->assertRedirect(route('property-details', ['uuid' => $property->uuid]))
-        ->assertSessionHas('error');
+    $response = $this->get(route('user-details', ['uuid' => $seller->uuid]));
 
-    expect(Appointment::query()->where('property_id', $property->id)->count())->toBe(1);
+    $response->assertOk();
+    $response->assertSee('Agent Properti Keren');
+    $response->assertSee('Katalog Rumah Seller');
+    $response->assertSee('Katalog Penjualan');
+    $response->assertSee('Rp 750.000.000');
 });

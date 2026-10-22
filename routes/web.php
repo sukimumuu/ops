@@ -27,6 +27,9 @@ Route::post('/detail-properti/{uuid}/jadwalkan', [HomeController::class, 'schedu
     ->whereUuid('uuid')
     ->name('property.schedule-visit');
 Route::get('/properti', [HomeController::class, 'property'])->name('properties');
+Route::get('/pengguna/{uuid}', [HomeController::class, 'userDetails'])
+    ->whereUuid('uuid')
+    ->name('user-details');
 Route::get('/tentang', [HomeController::class, 'about'])->name('about');
 Route::get('/kontak', [HomeController::class, 'contact'])->name('contact');
 Route::post('/api/chat', [ChatbotController::class, 'ask'])
