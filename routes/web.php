@@ -8,6 +8,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\LandDeedController;
 use App\Http\Controllers\Dashboard\ListingController;
 use App\Http\Controllers\Dashboard\PropertyReviewController;
+use App\Http\Controllers\Dashboard\SavedPropertyController;
 use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\HomeController;
@@ -90,6 +91,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     Route::name('buyer.')->group(function () {
         Route::get('/properti-tersimpan', [UserController::class, 'savedProperties'])->name('saved-properties');
+        Route::post('/properti/{uuid}/simpan', [UserController::class, 'saveProperty'])
+            ->whereUuid('uuid')
+            ->name('saved-properties.store');
+        Route::delete('/properti-tersimpan/{uuid}', [UserController::class, 'unsaveProperty'])
+            ->whereUuid('uuid')
+            ->name('saved-properties.destroy');
+        Route::post('/properti/simpan/toggle', [SavedPropertyController::class, 'toggle'])
+            ->middleware('throttle:60,1')
+            ->name('saved-properties.toggle');
         Route::get('/jadwal-survei', [UserController::class, 'surveySchedule'])->name('survey-schedule');
         Route::post('/jadwal-survei/{appointment}/jadwal-pengganti', [AppointmentController::class, 'respondToReschedule'])
             ->name('survey-schedule.reschedule');

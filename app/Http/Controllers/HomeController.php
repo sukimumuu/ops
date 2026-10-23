@@ -17,7 +17,7 @@ use Illuminate\Validation\Rule;
 
 class HomeController extends Controller
 {
-    public function home(): View
+    public function home(Request $request): View
     {
         $propertiesUnavailable = false;
 
@@ -45,10 +45,16 @@ class HomeController extends Controller
             $propertiesUnavailable = true;
         }
 
-        return view('welcome', compact('properties', 'propertiesUnavailable'));
+        $savedPropertyIds = $this->savedPropertyIdsFor($request);
+
+        return view('welcome', compact(
+            'properties',
+            'propertiesUnavailable',
+            'savedPropertyIds',
+        ));
     }
 
-    public function property(): View
+    public function property(Request $request): View
     {
         $propertiesUnavailable = false;
 
@@ -98,16 +104,21 @@ class HomeController extends Controller
             $propertiesUnavailable = true;
         }
 
-        return view('properties', compact('properties', 'propertiesUnavailable'));
+        $savedPropertyIds = $this->savedPropertyIdsFor($request);
+
+        return view('properties', compact('properties', 'propertiesUnavailable', 'savedPropertyIds'));
     }
 
-    public function propertyDetails(string $uuid): View
+    public function propertyDetails(Request $request, string $uuid): View
     {
         $property = Property::query()
             ->where('uuid', $uuid)
             ->where('status', 'published')
             ->with(['photos', 'seller'])
             ->firstOrFail();
+
+        $isSaved = $request->user() !== null
+            && $request->user()->savedProperties()->whereKey($property->getKey())->exists();
 
         $property->setAttribute(
             'photo_urls',
@@ -181,19 +192,26 @@ class HomeController extends Controller
             : "{$property->address}, {$property->city}, {$property->province}";
         $mapUrl = 'https://maps.google.com/maps?q='.urlencode($mapLocation).'&output=embed';
 
-        $timeSlots = Appointment::TIME_SLOTS;
+        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications', 'isSaved'));
+    }
 
-        $activeAppointment = auth()->check()
-            ? Appointment::query()
-                ->where('property_id', $property->id)
-                ->where('buyer_id', auth()->id())
-                ->whereIn('status', [Appointment::STATUS_REQUESTED, Appointment::STATUS_CONFIRMED])
-                ->where('scheduled_at', '>=', now())
-                ->latest('scheduled_at')
-                ->first()
-            : null;
+    /**
+     * Return the saved property identifiers once so every card can render its
+     * initial heart state without querying the database individually.
+     *
+     * @return array<int, int>
+     */
+    private function savedPropertyIdsFor(Request $request): array
+    {
+        $user = $request->user();
 
-        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications', 'timeSlots', 'activeAppointment'));
+        if ($user === null) {
+            return [];
+        }
+
+        return $user->savedProperties()
+            ->pluck('properties.id')
+            ->all();
     }
 
     private function propertyPhotoUrl(PropertyPhoto $photo): string

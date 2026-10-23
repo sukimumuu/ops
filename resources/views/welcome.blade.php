@@ -140,7 +140,7 @@
                 </div>
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     @forelse ($properties as $property)
-                        <x-property-card :property="$property" :compact="true" />
+                        <x-property-card :property="$property" :compact="true" :savedPropertyIds="$savedPropertyIds" />
                     @empty
                         <p class="col-span-full rounded-2xl bg-white p-8 text-center text-sm text-gray-500">
                             {{ $propertiesUnavailable ? 'Properti belum dapat dimuat saat ini. Silakan coba kembali nanti.' : 'Belum ada properti tersedia saat ini.' }}

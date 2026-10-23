@@ -4,16 +4,54 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Property;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function savedProperties()
+    public function savedProperties(Request $request): View
     {
-        return view('dashboard.user.saved-properti');
+        $sort = (string) $request->query('sort', 'newest');
+        $sort = in_array($sort, ['newest', 'oldest'], true) ? $sort : 'newest';
+        $direction = $sort === 'oldest' ? 'asc' : 'desc';
+
+        $savedProperties = $request->user()
+            ->savedProperties()
+            ->with(['photos' => fn ($query) => $query->limit(1)])
+            ->orderByPivot('created_at', $direction)
+            ->orderByPivot('id', $direction)
+            ->get();
+
+        $savedProperties->each(function (Property $property): void {
+            $property->setAttribute('image_url', $property->primaryPhotoUrl());
+        });
+
+        return view('dashboard.user.saved-properti', compact('savedProperties', 'sort'));
+    }
+
+    public function saveProperty(Request $request, string $uuid): RedirectResponse
+    {
+        $property = Property::query()
+            ->where('uuid', $uuid)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        $request->user()->savedProperties()->syncWithoutDetaching([$property->id]);
+
+        return back()->with('success', 'Properti berhasil disimpan.');
+    }
+
+    public function unsaveProperty(Request $request, string $uuid): RedirectResponse
+    {
+        $property = Property::query()->where('uuid', $uuid)->firstOrFail();
+
+        $request->user()->savedProperties()->detach($property->id);
+
+        return back()->with('success', 'Properti dihapus dari daftar tersimpan.');
     }
 
     public function surveySchedule(Request $request): View
