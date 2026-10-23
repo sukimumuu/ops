@@ -138,9 +138,9 @@ class ListingController extends Controller
             ->where('seller_id', $seller->id)
             ->whereBetween('scheduled_at', [$monthStart, $monthEnd])
             ->with([
-                'buyer:id,name,avatar_path',
+                'buyer:id,name,email,phone,avatar_path',
                 'seller:id,name',
-                'property:id,title,address,city,district,certificate_type',
+                'property:id,title,address,city,district,certificate_type,url_maps',
             ])
             ->orderBy('scheduled_at')
             ->get();
@@ -148,6 +148,8 @@ class ListingController extends Controller
         $calendarBookings = $appointments->map(fn (Appointment $appointment): array => [
             'id' => $appointment->id,
             'counterpart_name' => $appointment->buyer->name,
+            'counterpart_email' => $appointment->buyer->email,
+            'counterpart_phone' => $appointment->buyer->phone,
             'avatar_url' => $appointment->buyer->avatar_url,
             'seller_name' => $appointment->seller->name,
             'buyer_name' => $appointment->buyer->name,
@@ -164,8 +166,9 @@ class ListingController extends Controller
             'property_certificate' => $appointment->property->certificate_type,
             'property_address' => $appointment->property->address,
             'property_location' => $appointment->property->district.', '.$appointment->property->city,
+            'property_maps_url' => $appointment->property->url_maps,
         ])->values();
-
+            
         $appointmentsByDate = $appointments->groupBy(fn (Appointment $appointment): string => $appointment->scheduled_at->toDateString());
         $calendarStart = $monthStart->copy()->startOfWeek(Carbon::SUNDAY);
         $calendarEnd = $monthEnd->copy()->endOfWeek(Carbon::SATURDAY);

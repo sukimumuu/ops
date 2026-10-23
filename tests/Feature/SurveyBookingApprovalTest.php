@@ -34,6 +34,7 @@ function createSurveyBookingProperty(User $seller, ?User $ppat = null): Property
         'district' => 'Coblong',
         'postal_code' => '40132',
         'address' => 'Jl. Merdeka No. 1',
+        'url_maps' => 'https://www.openstreetmap.org/?mlat=-6.9175&mlon=107.6191#map=16/-6.9175/107.6191',
         'land_area_sqm' => 120,
         'building_area_sqm' => 90,
         'certificate_type' => 'SHM',
@@ -217,14 +218,17 @@ it('shows the seller calendar with status indicators and review actions', functi
         ->assertSee('Tolak & atur jadwal')
         ->assertSee('name="suggested_date"', false)
         ->assertSee('Kirim jadwal pengganti')
-        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $buyer, $property): bool {
             $booking = $bookings->firstWhere('id', $appointment->id);
 
             return $booking !== null
                 && $booking['status_key'] === 'requested'
                 && $booking['status'] === 'Menunggu persetujuan'
                 && $booking['can_review'] === true
-                && $booking['counterpart_name'] === $appointment->buyer->name;
+                && $booking['counterpart_name'] === $appointment->buyer->name
+                && $booking['counterpart_email'] === $buyer->email
+                && $booking['counterpart_phone'] === $buyer->phone
+                && $booking['property_maps_url'] === $property->url_maps;
         });
 });
 
@@ -308,11 +312,14 @@ it('shows buyers a calendar and upcoming list for their own survey bookings only
         ->assertDontSee('Penjual Lain')
         ->assertSee('bg-amber-500', false)
         ->assertDontSee('Setujui survei')
-        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $seller, $property): bool {
             return $bookings->count() === 1
                 && $bookings->first()['id'] === $appointment->id
                 && $bookings->first()['status_key'] === 'requested'
-                && $bookings->first()['seller_name'] === 'Penjual Kalender';
+                && $bookings->first()['seller_name'] === 'Penjual Kalender'
+                && $bookings->first()['counterpart_email'] === $seller->email
+                && $bookings->first()['counterpart_phone'] === $seller->phone
+                && $bookings->first()['property_maps_url'] === $property->url_maps;
         });
 });
 
