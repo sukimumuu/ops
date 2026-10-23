@@ -32,6 +32,18 @@
             </div>
         @endif
 
+        <x-survey-calendar
+            :month="$month"
+            :calendar-days="$calendarDays"
+            :appointments-by-date="$appointmentsByDate"
+            :bookings="$calendarBookings"
+            :appointments="$calendarAppointments"
+            perspective="seller"
+            reset-route="seller.request-survey"
+            title="Kalender permintaan survei"
+            description="Pilih avatar calon pembeli untuk menyetujui, menolak, atau menawarkan jadwal pengganti."
+        />
+
         <x-card-dashboard title="Daftar permintaan survei"
             subtitle="Permintaan dari calon pembeli untuk properti yang Anda tayangkan">
             <x-table>
@@ -68,34 +80,15 @@
                         </x-table.data>
                         <x-table.data>
                             @if ($appointment->isAwaitingReview())
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <form method="POST" action="{{ route('appointments.status', $appointment) }}">
-                                        @csrf
-                                        <input type="hidden" name="status" value="confirmed">
-                                        <button type="submit"
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
-                                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                stroke-width="2" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7" />
-                                            </svg>
-                                            Setujui
-                                        </button>
-                                    </form>
-                                    <form method="POST" action="{{ route('appointments.status', $appointment) }}"
-                                        onsubmit="return confirm('Tolak permintaan survei ini?')">
-                                        @csrf
-                                        <input type="hidden" name="status" value="rejected">
-                                        <button type="submit"
-                                            class="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2">
-                                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                stroke-width="2" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="m6 6 12 12M18 6 6 18" />
-                                            </svg>
-                                            Tolak
-                                        </button>
-                                    </form>
-                                </div>
+                                <a href="#survey-calendar"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 0 1 1 1v13H4V6a1 1 0 0 1 1-1Z" />
+                                    </svg>
+                                    Tinjau di kalender
+                                </a>
                             @else
                                 <span class="text-xs font-medium text-slate-400">Sudah ditinjau</span>
                             @endif

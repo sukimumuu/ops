@@ -13,14 +13,13 @@ use Illuminate\Validation\Rule;
 class AppointmentController extends Controller
 {
     /**
-     * Approve or reject a pending survey booking request.
+     * Approve or reject a pending survey booking request from a buyer.
      */
     public function updateStatus(Request $request, Appointment $appointment): RedirectResponse
     {
         Gate::authorize('review', $appointment);
 
-        $isPpat = $request->user()?->hasRole('PPAT') ?? false;
-        $requiresSuggestion = $isPpat && $appointment->status === Appointment::STATUS_REQUESTED;
+        $requiresSuggestion = $appointment->status === Appointment::STATUS_REQUESTED;
 
         $rules = [
             'status' => ['required', Rule::in(Appointment::REVIEW_STATUSES)],
@@ -67,7 +66,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * Accept or decline a reschedule suggestion proposed by the PPAT.
+     * Accept or decline a reschedule suggestion proposed by the property seller.
      */
     public function respondToReschedule(Request $request, Appointment $appointment): RedirectResponse
     {

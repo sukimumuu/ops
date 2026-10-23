@@ -51,68 +51,7 @@ function createSurveyBooking(User $seller, User $buyer, Property $property, stri
     ]);
 }
 
-it('allows the assigned PPAT to approve a survey booking request', function () {
-    $ppat = User::factory()->create();
-    $ppat->assignRole('PPAT');
-    $seller = User::factory()->create();
-    $buyer = User::factory()->create();
-    $property = createSurveyBookingProperty($seller, $ppat);
-    $appointment = createSurveyBooking($seller, $buyer, $property);
-
-    $this->actingAs($ppat)
-        ->from(route('land-deed.index', ['month' => now()->format('Y-m')]))
-        ->post(route('land-deed.appointments.status', $appointment), ['status' => 'confirmed'])
-        ->assertRedirect(route('land-deed.index', ['month' => now()->format('Y-m')]))
-        ->assertSessionHas('status', 'Permintaan survei berhasil disetujui.');
-
-    expect($appointment->fresh()->status)->toBe('confirmed');
-});
-
-it('allows the assigned PPAT to reject a survey booking request with a suggested schedule', function () {
-    $ppat = User::factory()->create();
-    $ppat->assignRole('PPAT');
-    $seller = User::factory()->create();
-    $buyer = User::factory()->create();
-    $property = createSurveyBookingProperty($seller, $ppat);
-    $appointment = createSurveyBooking($seller, $buyer, $property);
-
-    $suggestedDate = now()->addDays(4);
-
-    $this->actingAs($ppat)
-        ->from(route('land-deed.index'))
-        ->post(route('appointments.status', $appointment), [
-            'status' => 'rejected',
-            'suggested_date' => $suggestedDate->format('Y-m-d'),
-            'suggested_time' => '13:00',
-        ])
-        ->assertRedirect(route('land-deed.index'))
-        ->assertSessionHas('status', 'Permintaan survei ditolak. Jadwal pengganti telah dikirim ke pembeli untuk dikonfirmasi.');
-
-    $appointment->refresh();
-
-    expect($appointment->status)->toBe('rejected')
-        ->and($appointment->reschedule_suggested_at->format('Y-m-d H:i'))->toBe($suggestedDate->format('Y-m-d').' 13:00');
-});
-
-it('requires a suggested schedule when a PPAT rejects a survey booking request', function () {
-    $ppat = User::factory()->create();
-    $ppat->assignRole('PPAT');
-    $seller = User::factory()->create();
-    $buyer = User::factory()->create();
-    $property = createSurveyBookingProperty($seller, $ppat);
-    $appointment = createSurveyBooking($seller, $buyer, $property);
-
-    $this->actingAs($ppat)
-        ->from(route('land-deed.index'))
-        ->post(route('appointments.status', $appointment), ['status' => 'rejected'])
-        ->assertRedirect(route('land-deed.index'))
-        ->assertSessionHasErrors(['suggested_date', 'suggested_time']);
-
-    expect($appointment->fresh()->status)->toBe('requested')
-        ->and($appointment->fresh()->reschedule_suggested_at)->toBeNull();
-});
-
-it('allows a seller to review a survey booking for their own property', function () {
+it('allows a seller to approve a survey booking request directly', function () {
     $seller = User::factory()->create();
     $seller->assignRole('User');
     $buyer = User::factory()->create();
@@ -122,22 +61,92 @@ it('allows a seller to review a survey booking for their own property', function
     $this->actingAs($seller)
         ->from(route('seller.request-survey'))
         ->post(route('appointments.status', $appointment), ['status' => 'confirmed'])
-        ->assertRedirect(route('seller.request-survey'));
+        ->assertRedirect(route('seller.request-survey'))
+        ->assertSessionHas('status', 'Permintaan survei berhasil disetujui.');
 
     expect($appointment->fresh()->status)->toBe('confirmed');
 });
 
-it('prevents a PPAT from reviewing a booking assigned to another PPAT', function () {
-    $assignedPpat = User::factory()->create();
-    $assignedPpat->assignRole('PPAT');
-    $otherPpat = User::factory()->create();
-    $otherPpat->assignRole('PPAT');
+it('allows a seller to reject a survey booking request with a suggested schedule', function () {
     $seller = User::factory()->create();
+    $seller->assignRole('User');
     $buyer = User::factory()->create();
-    $property = createSurveyBookingProperty($seller, $assignedPpat);
+    $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property);
 
-    $this->actingAs($otherPpat)
+    $suggestedDate = now()->addDays(4);
+
+    $this->actingAs($seller)
+        ->from(route('seller.request-survey'))
+        ->post(route('appointments.status', $appointment), [
+            'status' => 'rejected',
+            'suggested_date' => $suggestedDate->format('Y-m-d'),
+            'suggested_time' => '13:00',
+        ])
+        ->assertRedirect(route('seller.request-survey'))
+        ->assertSessionHas('status', 'Permintaan survei ditolak. Jadwal pengganti telah dikirim ke pembeli untuk dikonfirmasi.');
+
+    $appointment->refresh();
+
+    expect($appointment->status)->toBe('rejected')
+        ->and($appointment->reschedule_suggested_at->format('Y-m-d H:i'))->toBe($suggestedDate->format('Y-m-d').' 13:00');
+});
+
+it('requires a suggested schedule when a seller rejects a survey booking request', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+
+    $this->actingAs($seller)
+        ->from(route('seller.request-survey'))
+        ->post(route('appointments.status', $appointment), ['status' => 'rejected'])
+        ->assertRedirect(route('seller.request-survey'))
+        ->assertSessionHasErrors(['suggested_date', 'suggested_time']);
+
+    expect($appointment->fresh()->status)->toBe('requested')
+        ->and($appointment->fresh()->reschedule_suggested_at)->toBeNull();
+});
+
+it('always associates a survey booking with the property owner', function () {
+    $owner = User::factory()->create();
+    $otherSeller = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($owner);
+
+    $appointment = createSurveyBooking($otherSeller, $buyer, $property);
+
+    expect($appointment->seller_id)->toBe($owner->id)
+        ->and($appointment->seller->is($owner))->toBeTrue()
+        ->and($appointment->property->is($property))->toBeTrue()
+        ->and($appointment->buyer->is($buyer))->toBeTrue();
+});
+
+it('prevents a PPAT from reviewing a survey booking request', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller, $ppat);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+
+    $this->actingAs($ppat)
+        ->from(route('land-deed.index'))
+        ->post(route('appointments.status', $appointment), ['status' => 'confirmed'])
+        ->assertForbidden();
+
+    expect($appointment->fresh()->status)->toBe('requested');
+});
+
+it('prevents a seller from reviewing another seller booking', function () {
+    $seller = User::factory()->create();
+    $otherSeller = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+
+    $this->actingAs($otherSeller)
         ->post(route('appointments.status', $appointment), ['status' => 'confirmed'])
         ->assertForbidden();
 
@@ -159,50 +168,48 @@ it('prevents buyers from reviewing a survey booking', function () {
 });
 
 it('does not allow a survey booking to be reviewed twice', function () {
-    $ppat = User::factory()->create();
-    $ppat->assignRole('PPAT');
     $seller = User::factory()->create();
+    $seller->assignRole('User');
     $buyer = User::factory()->create();
-    $property = createSurveyBookingProperty($seller, $ppat);
+    $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'confirmed');
 
-    $this->actingAs($ppat)
-        ->from(route('land-deed.index'))
-        ->post(route('land-deed.appointments.status', $appointment), ['status' => 'rejected'])
-        ->assertRedirect(route('land-deed.index'))
+    $this->actingAs($seller)
+        ->from(route('seller.request-survey'))
+        ->post(route('appointments.status', $appointment), ['status' => 'rejected', 'suggested_date' => now()->addDay()->format('Y-m-d'), 'suggested_time' => '09:00'])
+        ->assertRedirect(route('seller.request-survey'))
         ->assertSessionHasErrors('status');
 
     expect($appointment->fresh()->status)->toBe('confirmed');
 });
 
 it('rejects unsupported review statuses', function () {
-    $ppat = User::factory()->create();
-    $ppat->assignRole('PPAT');
     $seller = User::factory()->create();
+    $seller->assignRole('User');
     $buyer = User::factory()->create();
-    $property = createSurveyBookingProperty($seller, $ppat);
+    $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property);
 
-    $this->actingAs($ppat)
-        ->from(route('land-deed.index'))
-        ->post(route('land-deed.appointments.status', $appointment), ['status' => 'cancelled'])
+    $this->actingAs($seller)
+        ->from(route('seller.request-survey'))
+        ->post(route('appointments.status', $appointment), ['status' => 'cancelled'])
         ->assertSessionHasErrors('status');
 
     expect($appointment->fresh()->status)->toBe('requested');
 });
 
-it('shows status-based indicators and review actions on the calendar', function () {
-    $ppat = User::factory()->create();
-    $ppat->assignRole('PPAT');
+it('shows the seller calendar with status indicators and review actions', function () {
     $seller = User::factory()->create();
+    $seller->assignRole('User');
     $buyer = User::factory()->create();
-    $property = createSurveyBookingProperty($seller, $ppat);
+    $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property);
     $appointment->update(['scheduled_at' => '2026-10-20 10:00:00']);
 
-    $this->actingAs($ppat)
-        ->get(route('land-deed.index', ['month' => '2026-10']))
+    $this->actingAs($seller)
+        ->get(route('seller.request-survey', ['month' => '2026-10']))
         ->assertOk()
+        ->assertSee('Kalender permintaan survei')
         ->assertSee('Menunggu persetujuan')
         ->assertSee('bg-amber-500', false)
         ->assertSee('ring-amber-300', false)
@@ -216,8 +223,42 @@ it('shows status-based indicators and review actions on the calendar', function 
             return $booking !== null
                 && $booking['status_key'] === 'requested'
                 && $booking['status'] === 'Menunggu persetujuan'
-                && $booking['can_review'] === true;
+                && $booking['can_review'] === true
+                && $booking['counterpart_name'] === $appointment->buyer->name;
         });
+});
+
+it('shows the survey calendar on the seller dashboard', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create(['name' => 'Pembeli Dashboard Penjual']);
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+    $appointment->update(['scheduled_at' => '2026-10-20 10:00:00']);
+
+    $this->actingAs($seller)
+        ->get(route('seller.listing', ['month' => '2026-10']))
+        ->assertOk()
+        ->assertSee('Kalender survei properti')
+        ->assertSee('Pembeli Dashboard Penjual')
+        ->assertSee('Setujui survei')
+        ->assertViewHas('calendarBookings', fn ($bookings): bool => $bookings->firstWhere('id', $appointment->id) !== null);
+});
+
+it('hides the survey calendar from the PPAT dashboard', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller, $ppat);
+    createSurveyBooking($seller, $buyer, $property);
+
+    $this->actingAs($ppat)
+        ->get(route('land-deed.index'))
+        ->assertOk()
+        ->assertSee('Kalender survei dinonaktifkan sementara')
+        ->assertDontSee('Pilih avatar untuk membuka rincian survei.')
+        ->assertDontSee('Setujui survei');
 });
 
 it('shows only survey requests belonging to the signed-in seller', function () {
@@ -353,20 +394,19 @@ it('lets a buyer accept a suggested reschedule and confirms the appointment', fu
         ->and($appointment->reschedule_suggested_at)->toBeNull();
 });
 
-it('does not send an accepted reschedule back to the PPAT review queue', function () {
-    $ppat = User::factory()->create();
-    $ppat->assignRole('PPAT');
+it('does not send an accepted reschedule back to the seller review queue', function () {
     $seller = User::factory()->create();
+    $seller->assignRole('User');
     $buyer = User::factory()->create();
-    $property = createSurveyBookingProperty($seller, $ppat);
+    $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
     $appointment->update(['reschedule_suggested_at' => now()->addDays(4)->setTime(15, 30)]);
 
     $this->actingAs($buyer)
         ->post(route('buyer.survey-schedule.reschedule', $appointment), ['decision' => 'accepted']);
 
-    $this->actingAs($ppat)
-        ->from(route('land-deed.index'))
+    $this->actingAs($seller)
+        ->from(route('seller.request-survey'))
         ->post(route('appointments.status', $appointment->fresh()), ['status' => 'confirmed'])
         ->assertSessionHasErrors('status');
 
@@ -423,6 +463,7 @@ it('shows the suggested reschedule to the buyer', function () {
         ->assertSee('Persetujuan jadwal pengganti')
         ->assertSee('Saran jadwal baru')
         ->assertSee('Setujui jadwal')
+        ->assertSee('Penjual mengusulkan')
         ->assertSee('selectedAppointment.has_reschedule', false)
         ->assertSee('selectedAppointment.reschedule_url', false)
         ->assertSee($suggestedAt->locale('id')->translatedFormat('d M Y'))

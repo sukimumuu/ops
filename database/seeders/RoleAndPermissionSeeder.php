@@ -75,7 +75,6 @@ class RoleAndPermissionSeeder extends Seeder
             'documents.verify_status',
             'documents.input_bpn_result',
             'appointments.view_all',
-            'appointments.confirm_or_reject',
             'transactions.view_all',
             'transactions.mark_bpn_cleared',
             'transactions.schedule_ajb',

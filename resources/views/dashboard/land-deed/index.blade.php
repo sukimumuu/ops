@@ -42,15 +42,9 @@
         <header class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-primary">Operasional kantor</p>
-                <h1 class="mt-1 text-2xl font-bold text-secondary">Jadwal survei</h1>
-                <p class="mt-1 text-sm text-slate-500">Jadwal kunjungan untuk properti yang ditugaskan kepada Anda.</p>
+                <h1 class="mt-1 text-2xl font-bold text-secondary">Dashboard antrian</h1>
+                <p class="mt-1 text-sm text-slate-500">Pengajuan dan persetujuan survei kini ditangani langsung oleh penjual properti.</p>
             </div>
-            <p class="text-xs text-slate-500">
-                {{ $appointments->count() }} survei bulan ini
-                @if ($pendingSurveyCount > 0)
-                    <span class="font-semibold text-amber-600">· {{ $pendingSurveyCount }} menunggu persetujuan</span>
-                @endif
-            </p>
         </header>
 
         @if (session('status'))
@@ -76,6 +70,8 @@
             </div>
         @endif
 
+        {{-- Survey calendar temporarily disabled: survey scheduling and approval now belong to sellers. --}}
+        @if (false)
         <section aria-label="Kalender jadwal survei"
             class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xs">
             <div
@@ -343,6 +339,26 @@
                 </template>
             </aside>
         </div>
+        @endif
+
+        <section class="rounded-lg border border-slate-200 bg-white p-6 shadow-xs" aria-label="Informasi jadwal survei">
+            <div class="flex items-start gap-3">
+                <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                </span>
+                <div>
+                    <h2 class="text-sm font-bold text-secondary">Kalender survei dinonaktifkan sementara</h2>
+                    <p class="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">
+                        Pengajuan survei kini dikirim langsung oleh pembeli kepada pemilik properti. Penjual dapat
+                        menyetujui, menolak, atau menawarkan jadwal pengganti melalui kalender di dashboard penjual.
+                    </p>
+                </div>
+            </div>
+        </section>
     </div>
 
     @if (false)

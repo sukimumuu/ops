@@ -49,6 +49,23 @@ class Appointment extends Model
 
     protected $guarded = ['id'];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Appointment $appointment): void {
+            if ($appointment->property_id === null) {
+                return;
+            }
+
+            $ownerId = Property::query()
+                ->whereKey($appointment->property_id)
+                ->value('seller_id');
+
+            if ($ownerId !== null) {
+                $appointment->seller_id = $ownerId;
+            }
+        });
+    }
+
     /**
      * Get the attributes that should be cast.
      *
