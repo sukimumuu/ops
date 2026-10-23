@@ -39,8 +39,10 @@ class UserController extends Controller
 
         $calendarBookings = $appointments->map(fn (Appointment $appointment): array => [
             'id' => $appointment->id,
-            'seller_name' => $appointment->seller->name,
+            'counterpart_name' => $appointment->seller->name,
             'avatar_url' => $appointment->seller->avatar_url,
+            'seller_name' => $appointment->seller->name,
+            'buyer_name' => $appointment->buyer?->name,
             'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
             'time' => $appointment->scheduled_at->format('H:i'),
             'reschedule_date' => $appointment->reschedule_suggested_at?->locale('id')->translatedFormat('l, d F Y'),

@@ -84,6 +84,18 @@
         </x-card-dashboard>
     </section>
 
+    <x-survey-calendar
+        :month="$month"
+        :calendar-days="$calendarDays"
+        :appointments-by-date="$appointmentsByDate"
+        :bookings="$calendarBookings"
+        :appointments="$appointments"
+        perspective="seller"
+        reset-route="seller.listing"
+        title="Kalender survei properti"
+        description="Pilih avatar calon pembeli untuk menyetujui, menolak, atau menawarkan jadwal pengganti."
+    />
+
     <x-card-dashboard title="Properti terbaru" subtitle="Ringkasan listing yang terakhir Anda tambahkan">
         <x-slot name="actions">
             <a href="{{ route('seller.my-properties') }}" class="text-sm font-semibold text-primary hover:underline">
