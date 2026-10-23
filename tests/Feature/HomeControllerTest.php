@@ -266,6 +266,7 @@ it('redirects guests to login when attempting to schedule a visit', function () 
 
     $response = $this->post(route('property.schedule-visit', ['uuid' => $uuid]), [
         'scheduled_at' => now()->addDays(2)->format('Y-m-d'),
+        'scheduled_time' => '09:00',
     ]);
 
     $response->assertRedirect(route('login'));
@@ -305,6 +306,7 @@ it('allows authenticated buyers to schedule a visit', function () {
 
     $response = $this->actingAs($buyer)->post(route('property.schedule-visit', ['uuid' => $uuid]), [
         'scheduled_at' => $targetDate,
+        'scheduled_time' => '13:00',
     ]);
 
     $response->assertRedirect();
@@ -316,7 +318,8 @@ it('allows authenticated buyers to schedule a visit', function () {
         ->and($appointment->buyer_id)->toBe($buyer->id)
         ->and($appointment->seller_id)->toBe($seller->id)
         ->and($appointment->status)->toBe('requested')
-        ->and($appointment->scheduled_at->format('Y-m-d'))->toBe($targetDate);
+        ->and($appointment->scheduled_at->format('Y-m-d'))->toBe($targetDate)
+        ->and($appointment->scheduled_at->format('H:i'))->toBe('13:00');
 });
 
 it('prevents seller from scheduling a visit on their own property', function () {
@@ -349,9 +352,84 @@ it('prevents seller from scheduling a visit on their own property', function () 
 
     $response = $this->actingAs($seller)->post(route('property.schedule-visit', ['uuid' => $uuid]), [
         'scheduled_at' => now()->addDays(1)->format('Y-m-d'),
+        'scheduled_time' => '15:30',
     ]);
 
     $response->assertRedirect();
     $response->assertSessionHas('error');
     expect(Appointment::query()->count())->toBe(0);
+});
+
+it('links seller profile from property details page', function () {
+    $seller = User::factory()->create([
+        'name' => 'John Doe Agent',
+    ]);
+    $property = Property::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'seller_id' => $seller->id,
+        'property_type' => 'bangunan',
+        'type' => 'rumah',
+        'category' => 'sale',
+        'status' => 'published',
+        'title' => 'Rumah Bagus',
+        'description' => 'Deskripsi rumah bagus.',
+        'price' => 500000000,
+        'negotiable' => false,
+        'province' => 'Jawa Barat',
+        'city' => 'Bandung',
+        'district' => 'Coblong',
+        'postal_code' => '40132',
+        'address' => 'Jl. Dago No. 10',
+        'land_area_sqm' => 100,
+        'building_area_sqm' => 70,
+        'rooms' => '2',
+        'bathrooms' => '1',
+        'floors' => '1',
+        'condition' => 'siap_huni',
+        'certificate_type' => 'SHM',
+    ]);
+
+    $response = $this->get(route('property-details', ['uuid' => $property->uuid]));
+
+    $response->assertOk();
+    $response->assertSee(route('user-details', ['uuid' => $seller->uuid]));
+    $response->assertSee('John Doe Agent');
+});
+
+it('renders user details and property sales catalog page', function () {
+    $seller = User::factory()->create([
+        'name' => 'Agent Properti Keren',
+    ]);
+    $property = Property::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'seller_id' => $seller->id,
+        'property_type' => 'bangunan',
+        'type' => 'rumah',
+        'category' => 'sale',
+        'status' => 'published',
+        'title' => 'Katalog Rumah Seller',
+        'description' => 'Deskripsi properti.',
+        'price' => 750000000,
+        'negotiable' => false,
+        'province' => 'DKI Jakarta',
+        'city' => 'Jakarta Selatan',
+        'district' => 'Kebayoran Baru',
+        'postal_code' => '12110',
+        'address' => 'Jl. Senopati No. 1',
+        'land_area_sqm' => 150,
+        'building_area_sqm' => 120,
+        'rooms' => '4',
+        'bathrooms' => '3',
+        'floors' => '2',
+        'condition' => 'siap_huni',
+        'certificate_type' => 'SHM',
+    ]);
+
+    $response = $this->get(route('user-details', ['uuid' => $seller->uuid]));
+
+    $response->assertOk();
+    $response->assertSee('Agent Properti Keren');
+    $response->assertSee('Katalog Rumah Seller');
+    $response->assertSee('Katalog Penjualan');
+    $response->assertSee('Rp 750.000.000');
 });

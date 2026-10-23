@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -12,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class HomeController extends Controller
 {
@@ -246,12 +248,27 @@ class HomeController extends Controller
             return back()->with('error', 'Anda tidak dapat menjadwalkan kunjungan pada properti Anda sendiri.');
         }
 
+        $hasActiveAppointment = Appointment::query()
+            ->where('property_id', $property->id)
+            ->where('buyer_id', auth()->id())
+            ->whereIn('status', [Appointment::STATUS_REQUESTED, Appointment::STATUS_CONFIRMED])
+            ->where('scheduled_at', '>=', now())
+            ->exists();
+
+        if ($hasActiveAppointment) {
+            return back()->with('error', 'Anda sudah memiliki jadwal kunjungan aktif untuk properti ini.');
+        }
+
         $validated = $request->validate([
             'scheduled_at' => ['required', 'date', 'after_or_equal:today'],
+            'scheduled_time' => ['required', 'string', Rule::in(Appointment::TIME_SLOTS)],
             'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'scheduled_time.required' => 'Pilih waktu kunjungan.',
+            'scheduled_time.in' => 'Waktu kunjungan yang dipilih tidak valid.',
         ]);
 
-        $scheduledAt = Carbon::parse($validated['scheduled_at'])->setTime(10, 0, 0);
+        $scheduledAt = Carbon::parse($validated['scheduled_at'])->setTimeFromTimeString($validated['scheduled_time']);
 
         Appointment::query()->create([
             'property_id' => $property->id,
@@ -268,5 +285,69 @@ class HomeController extends Controller
     public function contact(): View
     {
         return view('contact');
+    }
+
+    public function userDetails(Request $request, string $uuid): View
+    {
+        $user = User::query()
+            ->where('uuid', $uuid)
+            ->firstOrFail();
+
+        $sort = $request->query('sort', 'terbaru');
+        $category = $request->query('category');
+        $type = $request->query('type');
+
+        $query = Property::query()
+            ->where('seller_id', $user->id)
+            ->where('status', 'published')
+            ->with(['photos' => fn ($q) => $q->limit(1)]);
+
+        if (filled($category) && in_array($category, ['sale', 'rent'])) {
+            $query->where('category', $category);
+        }
+
+        if (filled($type)) {
+            $query->where('type', $type);
+        }
+
+        match ($sort) {
+            'termurah' => $query->orderBy('price', 'asc'),
+            'termahal' => $query->orderByDesc('price'),
+            default => $query->orderByDesc('created_at')->orderByDesc('id'),
+        };
+
+        $properties = $query->paginate(6)->withQueryString();
+
+        $properties->getCollection()->each(function (Property $property): void {
+            $photo = $property->photos->first();
+            $area = $property->building_area_sqm ?? $property->land_area_sqm;
+            $specs = [];
+
+            if ($property->rooms) {
+                $specs[] = "{$property->rooms} KT";
+            }
+
+            if ($property->bathrooms) {
+                $specs[] = "{$property->bathrooms} KM";
+            }
+
+            if ($area) {
+                $specs[] = number_format((float) $area, 0, ',', '.').' m²';
+            }
+
+            $property->setAttribute('listing_specs', implode(' • ', $specs));
+            $property->setAttribute(
+                'image_url',
+                $photo ? $this->propertyPhotoUrl($photo) : null,
+            );
+        });
+
+        $totalProperties = Property::query()->where('seller_id', $user->id)->where('status', 'published')->count();
+        $totalRent = Property::query()->where('seller_id', $user->id)->where('status', 'published')->where('category', 'rent')->count();
+        $totalSale = Property::query()->where('seller_id', $user->id)->where('status', 'published')->where('category', 'sale')->count();
+        $availableTypes = Property::query()->where('seller_id', $user->id)->where('status', 'published')->pluck('type')->unique()->filter()->values();
+        $cities = Property::query()->where('seller_id', $user->id)->where('status', 'published')->pluck('city')->unique()->filter()->values();
+
+        return view('user-details', compact('user', 'properties', 'sort', 'category', 'type', 'totalProperties', 'totalRent', 'totalSale', 'availableTypes', 'cities'));
     }
 }

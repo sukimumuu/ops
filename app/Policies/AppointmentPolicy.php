@@ -26,4 +26,12 @@ class AppointmentPolicy
 
         return $appointment->property?->assigned_ppat_id === $user->id;
     }
+
+    /**
+     * Determine whether the user may respond to a proposed reschedule.
+     */
+    public function respondToReschedule(User $user, Appointment $appointment): bool
+    {
+        return $appointment->buyer_id === $user->id;
+    }
 }
