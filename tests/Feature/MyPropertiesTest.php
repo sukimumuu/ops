@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,6 +37,17 @@ function createMyPropertyForTest(User $seller, array $attributes = []): Property
         'bathrooms' => '2',
         'certificate_type' => 'SHM',
     ], $attributes));
+}
+
+function createMyPropertyAppointmentForTest(User $seller, User $buyer, Property $property, string $status): Appointment
+{
+    return Appointment::query()->create([
+        'property_id' => $property->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $seller->id,
+        'scheduled_at' => now()->addDay(),
+        'status' => $status,
+    ]);
 }
 
 it('redirects guests to the login page', function () {
@@ -149,6 +161,42 @@ it('paginates filtered properties and preserves the query string', function () {
     $this->actingAs($seller)
         ->get(route('seller.my-properties', ['search' => 'Halaman', 'status' => 'draft', 'page' => 2]))
         ->assertSeeText('Properti Halaman 1');
+});
+
+it('shows the active survey status on each property card', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+
+    $withoutSurvey = createMyPropertyForTest($seller, ['title' => 'Properti Tanpa Survei']);
+    $withRequest = createMyPropertyForTest($seller, ['title' => 'Properti Dengan Permintaan']);
+    $withConfirmed = createMyPropertyForTest($seller, ['title' => 'Properti Dengan Jadwal']);
+    $withCompletedSurvey = createMyPropertyForTest($seller, ['title' => 'Properti Survei Selesai']);
+
+    createMyPropertyAppointmentForTest($seller, $buyer, $withRequest, Appointment::STATUS_REQUESTED);
+    createMyPropertyAppointmentForTest($seller, $buyer, $withRequest, Appointment::STATUS_CONFIRMED);
+    createMyPropertyAppointmentForTest($seller, $buyer, $withConfirmed, Appointment::STATUS_CONFIRMED);
+    createMyPropertyAppointmentForTest($seller, $buyer, $withCompletedSurvey, Appointment::STATUS_COMPLETED);
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties'))
+        ->assertOk()
+        ->assertSeeText('Permintaan survei masuk')
+        ->assertSeeText('Jadwal survei aktif')
+        ->assertSeeText('Belum ada jadwal survei')
+        ->assertViewHas('properties', function ($properties) use (
+            $withoutSurvey,
+            $withRequest,
+            $withConfirmed,
+            $withCompletedSurvey,
+        ): bool {
+            $propertiesByUuid = $properties->getCollection()->keyBy('uuid');
+
+            return $propertiesByUuid[$withoutSurvey->uuid]->survey_status === 'none'
+                && $propertiesByUuid[$withRequest->uuid]->survey_status === Appointment::STATUS_REQUESTED
+                && $propertiesByUuid[$withConfirmed->uuid]->survey_status === Appointment::STATUS_CONFIRMED
+                && $propertiesByUuid[$withCompletedSurvey->uuid]->survey_status === 'none';
+        });
 });
 
 it('links every property card to the seller detail page', function () {

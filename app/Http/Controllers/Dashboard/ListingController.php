@@ -120,6 +120,10 @@ class ListingController extends Controller
         $properties = Property::query()
             ->where('seller_id', $request->user()->id)
             ->with(['photos' => fn ($query) => $query->limit(1)])
+            ->withExists([
+                'appointments as has_requested_survey' => fn (Builder $query): Builder => $query->where('status', Appointment::STATUS_REQUESTED),
+                'appointments as has_confirmed_survey' => fn (Builder $query): Builder => $query->where('status', Appointment::STATUS_CONFIRMED),
+            ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $term = '%'.$search.'%';
 
@@ -146,6 +150,11 @@ class ListingController extends Controller
 
         $properties->getCollection()->each(function (Property $property): void {
             $property->setAttribute('image_url', $property->primaryPhotoUrl());
+            $property->setAttribute('survey_status', match (true) {
+                (bool) $property->has_requested_survey => Appointment::STATUS_REQUESTED,
+                (bool) $property->has_confirmed_survey => Appointment::STATUS_CONFIRMED,
+                default => 'none',
+            });
         });
 
         $totalProperties = Property::query()

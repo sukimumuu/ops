@@ -169,7 +169,8 @@
                             $detailUrl = route('seller.my-properties.show', ['property' => $property->uuid]);
                         @endphp
 
-                        <x-dashboard.property-card :property="$property" :detail-url="$detailUrl" :show-status="true">
+                        <x-dashboard.property-card :property="$property" :detail-url="$detailUrl" :show-status="true"
+                            :survey-status="$property->survey_status">
                             <x-slot name="actions">
                                 <a href="{{ $detailUrl }}"
                                     class="inline-flex items-center gap-1.5 rounded font-sans text-sm font-semibold text-primary transition hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2">

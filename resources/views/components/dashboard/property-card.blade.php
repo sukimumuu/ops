@@ -2,6 +2,7 @@
     'property',
     'detailUrl' => null,
     'showStatus' => false,
+    'surveyStatus' => null,
     'removable' => false,
     'removeUrl' => null,
 ])
@@ -23,6 +24,25 @@
             'minggu' => '/ minggu',
             'hari' => '/ hari',
             default => null,
+        }
+        : null;
+    $surveyStatusStyles = $surveyStatus !== null
+        ? match ($surveyStatus) {
+            'requested' => [
+                'label' => 'Permintaan survei masuk',
+                'badge' => 'border-amber-200 bg-amber-50 text-amber-800',
+                'dot' => 'bg-amber-500',
+            ],
+            'confirmed' => [
+                'label' => 'Jadwal survei aktif',
+                'badge' => 'border-sky-200 bg-sky-50 text-sky-700',
+                'dot' => 'bg-sky-500',
+            ],
+            default => [
+                'label' => 'Belum ada jadwal survei',
+                'badge' => 'border-slate-200 bg-slate-50 text-slate-600',
+                'dot' => 'bg-slate-400',
+            ],
         }
         : null;
 @endphp
@@ -75,9 +95,19 @@
     </div>
 
     <div class="flex flex-1 flex-col p-5">
-        @if ($showStatus)
-            <div class="mb-3">
-                <x-property-status-badge :status="$property->status" />
+        @if ($showStatus || $surveyStatusStyles)
+            <div class="mb-3 flex flex-wrap items-center gap-2">
+                @if ($showStatus)
+                    <x-property-status-badge :status="$property->status" />
+                @endif
+
+                @if ($surveyStatusStyles)
+                    <span title="Status permintaan dan jadwal survei properti"
+                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-sans text-[11px] font-bold {{ $surveyStatusStyles['badge'] }}">
+                        <span class="size-1.5 rounded-full {{ $surveyStatusStyles['dot'] }}" aria-hidden="true"></span>
+                        {{ $surveyStatusStyles['label'] }}
+                    </span>
+                @endif
             </div>
         @endif
 
