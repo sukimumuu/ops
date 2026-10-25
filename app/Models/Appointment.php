@@ -76,6 +76,7 @@ class Appointment extends Model
         return [
             'scheduled_at' => 'datetime',
             'reschedule_suggested_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
     }
 
@@ -94,6 +95,76 @@ class Appointment extends Model
     public function statusLabel(): string
     {
         return self::labelFor((string) $this->status);
+    }
+
+    /**
+     * Describe the survey progress represented by this appointment.
+     *
+     * @return array{label: string, description: string, percentage: int, tone: string, completed_steps: int, stopped: bool}
+     */
+    public function progressState(): array
+    {
+        if ($this->hasPendingReschedule()) {
+            return [
+                'label' => 'Menunggu jadwal pengganti',
+                'description' => 'Jadwal pengganti sudah dikirim dan menunggu konfirmasi calon pembeli.',
+                'percentage' => 33,
+                'tone' => 'amber',
+                'completed_steps' => 1,
+                'stopped' => false,
+            ];
+        }
+
+        return match ($this->status) {
+            self::STATUS_REQUESTED => [
+                'label' => 'Menunggu konfirmasi survei',
+                'description' => 'Permintaan survei sudah masuk dan menunggu persetujuan Anda.',
+                'percentage' => 33,
+                'tone' => 'amber',
+                'completed_steps' => 1,
+                'stopped' => false,
+            ],
+            self::STATUS_CONFIRMED => [
+                'label' => 'Survei terjadwal',
+                'description' => 'Jadwal survei sudah dikonfirmasi. Catat hasilnya setelah survei dilaksanakan.',
+                'percentage' => 66,
+                'tone' => 'sky',
+                'completed_steps' => 2,
+                'stopped' => false,
+            ],
+            self::STATUS_COMPLETED => [
+                'label' => 'Survei selesai',
+                'description' => 'Hasil survei sudah dicatat dan tidak mengubah status tayang properti.',
+                'percentage' => 100,
+                'tone' => 'emerald',
+                'completed_steps' => 3,
+                'stopped' => false,
+            ],
+            self::STATUS_REJECTED => [
+                'label' => 'Survei tidak dilanjutkan',
+                'description' => 'Permintaan survei ditolak dan tidak ada jadwal pengganti yang aktif.',
+                'percentage' => 33,
+                'tone' => 'rose',
+                'completed_steps' => 1,
+                'stopped' => true,
+            ],
+            self::STATUS_CANCELLED => [
+                'label' => 'Survei dibatalkan',
+                'description' => 'Survei ini dibatalkan sebelum hasilnya dicatat.',
+                'percentage' => 33,
+                'tone' => 'slate',
+                'completed_steps' => 1,
+                'stopped' => true,
+            ],
+            default => [
+                'label' => 'Status survei tidak diketahui',
+                'description' => 'Progres survei belum dapat ditampilkan.',
+                'percentage' => 0,
+                'tone' => 'slate',
+                'completed_steps' => 0,
+                'stopped' => true,
+            ],
+        };
     }
 
     public function isAwaitingReview(): bool

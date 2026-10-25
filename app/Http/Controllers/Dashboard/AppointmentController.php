@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Property;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -63,6 +64,54 @@ class AppointmentController extends Controller
         };
 
         return back()->with('status', $message);
+    }
+
+    /**
+     * Record the result of a confirmed survey from the seller property page.
+     */
+    public function recordSurveyResult(Request $request, Property $property, Appointment $appointment): RedirectResponse
+    {
+        Gate::authorize('view', $property);
+
+        abort_unless($appointment->property_id === $property->id, 404);
+
+        Gate::authorize('recordResult', $appointment);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in([Appointment::STATUS_COMPLETED, Appointment::STATUS_CANCELLED])],
+            'result_notes' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'status.required' => 'Pilih hasil survei.',
+            'status.in' => 'Hasil survei yang dipilih tidak valid.',
+            'result_notes.max' => 'Catatan hasil survei tidak boleh lebih dari 1000 karakter.',
+        ]);
+
+        $updated = Appointment::query()
+            ->whereKey($appointment->getKey())
+            ->where('status', Appointment::STATUS_CONFIRMED)
+            ->update([
+                'status' => $validated['status'],
+                'result_notes' => $validated['result_notes'] ?? null,
+                'completed_at' => $validated['status'] === Appointment::STATUS_COMPLETED ? now() : null,
+            ]);
+
+        if ($updated === 0) {
+            return back()->withErrors([
+                'status' => 'Hasil survei hanya dapat dicatat untuk survei yang sudah dikonfirmasi.',
+            ]);
+        }
+
+        return redirect()
+            ->route('seller.my-properties.show', [
+                'property' => $property->uuid,
+                'appointment' => $appointment->id,
+            ])
+            ->with(
+                'status',
+                $validated['status'] === Appointment::STATUS_COMPLETED
+                    ? 'Hasil survei berhasil disimpan.'
+                    : 'Survei berhasil dibatalkan.',
+            );
     }
 
     /**
