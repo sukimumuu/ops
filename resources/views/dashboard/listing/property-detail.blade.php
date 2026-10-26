@@ -341,14 +341,22 @@
                                 </div>
                             @endif
 
-                            @if (filled($selectedAppointment->result_notes))
+                            @if (filled($selectedAppointment->result_notes) || filled($selectedAppointment->buyer_intent))
                                 <div class="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
                                     <p class="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
                                         Hasil survei
                                     </p>
-                                    <p class="mt-1 text-sm leading-6 text-emerald-800">
-                                        {{ $selectedAppointment->result_notes }}
-                                    </p>
+                                    @if (filled($selectedAppointment->result_notes))
+                                        <p class="mt-1 text-sm leading-6 text-emerald-800">
+                                            {{ $selectedAppointment->result_notes }}
+                                        </p>
+                                    @endif
+                                    @if (filled($selectedAppointment->buyer_intent))
+                                        <p class="mt-2 text-xs font-medium text-emerald-700">
+                                            Keputusan pembeli:
+                                            <span class="font-bold">{{ $selectedAppointment->buyerIntentLabel() }}</span>
+                                        </p>
+                                    @endif
                                     @if ($selectedAppointment->completed_at)
                                         <p class="mt-1.5 text-[11px] font-medium text-emerald-600">
                                             Dicatat
@@ -363,17 +371,19 @@
                                 <div class="mt-5 border-t border-slate-200 pt-5">
                                     <h3 class="font-heading text-sm font-bold text-secondary">Catat hasil survei</h3>
                                     <p class="mt-1 text-xs leading-5 text-slate-500">
-                                        Hasil survei hanya memperbarui progres survei. Status tayang properti tidak
-                                        berubah.
+                                        Jika pembeli memilih berminat membeli, status properti otomatis diubah menjadi
+                                        Dipesan.
                                     </p>
 
                                     <form method="POST"
                                         action="{{ route('seller.my-properties.surveys.update', ['property' => $property->uuid, 'appointment' => $selectedAppointment->id]) }}"
-                                        class="mt-4 space-y-4">
+                                        class="mt-4 space-y-4"
+                                        x-data="{ surveyStatus: @js(old('status', \App\Models\Appointment::STATUS_COMPLETED)) }">
                                         @csrf
                                         @method('PATCH')
 
-                                        <x-form-select-dashboard label="Hasil survei" name="status" required>
+                                        <x-form-select-dashboard label="Hasil survei" name="status" required
+                                            x-model="surveyStatus">
                                             <option value="completed" @selected(old('status', 'completed') === 'completed')>
                                                 Survei selesai
                                             </option>
@@ -381,6 +391,24 @@
                                                 Survei dibatalkan
                                             </option>
                                         </x-form-select-dashboard>
+
+                                        <div x-show="surveyStatus === 'completed'" x-cloak>
+                                            <x-form-select-dashboard label="Keputusan pembeli" name="buyer_intent" required
+                                                x-bind:required="surveyStatus === 'completed'"
+                                                x-bind:disabled="surveyStatus !== 'completed'">
+                                                <option value="" @selected(old('buyer_intent', $selectedAppointment->buyer_intent) === null || old('buyer_intent', $selectedAppointment->buyer_intent) === '')>
+                                                    Pilih keputusan pembeli
+                                                </option>
+                                                <option value="{{ \App\Models\Appointment::BUYER_INTENT_DEAL }}"
+                                                    @selected(old('buyer_intent', $selectedAppointment->buyer_intent) === \App\Models\Appointment::BUYER_INTENT_DEAL)>
+                                                    Berminat membeli
+                                                </option>
+                                                <option value="{{ \App\Models\Appointment::BUYER_INTENT_NO_DEAL }}"
+                                                    @selected(old('buyer_intent', $selectedAppointment->buyer_intent) === \App\Models\Appointment::BUYER_INTENT_NO_DEAL)>
+                                                    Tidak melanjutkan pembelian
+                                                </option>
+                                            </x-form-select-dashboard>
+                                        </div>
 
                                         <x-form-text-area-dashboard label="Catatan hasil survei" name="result_notes"
                                             rows="3"
@@ -448,6 +476,13 @@
                                                 <p class="mt-2 text-xs leading-5 text-slate-600">
                                                     <span class="font-bold text-slate-500">Hasil:</span>
                                                     {{ $appointment->result_notes }}
+                                                </p>
+                                            @endif
+
+                                            @if (filled($appointment->buyer_intent))
+                                                <p class="mt-1 text-xs leading-5 text-slate-600">
+                                                    <span class="font-bold text-slate-500">Keputusan pembeli:</span>
+                                                    {{ $appointment->buyerIntentLabel() }}
                                                 </p>
                                             @endif
 

@@ -91,6 +91,12 @@ class UserController extends Controller
             'reschedule_url' => route('buyer.survey-schedule.reschedule', $appointment),
             'status_key' => $appointment->status,
             'status' => $appointment->statusLabel(),
+            'buyer_intent_key' => $appointment->buyer_intent,
+            'buyer_intent_label' => $appointment->buyerIntentLabel(),
+            'result_notes' => $appointment->result_notes,
+            'result_recorded_at' => $appointment->completed_at
+                ? $appointment->completed_at->locale('id')->translatedFormat('l, d F Y, H:i').' WIB'
+                : null,
             'notes' => $appointment->notes,
             'property_title' => $appointment->property->title,
             'property_certificate' => $appointment->property->certificate_type,

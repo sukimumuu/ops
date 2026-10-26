@@ -323,6 +323,62 @@ it('shows buyers a calendar and upcoming list for their own survey bookings only
         });
 });
 
+it('shows the survey result and reason note on the seller calendar', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property, 'completed');
+    $appointment->update([
+        'scheduled_at' => '2026-10-20 10:00:00',
+        'buyer_intent' => Appointment::BUYER_INTENT_NO_DEAL,
+        'result_notes' => 'Calon pembeli memilih tidak melanjutkan pembelian.',
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($seller)
+        ->get(route('seller.listing', ['month' => '2026-10']))
+        ->assertOk()
+        ->assertSee('Hasil survei')
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+            $booking = $bookings->firstWhere('id', $appointment->id);
+
+            return $booking !== null
+                && $booking['buyer_intent_key'] === Appointment::BUYER_INTENT_NO_DEAL
+                && $booking['buyer_intent_label'] === 'Tidak melanjutkan pembelian'
+                && $booking['result_notes'] === 'Calon pembeli memilih tidak melanjutkan pembelian.'
+                && $booking['result_recorded_at'] !== null;
+        });
+});
+
+it('shows the survey result and reason note on the buyer calendar', function () {
+    $buyer = User::factory()->create();
+    $buyer->assignRole('User');
+    $seller = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property, 'completed');
+    $appointment->update([
+        'scheduled_at' => '2026-10-20 10:00:00',
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'result_notes' => 'Calon pembeli tertarik dan akan melanjutkan diskusi harga.',
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.survey-schedule', ['month' => '2026-10']))
+        ->assertOk()
+        ->assertSee('Hasil survei')
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+            $booking = $bookings->firstWhere('id', $appointment->id);
+
+            return $booking !== null
+                && $booking['buyer_intent_key'] === Appointment::BUYER_INTENT_DEAL
+                && $booking['buyer_intent_label'] === 'Berminat membeli'
+                && $booking['result_notes'] === 'Calon pembeli tertarik dan akan melanjutkan diskusi harga.'
+                && $booking['result_recorded_at'] !== null;
+        });
+});
+
 it('scopes the buyer survey calendar to the selected month', function () {
     $buyer = User::factory()->create();
     $buyer->assignRole('User');

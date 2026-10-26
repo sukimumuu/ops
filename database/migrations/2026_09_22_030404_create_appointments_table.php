@@ -25,6 +25,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->text('result_notes')->nullable();
             $table->timestamp('completed_at')->nullable();
+            $table->string('buyer_intent')->nullable();
             $table->timestamps();
         });
     }

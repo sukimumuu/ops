@@ -40,6 +40,20 @@ class Appointment extends Model
         self::STATUS_REJECTED,
     ];
 
+    public const BUYER_INTENT_DEAL = 'deal';
+
+    public const BUYER_INTENT_NO_DEAL = 'no_deal';
+
+    /**
+     * All supported buyer decisions after a survey.
+     *
+     * @var list<string>
+     */
+    public const BUYER_INTENTS = [
+        self::BUYER_INTENT_DEAL,
+        self::BUYER_INTENT_NO_DEAL,
+    ];
+
     /**
      * Available time slots for a property visit.
      *
@@ -95,6 +109,15 @@ class Appointment extends Model
     public function statusLabel(): string
     {
         return self::labelFor((string) $this->status);
+    }
+
+    public function buyerIntentLabel(): ?string
+    {
+        return match ($this->buyer_intent) {
+            self::BUYER_INTENT_DEAL => 'Berminat membeli',
+            self::BUYER_INTENT_NO_DEAL => 'Tidak melanjutkan pembelian',
+            default => null,
+        };
     }
 
     /**

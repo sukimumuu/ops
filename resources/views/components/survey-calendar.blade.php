@@ -255,6 +255,35 @@
                                     </span>
                                 </dd>
                             </div>
+                            <template
+                                x-if="selectedAppointment.buyer_intent_label || selectedAppointment.result_notes">
+                                <div class="px-4 py-3">
+                                    <dt class="text-xs text-slate-500">Hasil survei</dt>
+                                    <dd class="mt-1.5 space-y-2">
+                                        <template x-if="selectedAppointment.buyer_intent_label">
+                                            <span
+                                                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
+                                                x-bind:class="selectedAppointment.buyer_intent_key === 'deal' ?
+                                                    'border-emerald-200 bg-emerald-50 text-emerald-700' :
+                                                    'border-rose-200 bg-rose-50 text-rose-700'">
+                                                <span class="size-1.5 rounded-full"
+                                                    x-bind:class="selectedAppointment.buyer_intent_key === 'deal' ?
+                                                        'bg-emerald-500' : 'bg-rose-500'"></span>
+                                                <span x-text="selectedAppointment.buyer_intent_label"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="selectedAppointment.result_notes">
+                                            <p class="whitespace-pre-line text-sm leading-relaxed text-slate-700"
+                                                x-text="selectedAppointment.result_notes"></p>
+                                        </template>
+                                        <template x-if="selectedAppointment.result_recorded_at">
+                                            <p class="text-[11px] font-medium text-slate-400">
+                                                Dicatat <span x-text="selectedAppointment.result_recorded_at"></span>
+                                            </p>
+                                        </template>
+                                    </dd>
+                                </div>
+                            </template>
                             <div class="px-4 py-3">
                                 <dt class="text-xs text-slate-500">Properti</dt>
                                 <dd class="mt-1 text-sm font-semibold text-slate-800"><span

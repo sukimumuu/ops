@@ -85,6 +85,7 @@ it('shows essential property information and the latest survey progress', functi
         ->assertSeeText('Calon Pembeli Survei')
         ->assertSeeText('Progres properti')
         ->assertSeeText('Survei terjadwal')
+        ->assertSeeText('Keputusan pembeli')
         ->assertSeeText('Buka lokasi di peta')
         ->assertViewHas('latestAppointment', fn (Appointment $appointment): bool => $appointment->is($latest))
         ->assertViewHas('selectedAppointment', fn (Appointment $appointment): bool => $appointment->is($latest))
@@ -105,7 +106,7 @@ it('shows an empty survey progress when the property has no appointments', funct
             && $progress['completed_steps'] === 0);
 });
 
-it('lets a seller record a completed survey result without changing the property status', function () {
+it('reserves the property when the buyer agrees to proceed after a survey', function () {
     $seller = User::factory()->create();
     $seller->assignRole('User');
     $buyer = User::factory()->create();
@@ -120,7 +121,51 @@ it('lets a seller record a completed survey result without changing the property
             'appointment' => $appointment->id,
         ]), [
             'status' => Appointment::STATUS_COMPLETED,
+            'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
             'result_notes' => 'Calon pembeli tertarik dan akan melanjutkan diskusi harga.',
+        ])
+        ->assertRedirect(route('seller.my-properties.show', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]))
+        ->assertSessionHas('status', 'Hasil survei disimpan dan properti ditandai sebagai dipesan.');
+
+    $appointment->refresh();
+
+    expect($appointment->status)->toBe(Appointment::STATUS_COMPLETED)
+        ->and($appointment->buyer_intent)->toBe(Appointment::BUYER_INTENT_DEAL)
+        ->and($appointment->result_notes)->toBe('Calon pembeli tertarik dan akan melanjutkan diskusi harga.')
+        ->and($appointment->completed_at)->not->toBeNull()
+        ->and($property->fresh()->status)->toBe('reserved');
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties.show', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]))
+        ->assertOk()
+        ->assertSeeText('Survei selesai')
+        ->assertSeeText('Berminat membeli')
+        ->assertSeeText('Calon pembeli tertarik dan akan melanjutkan diskusi harga.');
+});
+
+it('keeps the property status when the buyer does not proceed after a survey', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller);
+    $appointment = createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_CONFIRMED,
+    ]);
+
+    $this->actingAs($seller)
+        ->patch(route('seller.my-properties.surveys.update', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]), [
+            'status' => Appointment::STATUS_COMPLETED,
+            'buyer_intent' => Appointment::BUYER_INTENT_NO_DEAL,
+            'result_notes' => 'Calon pembeli memilih tidak melanjutkan pembelian.',
         ])
         ->assertRedirect(route('seller.my-properties.show', [
             'property' => $property->uuid,
@@ -131,18 +176,63 @@ it('lets a seller record a completed survey result without changing the property
     $appointment->refresh();
 
     expect($appointment->status)->toBe(Appointment::STATUS_COMPLETED)
-        ->and($appointment->result_notes)->toBe('Calon pembeli tertarik dan akan melanjutkan diskusi harga.')
-        ->and($appointment->completed_at)->not->toBeNull()
+        ->and($appointment->buyer_intent)->toBe(Appointment::BUYER_INTENT_NO_DEAL)
         ->and($property->fresh()->status)->toBe('published');
+});
+
+it('requires a buyer decision when completing a survey', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller);
+    $appointment = createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_CONFIRMED,
+    ]);
 
     $this->actingAs($seller)
-        ->get(route('seller.my-properties.show', [
+        ->from(route('seller.my-properties.show', ['property' => $property->uuid]))
+        ->patch(route('seller.my-properties.surveys.update', [
             'property' => $property->uuid,
             'appointment' => $appointment->id,
-        ]))
-        ->assertOk()
-        ->assertSeeText('Survei selesai')
-        ->assertSeeText('Calon pembeli tertarik dan akan melanjutkan diskusi harga.');
+        ]), [
+            'status' => Appointment::STATUS_COMPLETED,
+            'result_notes' => 'Calon pembeli tertarik.',
+        ])
+        ->assertSessionHasErrors('buyer_intent');
+
+    $appointment->refresh();
+
+    expect($appointment->status)->toBe(Appointment::STATUS_CONFIRMED)
+        ->and($appointment->buyer_intent)->toBeNull()
+        ->and($property->fresh()->status)->toBe('published');
+});
+
+it('rejects an unsupported buyer decision', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller);
+    $appointment = createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_CONFIRMED,
+    ]);
+
+    $this->actingAs($seller)
+        ->from(route('seller.my-properties.show', ['property' => $property->uuid]))
+        ->patch(route('seller.my-properties.surveys.update', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]), [
+            'status' => Appointment::STATUS_COMPLETED,
+            'buyer_intent' => 'maybe',
+            'result_notes' => 'Calon pembeli masih ragu.',
+        ])
+        ->assertSessionHasErrors('buyer_intent');
+
+    $appointment->refresh();
+
+    expect($appointment->status)->toBe(Appointment::STATUS_CONFIRMED)
+        ->and($appointment->buyer_intent)->toBeNull()
+        ->and($property->fresh()->status)->toBe('published');
 });
 
 it('lets a seller cancel a confirmed survey and clears its completion time', function () {
@@ -172,6 +262,7 @@ it('lets a seller cancel a confirmed survey and clears its completion time', fun
     $appointment->refresh();
 
     expect($appointment->status)->toBe(Appointment::STATUS_CANCELLED)
+        ->and($appointment->buyer_intent)->toBeNull()
         ->and($appointment->result_notes)->toBe('Calon pembeli membatalkan kunjungan.')
         ->and($appointment->completed_at)->toBeNull();
 });
@@ -190,6 +281,7 @@ it('only records results for confirmed surveys', function () {
             'appointment' => $appointment->id,
         ]), [
             'status' => Appointment::STATUS_COMPLETED,
+            'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
             'result_notes' => 'Hasil tidak boleh tersimpan.',
         ])
         ->assertSessionHasErrors('status');
@@ -197,8 +289,10 @@ it('only records results for confirmed surveys', function () {
     $appointment->refresh();
 
     expect($appointment->status)->toBe(Appointment::STATUS_REQUESTED)
+        ->and($appointment->buyer_intent)->toBeNull()
         ->and($appointment->result_notes)->toBeNull()
-        ->and($appointment->completed_at)->toBeNull();
+        ->and($appointment->completed_at)->toBeNull()
+        ->and($property->fresh()->status)->toBe('published');
 });
 
 it('selects an older confirmed survey for result entry', function () {

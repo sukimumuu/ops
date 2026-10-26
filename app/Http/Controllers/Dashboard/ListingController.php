@@ -307,6 +307,12 @@ class ListingController extends Controller
             'reschedule_time' => $appointment->reschedule_suggested_at?->format('H:i'),
             'status_key' => $appointment->status,
             'status' => $appointment->statusLabel(),
+            'buyer_intent_key' => $appointment->buyer_intent,
+            'buyer_intent_label' => $appointment->buyerIntentLabel(),
+            'result_notes' => $appointment->result_notes,
+            'result_recorded_at' => $appointment->completed_at
+                ? $appointment->completed_at->locale('id')->translatedFormat('l, d F Y, H:i').' WIB'
+                : null,
             'can_review' => $seller->can('review', $appointment),
             'status_url' => route('appointments.status', $appointment),
             'notes' => $appointment->notes,
