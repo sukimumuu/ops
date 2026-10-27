@@ -12,7 +12,8 @@
 
 @php
     $isSeller = $perspective === 'seller';
-    $counterpartLabel = $isSeller ? 'Calon pembeli' : 'Penjual properti';
+    $isPpat = $perspective === 'ppat';
+    $counterpartLabel = $isSeller || $isPpat ? 'Calon pembeli' : 'Penjual properti';
     $timeSlots = \App\Models\Appointment::TIME_SLOTS;
     $bookingStatusStyles = [
         'requested' => [
@@ -107,7 +108,7 @@
                             <div class="mt-2 flex flex-wrap gap-1.5">
                                 @foreach ($dayAppointments as $appointment)
                                     @php($statusStyle = $bookingStatusStyles[$appointment->status] ?? $bookingStatusStyles['cancelled'])
-                                    @php($counterpart = $isSeller ? $appointment->buyer : $appointment->seller)
+                                    @php($counterpart = $isSeller || $isPpat ? $appointment->buyer : $appointment->seller)
                                     <button type="button" x-on:click="openBooking({{ $appointment->id }})"
                                         title="{{ $counterpart->name }} · {{ $appointment->scheduled_at->format('H:i') }} · {{ $appointment->property->title }} · {{ $statusStyle['label'] }}"
                                         aria-label="Buka survei {{ $counterpart->name }}, {{ $appointment->scheduled_at->format('H:i') }}, {{ $appointment->property->title }}, status {{ $statusStyle['label'] }}"
@@ -131,7 +132,7 @@
                         class="size-2 rounded-full {{ $statusStyle['dot'] }}"></span>{{ $statusStyle['label'] }}</span>
             @endforeach
             <span class="text-slate-400">{{ $appointments->where('status', 'confirmed')->count() }}
-                {{ $isSeller ? 'terjadwal' : 'disetujui' }} ·
+                {{ $isSeller || $isPpat ? 'terjadwal' : 'disetujui' }} ·
                 {{ $pendingSurveyCount }} menunggu persetujuan</span>
         </footer>
     </section>
@@ -150,7 +151,7 @@
                     <div class="flex items-start justify-between border-b border-slate-200 px-5 py-4">
                         <div>
                             <p class="text-xs font-semibold uppercase text-primary">
-                                {{ $isSeller ? 'Rincian permintaan survei' : 'Rincian jadwal' }}
+                                {{ $isSeller ? 'Rincian permintaan survei' : ($isPpat ? 'Rincian jadwal survei' : 'Rincian jadwal') }}
                             </p>
                             <h2 id="booking-drawer-title" class="mt-1 text-lg font-bold text-secondary"
                                 x-text="selectedAppointment.counterpart_name"></h2>
@@ -313,6 +314,13 @@
                                 <dd class="mt-1 text-sm font-medium text-slate-800"
                                     x-text="selectedAppointment.counterpart_name"></dd>
                             </div>
+                            @if ($isPpat)
+                                <div class="px-4 py-3">
+                                    <dt class="text-xs text-slate-500">Penjual properti</dt>
+                                    <dd class="mt-1 text-sm font-medium text-slate-800"
+                                        x-text="selectedAppointment.seller_name"></dd>
+                                </div>
+                            @endif
                             <template x-if="selectedAppointment.notes">
                                 <div class="px-4 py-3">
                                     <dt class="text-xs text-slate-500">Catatan</dt>
@@ -418,7 +426,7 @@
                                     meninjau
                                     pengajuan ini.</span>
                             </p>
-                        @else
+                        @elseif (! $isPpat)
                             <template x-if="selectedAppointment.has_reschedule">
                                 <div class="mb-3 space-y-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
                                     <p class="text-xs leading-relaxed text-slate-600">

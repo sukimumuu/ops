@@ -249,20 +249,30 @@ it('shows the survey calendar on the seller dashboard', function () {
         ->assertViewHas('calendarBookings', fn ($bookings): bool => $bookings->firstWhere('id', $appointment->id) !== null);
 });
 
-it('hides the survey calendar from the PPAT dashboard', function () {
+it('shows the read-only survey calendar to the assigned PPAT', function () {
     $ppat = User::factory()->create();
     $ppat->assignRole('PPAT');
     $seller = User::factory()->create();
-    $buyer = User::factory()->create();
+    $buyer = User::factory()->create(['name' => 'Pembeli Kalender PPAT']);
     $property = createSurveyBookingProperty($seller, $ppat);
-    createSurveyBooking($seller, $buyer, $property);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+    $appointment->update(['scheduled_at' => '2026-10-20 10:00:00']);
 
     $this->actingAs($ppat)
-        ->get(route('land-deed.index'))
+        ->get(route('land-deed.index', ['month' => '2026-10']))
         ->assertOk()
-        ->assertSee('Kalender survei dinonaktifkan sementara')
-        ->assertDontSee('Pilih avatar untuk membuka rincian survei.')
-        ->assertDontSee('Setujui survei');
+        ->assertSee('Kalender jadwal survei')
+        ->assertSee('Pembeli Kalender PPAT')
+        ->assertSee('Pilih avatar calon pembeli')
+        ->assertDontSee('Setujui survei')
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $buyer, $property): bool {
+            $booking = $bookings->firstWhere('id', $appointment->id);
+
+            return $booking !== null
+                && $booking['counterpart_name'] === $buyer->name
+                && $booking['seller_name'] === $appointment->seller->name
+                && $booking['property_maps_url'] === $property->url_maps;
+        });
 });
 
 it('shows only survey requests belonging to the signed-in seller', function () {
