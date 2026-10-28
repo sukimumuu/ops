@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,5 +48,96 @@ class NotificationController extends Controller
         return response()->json([
             'unread_count' => $user->unreadNotifications()->count(),
         ]);
+    }
+
+    public function storeSubscription(Request $request): JsonResponse
+    {
+        abort_unless(
+            config('services.webpush.public_key')
+                && config('services.webpush.private_key')
+                && config('services.webpush.subject'),
+            503,
+            'Notifikasi browser belum dikonfigurasi.',
+        );
+
+        $validated = $request->validate([
+            'endpoint' => [
+                'required',
+                'string',
+                'max:4096',
+                'url',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value) || ! $this->isAllowedPushEndpoint($value)) {
+                        $fail('Endpoint push browser tidak valid.');
+                    }
+                },
+            ],
+            'keys' => ['required', 'array:p256dh,auth'],
+            'keys.p256dh' => ['required', 'string', 'size:87', 'regex:/\A[A-Za-z0-9_-]+\z/'],
+            'keys.auth' => ['required', 'string', 'size:22', 'regex:/\A[A-Za-z0-9_-]+\z/'],
+        ]);
+
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $user->webPushSubscriptions()->updateOrCreate(
+            ['endpoint_hash' => hash('sha256', $validated['endpoint'])],
+            [
+                'endpoint' => $validated['endpoint'],
+                'public_key' => $validated['keys']['p256dh'],
+                'auth_token' => $validated['keys']['auth'],
+            ],
+        );
+
+        return response()->json(['subscribed' => true], 201);
+    }
+
+    public function destroySubscription(Request $request, string $endpointHash): JsonResponse
+    {
+        abort_unless(preg_match('/\A[a-f0-9]{64}\z/', $endpointHash) === 1, 404);
+
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+
+        $user->webPushSubscriptions()
+            ->where('endpoint_hash', $endpointHash)
+            ->delete();
+
+        return response()->json(['subscribed' => false]);
+    }
+
+    private function isAllowedPushEndpoint(string $endpoint): bool
+    {
+        $parts = parse_url($endpoint);
+
+        if (
+            $parts === false
+            || ($parts['scheme'] ?? null) !== 'https'
+            || ! isset($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || (isset($parts['port']) && $parts['port'] !== 443)
+        ) {
+            return false;
+        }
+
+        $host = strtolower($parts['host']);
+        $allowedDomains = [
+            'fcm.googleapis.com',
+            'android.googleapis.com',
+            'push.services.mozilla.com',
+            'updates.push.services.mozilla.com',
+            'web.push.apple.com',
+            'notify.windows.com',
+            'push.services.opera.com',
+        ];
+
+        foreach ($allowedDomains as $domain) {
+            if ($host === $domain || str_ends_with($host, '.'.$domain)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

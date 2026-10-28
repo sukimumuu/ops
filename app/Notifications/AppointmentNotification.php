@@ -17,7 +17,17 @@ class AppointmentNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        if (
+            config('services.webpush.public_key')
+            && config('services.webpush.private_key')
+            && config('services.webpush.subject')
+        ) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        return $channels;
     }
 
     /**
@@ -28,6 +38,18 @@ class AppointmentNotification extends Notification
         return [
             'title' => $this->title,
             'message' => $this->message,
+            'url' => $this->url,
+        ];
+    }
+
+    /**
+     * @return array{title: string, body: string, url: string}
+     */
+    public function toWebPush(object $notifiable): array
+    {
+        return [
+            'title' => $this->title,
+            'body' => $this->message,
             'url' => $this->url,
         ];
     }

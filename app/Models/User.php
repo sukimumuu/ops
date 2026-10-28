@@ -119,4 +119,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(TransactionLogs::class, 'actor_id');
     }
+
+    public function webPushSubscriptions(): HasMany
+    {
+        return $this->hasMany(WebPushSubscription::class);
+    }
 }

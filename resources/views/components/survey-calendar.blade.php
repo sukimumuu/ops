@@ -12,7 +12,8 @@
 
 @php
     $isSeller = $perspective === 'seller';
-    $counterpartLabel = $isSeller ? 'Calon pembeli' : 'Penjual properti';
+    $isPpat = $perspective === 'ppat';
+    $counterpartLabel = $isSeller || $isPpat ? 'Calon pembeli' : 'Penjual properti';
     $timeSlots = \App\Models\Appointment::TIME_SLOTS;
     $bookingStatusStyles = [
         'requested' => [
@@ -99,14 +100,15 @@
                                 <span
                                     class="inline-flex size-7 items-center justify-center rounded-full text-xs {{ $day->isToday() ? 'bg-primary font-bold text-white' : ($day->month === $month->month ? 'font-medium text-slate-700' : 'text-slate-400') }}">{{ $day->day }}</span>
                                 @if ($dayAppointments->isNotEmpty())
-                                    <span class="text-[10px] font-medium text-slate-400">{{ $dayAppointments->count() }}
+                                    <span
+                                        class="text-[10px] font-medium text-slate-400">{{ $dayAppointments->count() }}
                                         jadwal</span>
                                 @endif
                             </div>
                             <div class="mt-2 flex flex-wrap gap-1.5">
                                 @foreach ($dayAppointments as $appointment)
                                     @php($statusStyle = $bookingStatusStyles[$appointment->status] ?? $bookingStatusStyles['cancelled'])
-                                    @php($counterpart = $isSeller ? $appointment->buyer : $appointment->seller)
+                                    @php($counterpart = $isSeller || $isPpat ? $appointment->buyer : $appointment->seller)
                                     <button type="button" x-on:click="openBooking({{ $appointment->id }})"
                                         title="{{ $counterpart->name }} · {{ $appointment->scheduled_at->format('H:i') }} · {{ $appointment->property->title }} · {{ $statusStyle['label'] }}"
                                         aria-label="Buka survei {{ $counterpart->name }}, {{ $appointment->scheduled_at->format('H:i') }}, {{ $appointment->property->title }}, status {{ $statusStyle['label'] }}"
@@ -130,7 +132,7 @@
                         class="size-2 rounded-full {{ $statusStyle['dot'] }}"></span>{{ $statusStyle['label'] }}</span>
             @endforeach
             <span class="text-slate-400">{{ $appointments->where('status', 'confirmed')->count() }}
-                {{ $isSeller ? 'terjadwal' : 'disetujui' }} ·
+                {{ $isSeller || $isPpat ? 'terjadwal' : 'disetujui' }} ·
                 {{ $pendingSurveyCount }} menunggu persetujuan</span>
         </footer>
     </section>
@@ -149,7 +151,7 @@
                     <div class="flex items-start justify-between border-b border-slate-200 px-5 py-4">
                         <div>
                             <p class="text-xs font-semibold uppercase text-primary">
-                                {{ $isSeller ? 'Rincian permintaan survei' : 'Rincian jadwal' }}
+                                {{ $isSeller ? 'Rincian permintaan survei' : ($isPpat ? 'Rincian jadwal survei' : 'Rincian jadwal') }}
                             </p>
                             <h2 id="booking-drawer-title" class="mt-1 text-lg font-bold text-secondary"
                                 x-text="selectedAppointment.counterpart_name"></h2>
@@ -171,6 +173,60 @@
                                 <p class="font-semibold text-slate-800" x-text="selectedAppointment.counterpart_name">
                                 </p>
                                 <p class="mt-1 text-xs text-slate-500">{{ $counterpartLabel }}</p>
+                            </div>
+                        </div>
+                        <div class="rounded-md border border-slate-200 bg-slate-50/60 p-4">
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Kontak
+                                {{ $counterpartLabel }}</p>
+                            <div class="mt-3 space-y-2.5">
+                                <template x-if="selectedAppointment.counterpart_phone">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <span
+                                            class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                                            <svg class="size-4 shrink-0 text-slate-400" viewBox="0 0 24 24"
+                                                fill="none" stroke="currentColor" stroke-width="1.8"
+                                                aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.5 2.8a2 2 0 0 1-.6 1.9L7.1 10a16 16 0 0 0 6 6l1.6-1.9a2 2 0 0 1 1.9-.6l2.8.5a2 2 0 0 1 1.6 1.9Z" />
+                                            </svg>
+                                            <span x-text="`+${selectedAppointment.counterpart_phone}`"></span>
+                                        </span>
+                                        <span class="flex items-center gap-1.5">
+                                            <a x-bind:href="`https://wa.me/${selectedAppointment.counterpart_phone}`"
+                                                target="_blank" rel="noopener noreferrer"
+                                                class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700">
+                                                WhatsApp
+                                            </a>
+                                            <a x-bind:href="`tel:+${selectedAppointment.counterpart_phone}`"
+                                                class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100">
+                                                Telepon
+                                            </a>
+                                        </span>
+                                    </div>
+                                </template>
+                                <template x-if="selectedAppointment.counterpart_email">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <span
+                                            class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                                            <svg class="size-4 shrink-0 text-slate-400" viewBox="0 0 24 24"
+                                                fill="none" stroke="currentColor" stroke-width="1.8"
+                                                aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Zm0 1 8 6 8-6" />
+                                            </svg>
+                                            <span class="break-all"
+                                                x-text="selectedAppointment.counterpart_email"></span>
+                                        </span>
+                                        <a x-bind:href="`mailto:${selectedAppointment.counterpart_email}`"
+                                            class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100">
+                                            Email
+                                        </a>
+                                    </div>
+                                </template>
+                                <template
+                                    x-if="! selectedAppointment.counterpart_phone && ! selectedAppointment.counterpart_email">
+                                    <p class="text-sm text-slate-500">Informasi kontak belum tersedia.</p>
+                                </template>
                             </div>
                         </div>
                         <dl class="divide-y divide-slate-100 rounded-md border border-slate-200">
@@ -200,6 +256,35 @@
                                     </span>
                                 </dd>
                             </div>
+                            <template
+                                x-if="selectedAppointment.buyer_intent_label || selectedAppointment.result_notes">
+                                <div class="px-4 py-3">
+                                    <dt class="text-xs text-slate-500">Hasil survei</dt>
+                                    <dd class="mt-1.5 space-y-2">
+                                        <template x-if="selectedAppointment.buyer_intent_label">
+                                            <span
+                                                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
+                                                x-bind:class="selectedAppointment.buyer_intent_key === 'deal' ?
+                                                    'border-emerald-200 bg-emerald-50 text-emerald-700' :
+                                                    'border-rose-200 bg-rose-50 text-rose-700'">
+                                                <span class="size-1.5 rounded-full"
+                                                    x-bind:class="selectedAppointment.buyer_intent_key === 'deal' ?
+                                                        'bg-emerald-500' : 'bg-rose-500'"></span>
+                                                <span x-text="selectedAppointment.buyer_intent_label"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="selectedAppointment.result_notes">
+                                            <p class="whitespace-pre-line text-sm leading-relaxed text-slate-700"
+                                                x-text="selectedAppointment.result_notes"></p>
+                                        </template>
+                                        <template x-if="selectedAppointment.result_recorded_at">
+                                            <p class="text-[11px] font-medium text-slate-400">
+                                                Dicatat <span x-text="selectedAppointment.result_recorded_at"></span>
+                                            </p>
+                                        </template>
+                                    </dd>
+                                </div>
+                            </template>
                             <div class="px-4 py-3">
                                 <dt class="text-xs text-slate-500">Properti</dt>
                                 <dd class="mt-1 text-sm font-semibold text-slate-800"><span
@@ -208,12 +293,34 @@
                                 <dd class="mt-1 text-xs leading-relaxed text-slate-500"><span
                                         x-text="selectedAppointment.property_address"></span>, <span
                                         x-text="selectedAppointment.property_location"></span></dd>
+                                <template x-if="selectedAppointment.property_maps_url">
+                                    <dd class="mt-2">
+                                        <a x-bind:href="selectedAppointment.property_maps_url" target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-primary transition hover:bg-slate-50">
+                                            <svg class="size-4" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M12 21s-7-5.7-7-11a7 7 0 1 1 14 0c0 5.3-7 11-7 11Z" />
+                                                <circle cx="12" cy="10" r="2.5" />
+                                            </svg>
+                                            Lihat lokasi di peta
+                                        </a>
+                                    </dd>
+                                </template>
                             </div>
                             <div class="px-4 py-3">
                                 <dt class="text-xs text-slate-500">{{ $counterpartLabel }}</dt>
                                 <dd class="mt-1 text-sm font-medium text-slate-800"
                                     x-text="selectedAppointment.counterpart_name"></dd>
                             </div>
+                            @if ($isPpat)
+                                <div class="px-4 py-3">
+                                    <dt class="text-xs text-slate-500">Penjual properti</dt>
+                                    <dd class="mt-1 text-sm font-medium text-slate-800"
+                                        x-text="selectedAppointment.seller_name"></dd>
+                                </div>
+                            @endif
                             <template x-if="selectedAppointment.notes">
                                 <div class="px-4 py-3">
                                     <dt class="text-xs text-slate-500">Catatan</dt>
@@ -228,7 +335,8 @@
                             <template
                                 x-if="selectedAppointment.can_review && selectedAppointment.status_key === 'requested'">
                                 <div class="space-y-3" x-data="{ rejecting: false }">
-                                    <p class="text-xs leading-relaxed text-slate-500">Setujui untuk mengonfirmasi jadwal
+                                    <p class="text-xs leading-relaxed text-slate-500">Setujui untuk mengonfirmasi
+                                        jadwal
                                         survei, atau tolak dan tawarkan jadwal pengganti kepada pembeli.</p>
 
                                     <div class="flex flex-col gap-2 sm:flex-row" x-show="! rejecting">
@@ -280,7 +388,8 @@
                                                 @foreach ($timeSlots as $slot)
                                                     <label class="cursor-pointer">
                                                         <input type="radio" name="suggested_time"
-                                                            value="{{ $slot }}" class="peer sr-only" required>
+                                                            value="{{ $slot }}" class="peer sr-only"
+                                                            required>
                                                         <span
                                                             class="flex flex-col items-center gap-0.5 rounded-md border border-slate-300 bg-white px-2 py-2 text-center text-sm font-extrabold text-secondary transition hover:border-primary/50 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30">
                                                             {{ str_replace(':', '.', $slot) }}
@@ -292,7 +401,8 @@
                                             </div>
                                         </div>
 
-                                        <p class="text-xs leading-relaxed text-slate-500">Jadwal pengganti akan dikirim ke
+                                        <p class="text-xs leading-relaxed text-slate-500">Jadwal pengganti akan dikirim
+                                            ke
                                             pembeli untuk dikonfirmasi.</p>
 
                                         <div class="flex flex-col gap-2 sm:flex-row">
@@ -310,15 +420,18 @@
                             </template>
                             <p x-show="! selectedAppointment.can_review || selectedAppointment.status_key !== 'requested'"
                                 class="mb-3 text-xs leading-relaxed text-slate-500">
-                                <span x-show="selectedAppointment.can_review">Pengajuan survei ini sudah diproses.</span>
-                                <span x-show="! selectedAppointment.can_review">Anda tidak memiliki akses untuk meninjau
+                                <span x-show="selectedAppointment.can_review">Pengajuan survei ini sudah
+                                    diproses.</span>
+                                <span x-show="! selectedAppointment.can_review">Anda tidak memiliki akses untuk
+                                    meninjau
                                     pengajuan ini.</span>
                             </p>
-                        @else
+                        @elseif (! $isPpat)
                             <template x-if="selectedAppointment.has_reschedule">
                                 <div class="mb-3 space-y-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
                                     <p class="text-xs leading-relaxed text-slate-600">
-                                        Penjual mengusulkan jadwal pengganti. Setujui untuk langsung mengonfirmasi jadwal
+                                        Penjual mengusulkan jadwal pengganti. Setujui untuk langsung mengonfirmasi
+                                        jadwal
                                         baru, atau tolak saran tersebut.
                                     </p>
                                     <div class="flex flex-col gap-2 sm:flex-row">

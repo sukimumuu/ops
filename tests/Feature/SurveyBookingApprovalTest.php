@@ -35,6 +35,7 @@ function createSurveyBookingProperty(User $seller, ?User $ppat = null): Property
         'district' => 'Coblong',
         'postal_code' => '40132',
         'address' => 'Jl. Merdeka No. 1',
+        'url_maps' => 'https://www.openstreetmap.org/?mlat=-6.9175&mlon=107.6191#map=16/-6.9175/107.6191',
         'land_area_sqm' => 120,
         'building_area_sqm' => 90,
         'certificate_type' => 'SHM',
@@ -220,14 +221,17 @@ it('shows the seller calendar with status indicators and review actions', functi
         ->assertSee('Tolak & atur jadwal')
         ->assertSee('name="suggested_date"', false)
         ->assertSee('Kirim jadwal pengganti')
-        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $buyer, $property): bool {
             $booking = $bookings->firstWhere('id', $appointment->id);
 
             return $booking !== null
                 && $booking['status_key'] === 'requested'
                 && $booking['status'] === 'Menunggu persetujuan'
                 && $booking['can_review'] === true
-                && $booking['counterpart_name'] === $appointment->buyer->name;
+                && $booking['counterpart_name'] === $appointment->buyer->name
+                && $booking['counterpart_email'] === $buyer->email
+                && $booking['counterpart_phone'] === $buyer->phone
+                && $booking['property_maps_url'] === $property->url_maps;
         });
 });
 
@@ -248,20 +252,30 @@ it('shows the survey calendar on the seller dashboard', function () {
         ->assertViewHas('calendarBookings', fn ($bookings): bool => $bookings->firstWhere('id', $appointment->id) !== null);
 });
 
-it('hides the survey calendar from the PPAT dashboard', function () {
+it('shows the read-only survey calendar to the assigned PPAT', function () {
     $ppat = User::factory()->create();
     $ppat->assignRole('PPAT');
     $seller = User::factory()->create();
-    $buyer = User::factory()->create();
+    $buyer = User::factory()->create(['name' => 'Pembeli Kalender PPAT']);
     $property = createSurveyBookingProperty($seller, $ppat);
-    createSurveyBooking($seller, $buyer, $property);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+    $appointment->update(['scheduled_at' => '2026-10-20 10:00:00']);
 
     $this->actingAs($ppat)
-        ->get(route('land-deed.index'))
+        ->get(route('land-deed.index', ['month' => '2026-10']))
         ->assertOk()
-        ->assertSee('Kalender survei dinonaktifkan sementara')
-        ->assertDontSee('Pilih avatar untuk membuka rincian survei.')
-        ->assertDontSee('Setujui survei');
+        ->assertSee('Kalender jadwal survei')
+        ->assertSee('Pembeli Kalender PPAT')
+        ->assertSee('Pilih avatar calon pembeli')
+        ->assertDontSee('Setujui survei')
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $buyer, $property): bool {
+            $booking = $bookings->firstWhere('id', $appointment->id);
+
+            return $booking !== null
+                && $booking['counterpart_name'] === $buyer->name
+                && $booking['seller_name'] === $appointment->seller->name
+                && $booking['property_maps_url'] === $property->url_maps;
+        });
 });
 
 it('shows only survey requests belonging to the signed-in seller', function () {
@@ -311,11 +325,70 @@ it('shows buyers a calendar and upcoming list for their own survey bookings only
         ->assertDontSee('Penjual Lain')
         ->assertSee('bg-amber-500', false)
         ->assertDontSee('Setujui survei')
-        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $seller, $property): bool {
             return $bookings->count() === 1
                 && $bookings->first()['id'] === $appointment->id
                 && $bookings->first()['status_key'] === 'requested'
-                && $bookings->first()['seller_name'] === 'Penjual Kalender';
+                && $bookings->first()['seller_name'] === 'Penjual Kalender'
+                && $bookings->first()['counterpart_email'] === $seller->email
+                && $bookings->first()['counterpart_phone'] === $seller->phone
+                && $bookings->first()['property_maps_url'] === $property->url_maps;
+        });
+});
+
+it('shows the survey result and reason note on the seller calendar', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property, 'completed');
+    $appointment->update([
+        'scheduled_at' => '2026-10-20 10:00:00',
+        'buyer_intent' => Appointment::BUYER_INTENT_NO_DEAL,
+        'result_notes' => 'Calon pembeli memilih tidak melanjutkan pembelian.',
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($seller)
+        ->get(route('seller.listing', ['month' => '2026-10']))
+        ->assertOk()
+        ->assertSee('Hasil survei')
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+            $booking = $bookings->firstWhere('id', $appointment->id);
+
+            return $booking !== null
+                && $booking['buyer_intent_key'] === Appointment::BUYER_INTENT_NO_DEAL
+                && $booking['buyer_intent_label'] === 'Tidak melanjutkan pembelian'
+                && $booking['result_notes'] === 'Calon pembeli memilih tidak melanjutkan pembelian.'
+                && $booking['result_recorded_at'] !== null;
+        });
+});
+
+it('shows the survey result and reason note on the buyer calendar', function () {
+    $buyer = User::factory()->create();
+    $buyer->assignRole('User');
+    $seller = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property, 'completed');
+    $appointment->update([
+        'scheduled_at' => '2026-10-20 10:00:00',
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'result_notes' => 'Calon pembeli tertarik dan akan melanjutkan diskusi harga.',
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.survey-schedule', ['month' => '2026-10']))
+        ->assertOk()
+        ->assertSee('Hasil survei')
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment): bool {
+            $booking = $bookings->firstWhere('id', $appointment->id);
+
+            return $booking !== null
+                && $booking['buyer_intent_key'] === Appointment::BUYER_INTENT_DEAL
+                && $booking['buyer_intent_label'] === 'Berminat membeli'
+                && $booking['result_notes'] === 'Calon pembeli tertarik dan akan melanjutkan diskusi harga.'
+                && $booking['result_recorded_at'] !== null;
         });
 });
 

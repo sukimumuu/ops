@@ -69,8 +69,8 @@ class UserController extends Controller
             ->where('buyer_id', $buyer->id)
             ->whereBetween('scheduled_at', [$monthStart, $monthEnd])
             ->with([
-                'seller:id,name,avatar_path',
-                'property:id,title,address,city,district,certificate_type',
+                'seller:id,name,email,phone,avatar_path',
+                'property:id,title,address,city,district,certificate_type,url_maps',
             ])
             ->orderBy('scheduled_at')
             ->get();
@@ -78,6 +78,8 @@ class UserController extends Controller
         $calendarBookings = $appointments->map(fn (Appointment $appointment): array => [
             'id' => $appointment->id,
             'counterpart_name' => $appointment->seller->name,
+            'counterpart_email' => $appointment->seller->email,
+            'counterpart_phone' => $appointment->seller->phone,
             'avatar_url' => $appointment->seller->avatar_url,
             'seller_name' => $appointment->seller->name,
             'buyer_name' => $appointment->buyer?->name,
@@ -89,11 +91,18 @@ class UserController extends Controller
             'reschedule_url' => route('buyer.survey-schedule.reschedule', $appointment),
             'status_key' => $appointment->status,
             'status' => $appointment->statusLabel(),
+            'buyer_intent_key' => $appointment->buyer_intent,
+            'buyer_intent_label' => $appointment->buyerIntentLabel(),
+            'result_notes' => $appointment->result_notes,
+            'result_recorded_at' => $appointment->completed_at
+                ? $appointment->completed_at->locale('id')->translatedFormat('l, d F Y, H:i').' WIB'
+                : null,
             'notes' => $appointment->notes,
             'property_title' => $appointment->property->title,
             'property_certificate' => $appointment->property->certificate_type,
             'property_address' => $appointment->property->address,
             'property_location' => $appointment->property->district.', '.$appointment->property->city,
+            'property_maps_url' => $appointment->property->url_maps,
         ])->values();
 
         $appointmentsByDate = $appointments->groupBy(fn (Appointment $appointment): string => $appointment->scheduled_at->toDateString());

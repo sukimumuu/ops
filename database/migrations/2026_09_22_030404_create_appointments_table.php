@@ -23,6 +23,9 @@ return new class extends Migration
             $table->dateTime('reschedule_suggested_at')->nullable();
             $table->enum('status', ['requested', 'confirmed', 'rejected', 'completed', 'cancelled'])->default('requested');
             $table->text('notes')->nullable();
+            $table->text('result_notes')->nullable();
+            $table->timestamp('completed_at')->nullable();
+            $table->string('buyer_intent')->nullable();
             $table->timestamps();
         });
     }

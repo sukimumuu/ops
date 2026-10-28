@@ -4,9 +4,8 @@ if (notificationCenter) {
     const notificationItems = document.querySelector('#notification-items');
     const notificationBadge = document.querySelector('#notification-badge');
     const notificationCount = document.querySelector('#notification-count');
-    const seenNotificationIds = new Set();
+    const browserNotificationsToggle = document.querySelector('#browser-notifications-toggle');
     const csrfToken = notificationCenter.dataset.csrfToken;
-    let hasLoadedNotifications = false;
 
     const loadingMessage = document.createElement('p');
     loadingMessage.className = 'px-5 py-8 text-center text-sm text-slate-400';
@@ -61,35 +60,6 @@ if (notificationCenter) {
         });
     };
 
-    const showToast = (notification) => {
-        let container = document.querySelector('#notification-toasts');
-
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'notification-toasts';
-            container.className = 'pointer-events-none fixed right-4 top-20 z-[100] flex w-[min(90vw,24rem)] flex-col gap-3';
-            container.setAttribute('aria-live', 'polite');
-            document.body.append(container);
-        }
-
-        const toast = document.createElement('a');
-        toast.href = notification.url;
-        toast.dataset.notificationRead = notification.id;
-        toast.className = 'pointer-events-auto block rounded-xl border border-slate-200 bg-white p-4 shadow-xl transition hover:border-primary';
-
-        const title = document.createElement('p');
-        title.className = 'font-bold text-slate-800';
-        title.textContent = notification.title;
-
-        const message = document.createElement('p');
-        message.className = 'mt-1 text-sm text-slate-600';
-        message.textContent = notification.message;
-
-        toast.append(title, message);
-        container.append(toast);
-        window.setTimeout(() => toast.remove(), 8000);
-    };
-
     const pollNotifications = async () => {
         try {
             const response = await fetch(notificationCenter.dataset.feedUrl, {
@@ -105,15 +75,6 @@ if (notificationCenter) {
             renderNotifications(payload.notifications);
             updateUnreadCount(payload.unread_count);
 
-            payload.notifications.forEach((notification) => {
-                if (hasLoadedNotifications && !seenNotificationIds.has(notification.id)) {
-                    showToast(notification);
-                }
-
-                seenNotificationIds.add(notification.id);
-            });
-
-            hasLoadedNotifications = true;
         } catch (error) {
             console.error('Unable to load notifications.', error);
         }
@@ -141,6 +102,119 @@ if (notificationCenter) {
         updateUnreadCount(payload.unread_count);
     };
 
+    const pushSupported = window.isSecureContext
+        && 'serviceWorker' in navigator
+        && 'PushManager' in window
+        && 'Notification' in window;
+    const vapidPublicKey = notificationCenter.dataset.vapidPublicKey;
+
+    const updatePushButton = (isSubscribed) => {
+        browserNotificationsToggle.textContent = isSubscribed
+            ? 'Matikan notifikasi browser'
+            : 'Aktifkan notifikasi browser';
+        browserNotificationsToggle.dataset.subscribed = String(isSubscribed);
+    };
+
+    const savePushSubscription = async (subscription) => {
+        const response = await fetch(notificationCenter.dataset.subscriptionUrl, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(subscription.toJSON()),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Saving browser notification subscription failed with status ${response.status}`);
+        }
+    };
+
+    const deletePushSubscription = async (subscription) => {
+        const endpointHash = Array.from(new Uint8Array(
+            await crypto.subtle.digest('SHA-256', new TextEncoder().encode(subscription.endpoint)),
+        ), (byte) => byte.toString(16).padStart(2, '0')).join('');
+        const deleteUrl = notificationCenter.dataset.subscriptionDeleteUrl.replace(
+            '0'.repeat(64),
+            endpointHash,
+        );
+        const response = await fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            credentials: 'same-origin',
+        });
+
+        if (!response.ok) {
+            throw new Error(`Removing browser notification subscription failed with status ${response.status}`);
+        }
+    };
+
+    const decodeVapidPublicKey = (key) => {
+        const paddedKey = key.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = window.atob(paddedKey);
+
+        return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+    };
+
+    const initializeBrowserNotifications = async () => {
+        if (!pushSupported) {
+            return;
+        }
+
+        browserNotificationsToggle.hidden = false;
+
+        if (!vapidPublicKey) {
+            browserNotificationsToggle.disabled = true;
+            browserNotificationsToggle.textContent = 'Notifikasi browser belum dikonfigurasi';
+            return;
+        }
+
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
+        let subscription = await registration.pushManager.getSubscription();
+        updatePushButton(subscription !== null);
+
+        if (subscription) {
+            await savePushSubscription(subscription);
+        }
+
+        browserNotificationsToggle.addEventListener('click', async () => {
+            browserNotificationsToggle.disabled = true;
+
+            try {
+                if (subscription) {
+                    await deletePushSubscription(subscription);
+                    await subscription.unsubscribe();
+                    subscription = null;
+                    updatePushButton(false);
+                    return;
+                }
+
+                const permission = await Notification.requestPermission();
+
+                if (permission !== 'granted') {
+                    throw new Error(`Browser notification permission is ${permission}.`);
+                }
+
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: decodeVapidPublicKey(vapidPublicKey),
+                });
+                await savePushSubscription(subscription);
+                updatePushButton(true);
+            } catch (error) {
+                console.error('Unable to update browser notification subscription.', error);
+                window.alert('Notifikasi browser tidak dapat diaktifkan. Periksa izin browser dan coba lagi.');
+            } finally {
+                browserNotificationsToggle.disabled = false;
+            }
+        });
+    };
+
     document.addEventListener('click', (event) => {
         const link = event.target.closest('a[data-notification-read]');
 
@@ -155,6 +229,9 @@ if (notificationCenter) {
     });
 
     pollNotifications();
+    initializeBrowserNotifications().catch((error) => {
+        console.error('Unable to initialize browser notifications.', error);
+    });
     window.setInterval(() => {
         if (!document.hidden) {
             pollNotifications();

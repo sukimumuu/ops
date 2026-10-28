@@ -193,7 +193,16 @@ class HomeController extends Controller
             : "{$property->address}, {$property->city}, {$property->province}";
         $mapUrl = 'https://maps.google.com/maps?q='.urlencode($mapLocation).'&output=embed';
 
-        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications', 'isSaved'));
+        $activeAppointment = $request->user()?->appointmentsAsBuyer()
+            ->where('property_id', $property->id)
+            ->whereIn('status', [Appointment::STATUS_REQUESTED, Appointment::STATUS_CONFIRMED])
+            ->where('scheduled_at', '>=', now())
+            ->latest('scheduled_at')
+            ->first();
+
+        $timeSlots = Appointment::TIME_SLOTS;
+
+        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications', 'isSaved', 'activeAppointment', 'timeSlots'));
     }
 
     /**

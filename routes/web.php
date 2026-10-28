@@ -63,10 +63,23 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/notifikasi/belum-dibaca', [NotificationController::class, 'unread'])->name('notifications.unread');
     Route::patch('/notifikasi/{notification}/dibaca', [NotificationController::class, 'markAsRead'])
         ->name('notifications.read');
+    Route::post('/notifikasi/subscriptions', [NotificationController::class, 'storeSubscription'])
+        ->middleware('throttle:10,1')
+        ->name('notifications.subscriptions.store');
+    Route::delete('/notifikasi/subscriptions/{endpointHash}', [NotificationController::class, 'destroySubscription'])
+        ->where('endpointHash', '[a-f0-9]{64}')
+        ->name('notifications.subscriptions.destroy');
 
     Route::name('seller.')->group(function () {
         Route::get('/listing', [ListingController::class, 'index'])->name('listing');
         Route::get('/properti-saya', [ListingController::class, 'myProperties'])->name('my-properties');
+        Route::get('/properti-saya/{property:uuid}', [ListingController::class, 'showProperty'])
+            ->whereUuid('property')
+            ->name('my-properties.show');
+        Route::patch('/properti-saya/{property:uuid}/survei/{appointment}', [AppointmentController::class, 'recordSurveyResult'])
+            ->whereUuid('property')
+            ->whereNumber('appointment')
+            ->name('my-properties.surveys.update');
         Route::get('/permintaan-survei', [ListingController::class, 'requestSurvey'])->name('request-survey');
         Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])->name('selling-transaction');
         Route::get('/rekening-pencairan', [ListingController::class, 'disbursementAccount'])->name('disbursement-account');
