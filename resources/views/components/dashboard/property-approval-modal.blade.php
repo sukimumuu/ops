@@ -126,7 +126,7 @@
                         </svg>
                         @if (filled($certificate->file_path) && Storage::disk('local')->exists($certificate->file_path))
                             <a href="{{ route('property-review.file', $certificate) }}" target="_blank"
-                                rel="noopener noreferrer">Lihat sertifikat</a>
+                                rel="noopener noreferrer">Lihat sertifikat{{ $certificate->certificate_type ? ' ('.$certificate->certificate_type.')' : '' }}</a>
                         @else
                             <span>Sertifikat tidak tersedia</span>
                         @endif
@@ -135,6 +135,28 @@
                     <span class="wz-review-empty">Belum diunggah</span>
                 @endforelse
             </div>
+            @if ($property->supportingDocuments->isNotEmpty())
+                <div class="wz-review-item mt-3">
+                    <span class="wz-review-label">Dokumen pendukung</span>
+                    @foreach ($property->supportingDocuments as $document)
+                        <div class="wz-review-cert-badge">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8m-5-5l5 5m-5-5v5h5" />
+                            </svg>
+                            @if (filled($document->file_path) && Storage::disk('local')->exists($document->file_path))
+                                <a href="{{ route('property-review.file', $document) }}" target="_blank"
+                                    rel="noopener noreferrer">
+                                    {{ $document->type === 'imb' ? 'Lihat IMB / PBG' : 'Lihat SPPT & STTS PBB' }}
+                                </a>
+                            @else
+                                <span>Dokumen tidak tersedia</span>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </div>
 
