@@ -7,6 +7,7 @@ use App\Http\Controllers\Dashboard\AppointmentController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\LandDeedController;
 use App\Http\Controllers\Dashboard\ListingController;
+use App\Http\Controllers\Dashboard\NotificationController;
 use App\Http\Controllers\Dashboard\PropertyReviewController;
 use App\Http\Controllers\Dashboard\SavedPropertyController;
 use App\Http\Controllers\Dashboard\SuperadminController;
@@ -58,7 +59,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->name('profile.password.update');
     Route::post('/profil/avatar', [DashboardController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::delete('/profil/avatar', [DashboardController::class, 'deleteAvatar'])->name('profile.avatar.delete');
-    Route::get('/notifikasi', [DashboardController::class, 'detailNotif'])->name('detail-notif');
+    Route::get('/notifikasi', [NotificationController::class, 'index'])->name('detail-notif');
+    Route::get('/notifikasi/belum-dibaca', [NotificationController::class, 'unread'])->name('notifications.unread');
+    Route::patch('/notifikasi/{notification}/dibaca', [NotificationController::class, 'markAsRead'])
+        ->name('notifications.read');
 
     Route::name('seller.')->group(function () {
         Route::get('/listing', [ListingController::class, 'index'])->name('listing');

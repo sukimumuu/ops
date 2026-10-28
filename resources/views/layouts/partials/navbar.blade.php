@@ -195,15 +195,20 @@
                 </a>
             </x-button>
         @endrole
-        <!-- Notifications Dropdown (Modifikasi) -->
-        <div x-data="{ notifOpen: false }" class="relative hidden lg:block">
+        @auth
+        <div id="notification-center"
+            data-feed-url="{{ route('notifications.unread') }}"
+            data-read-url="{{ route('notifications.read', ['notification' => '__notification__']) }}"
+            data-csrf-token="{{ csrf_token() }}"
+            x-data="{ notifOpen: false }" class="relative">
             <button @click="notifOpen = !notifOpen"
                 class="relative p-2 rounded-lg text-slate-500 hover:text-secondary hover:bg-slate-100 focus:outline-none">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary"></span>
+                <span id="notification-badge"
+                    class="absolute right-1 top-1 hidden min-w-4 rounded-full bg-primary px-1 text-center text-[10px] font-bold leading-4 text-white"></span>
             </button>
 
             <!-- Pop-up Notifikasi -->
@@ -211,22 +216,19 @@
                 x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
                 x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150"
                 x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
-                class="absolute right-0 mt-3 w-[380px] sm:w-[420px] bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50">
+                class="absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-[420px] bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50">
 
                 <!-- Header Pop-up -->
                 <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                     <div class="flex items-center gap-2.5">
                         <h3 class="font-bold text-slate-800 text-lg">Notifikasi</h3>
-                        <span class="px-2.5 py-0.5 text-xs font-semibold text-primary bg-orange-50 rounded-full">3
-                            baru</span>
+                        <span id="notification-count"
+                            class="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-primary">0 baru</span>
                     </div>
-                    <button class="text-sm font-semibold text-primary hover:underline">
-                        Tandai dibaca
-                    </button>
                 </div>
 
                 <!-- List Notifikasi -->
-                <div class="max-h-[420px] overflow-y-auto divide-y divide-slate-50">
+                <div id="notification-items" class="max-h-[420px] overflow-y-auto divide-y divide-slate-50">
                     <!-- Item 1 (Belum Dibaca) -->
                     <a href="#"
                         class="flex items-start gap-3.5 p-4 bg-orange-50/20 hover:bg-slate-50 transition relative">
@@ -336,6 +338,7 @@
                 </a>
             </div>
         </div>
+        @endauth
 
         <!-- User dropdown -->
         <div x-data="{ open: false }" class="relative">

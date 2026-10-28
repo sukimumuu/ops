@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Notifications\AppointmentNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -55,6 +56,22 @@ class AppointmentController extends Controller
             ]);
         }
 
+        $appointment->refresh()->load(['buyer', 'property']);
+        $isSuggested = $requiresSuggestion && $validated['status'] === Appointment::STATUS_REJECTED;
+        $scheduledAt = $isSuggested
+            ? $appointment->reschedule_suggested_at
+            : $appointment->scheduled_at;
+        $title = $isSuggested ? 'Penjual mengajukan jadwal lain' : 'Jadwal survei disetujui';
+        $message = $isSuggested
+            ? 'Penjual mengusulkan jadwal '.$scheduledAt->locale('id')->translatedFormat('d M Y, H:i').' WIB untuk '.$appointment->property->title.'.'
+            : 'Penjual menyetujui jadwal survei '.$appointment->property->title.' pada '.$scheduledAt->locale('id')->translatedFormat('d M Y, H:i').' WIB.';
+
+        $appointment->buyer->notify(new AppointmentNotification(
+            $title,
+            $message,
+            route('buyer.survey-schedule'),
+        ));
+
         $message = match ($validated['status']) {
             Appointment::STATUS_CONFIRMED => 'Permintaan survei berhasil disetujui.',
             default => $requiresSuggestion
@@ -89,12 +106,26 @@ class AppointmentController extends Controller
                 'status' => Appointment::STATUS_CONFIRMED,
             ]);
 
+            $appointment->load(['buyer', 'property']);
+            $appointment->seller->notify(new AppointmentNotification(
+                'Jadwal pengganti disetujui',
+                $appointment->buyer->name.' menyetujui jadwal survei '.$appointment->property->title.'.',
+                route('seller.request-survey'),
+            ));
+
             return back()->with('status', 'Jadwal pengganti disetujui. Jadwal survei telah dikonfirmasi.');
         }
 
         $appointment->update([
             'reschedule_suggested_at' => null,
         ]);
+
+        $appointment->load(['buyer', 'property']);
+        $appointment->seller->notify(new AppointmentNotification(
+            'Jadwal pengganti ditolak',
+            $appointment->buyer->name.' menolak jadwal pengganti untuk '.$appointment->property->title.'.',
+            route('seller.request-survey'),
+        ));
 
         return back()->with('status', 'Jadwal pengganti ditolak. Silakan ajukan jadwal survei baru.');
     }

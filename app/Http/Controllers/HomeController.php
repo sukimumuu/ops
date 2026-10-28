@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
 use App\Models\User;
+use App\Notifications\AppointmentNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -270,7 +271,7 @@ class HomeController extends Controller
 
         $scheduledAt = Carbon::parse($validated['scheduled_at'])->setTimeFromTimeString($validated['scheduled_time']);
 
-        Appointment::query()->create([
+        $appointment = Appointment::query()->create([
             'property_id' => $property->id,
             'buyer_id' => auth()->id(),
             'seller_id' => $property->seller_id,
@@ -278,6 +279,12 @@ class HomeController extends Controller
             'status' => 'requested',
             'notes' => $validated['notes'] ?? null,
         ]);
+
+        $property->seller->notify(new AppointmentNotification(
+            'Permintaan jadwal survei baru',
+            $request->user()->name.' mengajukan survei untuk '.$property->title.' pada '.$scheduledAt->locale('id')->translatedFormat('d M Y, H:i').' WIB.',
+            route('seller.request-survey'),
+        ));
 
         return back()->with('success', 'Jadwal kunjungan berhasil diajukan! Pemilik properti akan segera mengonfirmasi jadwal Anda.');
     }

@@ -320,6 +320,17 @@ it('allows authenticated buyers to schedule a visit', function () {
         ->and($appointment->status)->toBe('requested')
         ->and($appointment->scheduled_at->format('Y-m-d'))->toBe($targetDate)
         ->and($appointment->scheduled_at->format('H:i'))->toBe('13:00');
+
+    $sellerNotification = $seller->notifications()->first();
+    expect($sellerNotification->data['title'])->toBe('Permintaan jadwal survei baru')
+        ->and($sellerNotification->data['message'])->toContain('Calon Pembeli')
+        ->and($sellerNotification->data['url'])->toBe(route('seller.request-survey'));
+
+    $this->actingAs($seller)
+        ->get(route('notifications.unread'))
+        ->assertOk()
+        ->assertJsonPath('unread_count', 1)
+        ->assertJsonPath('notifications.0.title', 'Permintaan jadwal survei baru');
 });
 
 it('prevents seller from scheduling a visit on their own property', function () {

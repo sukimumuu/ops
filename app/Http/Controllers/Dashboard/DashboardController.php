@@ -405,9 +405,4 @@ class DashboardController extends Controller
             'message' => 'Foto profil berhasil dihapus.',
         ]);
     }
-
-    public function detailNotif()
-    {
-        return view('dashboard.detail-notif');
-    }
 }
