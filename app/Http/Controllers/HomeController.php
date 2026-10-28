@@ -120,6 +120,18 @@ class HomeController extends Controller
         $isSaved = $request->user() !== null
             && $request->user()->savedProperties()->whereKey($property->getKey())->exists();
 
+        $activeAppointment = $request->user() === null
+            ? null
+            : Appointment::query()
+                ->where('property_id', $property->getKey())
+                ->where('buyer_id', $request->user()->getKey())
+                ->whereIn('status', [Appointment::STATUS_REQUESTED, Appointment::STATUS_CONFIRMED])
+                ->where('scheduled_at', '>=', now())
+                ->latest('scheduled_at')
+                ->first();
+
+        $timeSlots = Appointment::TIME_SLOTS;
+
         $property->setAttribute(
             'photo_urls',
             $property->photos
@@ -192,7 +204,7 @@ class HomeController extends Controller
             : "{$property->address}, {$property->city}, {$property->province}";
         $mapUrl = 'https://maps.google.com/maps?q='.urlencode($mapLocation).'&output=embed';
 
-        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications', 'isSaved'));
+        return view('property-details', compact('property', 'propertyFacts', 'locationFacts', 'mapUrl', 'relatedProperties', 'specifications', 'isSaved', 'activeAppointment', 'timeSlots'));
     }
 
     /**
