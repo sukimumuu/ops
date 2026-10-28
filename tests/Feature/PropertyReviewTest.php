@@ -7,14 +7,30 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
-    Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);
+    $reviewPermissions = [
+        'properties.approve_listing',
+        'properties.reject_listing',
+        'documents.view_sensitive_pii',
+        'appointments.view_all',
+        'appointments.confirm_or_reject',
+    ];
+
+    foreach ($reviewPermissions as $permission) {
+        Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+    }
+
+    Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web'])
+        ->syncPermissions($reviewPermissions);
+    Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web'])
+        ->syncPermissions($reviewPermissions);
+    Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web'])
+        ->syncPermissions(['appointments.view_all']);
     Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 });
 
@@ -58,6 +74,45 @@ it('allows an admin to approve a pending property', function () {
         'id' => $property->id,
         'status' => 'published',
     ]);
+});
+
+it('applies the selected approval permission to each review action', function () {
+    $reviewerRole = Role::create(['name' => 'Listing approver', 'guard_name' => 'web']);
+    $reviewerRole->givePermissionTo('properties.approve_listing');
+    $reviewer = User::factory()->create();
+    $reviewer->assignRole($reviewerRole);
+    $property = createReviewProperty();
+
+    $this->actingAs($reviewer)
+        ->post(route('property-review.status', $property), ['status' => 'rejected'])
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('properties', [
+        'id' => $property->id,
+        'status' => 'pending_verification',
+    ]);
+
+    $this->post(route('property-review.status', $property), ['status' => 'published'])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('properties', [
+        'id' => $property->id,
+        'status' => 'published',
+    ]);
+});
+
+it('does not allow property access after review permissions are removed', function () {
+    $adminRole = Role::findByName('Admin');
+    $adminRole->syncPermissions(['documents.view_sensitive_pii']);
+    $admin = User::factory()->create();
+    $admin->assignRole($adminRole);
+
+    $this->actingAs($admin)
+        ->get(route('admin.master-data-property'))
+        ->assertForbidden();
+
+    $this->get(route('superadmin.master-data-property'))
+        ->assertForbidden();
 });
 
 it('allows a superadmin to reject a pending property', function () {
@@ -221,10 +276,14 @@ it('shows working private document links and fallbacks in both reviewer views', 
     ]);
     Storage::disk('local')->put($photo->file_path, 'photo contents');
     Storage::disk('local')->put($certificate->file_path, '%PDF-1.4 private certificate');
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
 
-    $this->actingAs($admin);
-
-    foreach ([route('admin.master-data-property'), route('superadmin.master-data-property')] as $url) {
+    foreach ([
+        [$admin, route('admin.master-data-property')],
+        [$superadmin, route('superadmin.master-data-property')],
+    ] as [$reviewer, $url]) {
+        $this->actingAs($reviewer);
         $this->get($url)
             ->assertOk()
             ->assertSee(route('property-review.file', $photo), false)

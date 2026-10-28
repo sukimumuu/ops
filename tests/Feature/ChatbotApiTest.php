@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
@@ -281,7 +282,13 @@ it('fills the listing form from a groq tool call with validated values', functio
     ]);
     config(['services.groq.api_key' => 'test-api-key']);
 
-    $response = $this->actingAs(User::factory()->create())
+    $user = User::factory()->create();
+    $user->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'properties.create',
+        'guard_name' => 'web',
+    ]));
+
+    $response = $this->actingAs($user)
         ->postJson(route('chatbot.reply'), [
             'message' => 'Saya mau jual rumah 3 lantai di Bintaro harganya 1.8 miliar.',
             'context' => 'listing_create',
@@ -360,6 +367,10 @@ it('falls back to a conversational reply when tool arguments are malformed', fun
     config(['services.groq.api_key' => 'test-api-key']);
 
     $user = User::factory()->create();
+    $user->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'properties.create',
+        'guard_name' => 'web',
+    ]));
 
     $this->actingAs($user)
         ->postJson(route('chatbot.reply'), [
@@ -415,6 +426,10 @@ it('renders the chatbot for regular users and guests', function () {
         ->assertSee('data-chatbot', false);
 
     $user = User::factory()->create();
+    $user->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'properties.create',
+        'guard_name' => 'web',
+    ]));
 
     $this->actingAs($user)
         ->get(route('listing.create'))

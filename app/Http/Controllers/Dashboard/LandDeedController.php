@@ -19,7 +19,7 @@ class LandDeedController extends Controller
     public function index(Request $request): View
     {
         $ppat = $request->user();
-        abort_unless($ppat instanceof User && $ppat->hasRole('PPAT'), 403);
+        abort_unless($ppat instanceof User && $ppat->can('appointments.view_all'), 403);
 
         $validated = $request->validate([
             'month' => ['sometimes', 'date_format:Y-m'],

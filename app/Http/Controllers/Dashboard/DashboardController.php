@@ -110,47 +110,65 @@ class DashboardController extends Controller
             ]);
         } else {
             $activeTransactionStates = ['held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'];
+            $hasSuperadminAccess = $user?->hasRole('Superadmin') ?? false;
+            $canViewUsers = $hasSuperadminAccess || ($user?->can('users.view_all_users') ?? false);
+            $canViewProperties = $hasSuperadminAccess || ($user?->canAny([
+                'properties.approve_listing',
+                'properties.reject_listing',
+            ]) ?? false);
+            $canViewPropertyReviewData = $canViewProperties
+                && ($hasSuperadminAccess || ($user?->can('documents.view_sensitive_pii') ?? false));
+            $canViewTransactions = $hasSuperadminAccess || ($user?->can('transactions.view_all') ?? false);
+            $metrics = [];
+
+            if ($canViewUsers) {
+                $metrics[] = [
+                    'label' => 'Pengguna terdaftar',
+                    'value' => User::withoutRole('Superadmin')->count(),
+                    'description' => 'Akun di luar superadmin',
+                    'icon' => 'users',
+                ];
+            }
+
+            if ($canViewProperties) {
+                $metrics[] = [
+                    'label' => 'Properti tayang',
+                    'value' => Property::where('status', 'published')->count(),
+                    'description' => 'Listing yang terlihat publik',
+                    'icon' => 'home',
+                ];
+                $metrics[] = [
+                    'label' => 'Menunggu verifikasi',
+                    'value' => Property::where('status', 'pending_verification')->count(),
+                    'description' => 'Listing perlu ditinjau',
+                    'icon' => 'clipboard',
+                ];
+            }
+
+            if ($canViewTransactions) {
+                $metrics[] = [
+                    'label' => 'Transaksi berjalan',
+                    'value' => Transaction::whereIn('state', $activeTransactionStates)->count(),
+                    'description' => 'Dalam proses hingga AJB',
+                    'icon' => 'arrows',
+                ];
+            }
 
             $viewData = [
-                'metrics' => [
-                    [
-                        'label' => 'Pengguna terdaftar',
-                        'value' => User::withoutRole('Superadmin')->count(),
-                        'description' => 'Akun di luar superadmin',
-                        'icon' => 'users',
-                    ],
-                    [
-                        'label' => 'Properti tayang',
-                        'value' => Property::where('status', 'published')->count(),
-                        'description' => 'Listing yang terlihat publik',
-                        'icon' => 'home',
-                    ],
-                    [
-                        'label' => 'Menunggu verifikasi',
-                        'value' => Property::where('status', 'pending_verification')->count(),
-                        'description' => 'Listing perlu ditinjau',
-                        'icon' => 'clipboard',
-                    ],
-                    [
-                        'label' => 'Transaksi berjalan',
-                        'value' => Transaction::whereIn('state', $activeTransactionStates)->count(),
-                        'description' => 'Dalam proses hingga AJB',
-                        'icon' => 'arrows',
-                    ],
-                ],
-                'recentTransactions' => Transaction::query()
+                'metrics' => $metrics,
+                'recentTransactions' => $canViewTransactions ? Transaction::query()
                     ->select('id', 'uuid', 'property_id', 'buyer_id', 'seller_id', 'total_property_amount', 'state', 'created_at')
                     ->with(['property:id,title', 'buyer:id,name', 'seller:id,name'])
                     ->latest()
                     ->limit(6)
-                    ->get(),
-                'pendingProperties' => Property::query()
+                    ->get() : collect(),
+                'pendingProperties' => $canViewPropertyReviewData ? Property::query()
                     ->select('id', 'title', 'seller_id', 'city', 'status', 'created_at')
                     ->with('seller:id,name')
                     ->where('status', 'pending_verification')
                     ->latest()
                     ->limit(6)
-                    ->get(),
+                    ->get() : collect(),
             ];
         }
 

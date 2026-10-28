@@ -89,52 +89,56 @@
         </div>
     </div>
 
-    <x-dashboard.ppat-profile-card :property="$property" />
+    @can('properties.approve_listing')
+        <x-dashboard.ppat-profile-card :property="$property" />
+    @endcan
 
     <div class="wz-review-block">
         <div class="wz-review-header">
             <h4>Foto & dokumen</h4>
         </div>
         <div class="wz-review-body">
-            <div class="wz-review-item">
-                <span class="wz-review-label">Foto properti</span>
-                <div class="wz-review-photos">
-                    @forelse ($property->photos as $photo)
-                        <div class="wz-review-photo-thumb">
-                            @if (filled($photo->file_path) && (Storage::disk('public')->exists($photo->file_path) || Storage::disk('local')->exists($photo->file_path)))
-                                <img src="{{ route('property-review.file', $photo) }}"
-                                    alt="Foto {{ $property->title }}"
-                                    onerror="this.hidden = true; this.nextElementSibling.hidden = false;">
-                                <span class="wz-review-empty" hidden>Foto tidak tersedia</span>
+            @can('documents.view_sensitive_pii')
+                <div class="wz-review-item">
+                    <span class="wz-review-label">Foto properti</span>
+                    <div class="wz-review-photos">
+                        @forelse ($property->photos as $photo)
+                            <div class="wz-review-photo-thumb">
+                                @if (filled($photo->file_path) && (Storage::disk('public')->exists($photo->file_path) || Storage::disk('local')->exists($photo->file_path)))
+                                    <img src="{{ route('property-review.file', $photo) }}"
+                                        alt="Foto {{ $property->title }}"
+                                        onerror="this.hidden = true; this.nextElementSibling.hidden = false;">
+                                    <span class="wz-review-empty" hidden>Foto tidak tersedia</span>
+                                @else
+                                    <span class="wz-review-empty">Foto tidak tersedia</span>
+                                @endif
+                            </div>
+                        @empty
+                            <span class="wz-review-empty">Belum ada foto</span>
+                        @endforelse
+                    </div>
+                    <p class="wz-review-photo-count">{{ $property->photos->count() }} foto diunggah</p>
+                </div>
+                <div class="wz-review-item mt-3">
+                    <span class="wz-review-label">Sertifikat</span>
+                    @forelse ($property->certificate as $certificate)
+                        <div class="wz-review-cert-badge">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            @if (filled($certificate->file_path) && Storage::disk('local')->exists($certificate->file_path))
+                                <a href="{{ route('property-review.file', $certificate) }}" target="_blank"
+                                    rel="noopener noreferrer">Lihat sertifikat</a>
                             @else
-                                <span class="wz-review-empty">Foto tidak tersedia</span>
+                                <span>Sertifikat tidak tersedia</span>
                             @endif
                         </div>
                     @empty
-                        <span class="wz-review-empty">Belum ada foto</span>
+                        <span class="wz-review-empty">Belum diunggah</span>
                     @endforelse
                 </div>
-                <p class="wz-review-photo-count">{{ $property->photos->count() }} foto diunggah</p>
-            </div>
-            <div class="wz-review-item mt-3">
-                <span class="wz-review-label">Sertifikat</span>
-                @forelse ($property->certificate as $certificate)
-                    <div class="wz-review-cert-badge">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        @if (filled($certificate->file_path) && Storage::disk('local')->exists($certificate->file_path))
-                            <a href="{{ route('property-review.file', $certificate) }}" target="_blank"
-                                rel="noopener noreferrer">Lihat sertifikat</a>
-                        @else
-                            <span>Sertifikat tidak tersedia</span>
-                        @endif
-                    </div>
-                @empty
-                    <span class="wz-review-empty">Belum diunggah</span>
-                @endforelse
-            </div>
+            @endcan
         </div>
     </div>
 
@@ -142,18 +146,22 @@
         <div class="flex justify-end gap-3">
             @if ($property->status === 'pending_verification')
                 <x-button variant="secondary" @click="open = false">Batal</x-button>
-                <form method="POST" action="{{ route('property-review.status', $property) }}"
-                    onsubmit="this.querySelector('button[type=submit]').disabled = true;">
-                    @csrf
-                    <input type="hidden" name="status" value="rejected">
-                    <x-button type="submit" variant="danger">Tolak</x-button>
-                </form>
-                <form method="POST" action="{{ route('property-review.status', $property) }}"
-                    onsubmit="this.querySelector('button[type=submit]').disabled = true;">
-                    @csrf
-                    <input type="hidden" name="status" value="published">
-                    <x-button type="submit" variant="approve">Setujui</x-button>
-                </form>
+                @can('properties.reject_listing')
+                    <form method="POST" action="{{ route('property-review.status', $property) }}"
+                        onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+                        @csrf
+                        <input type="hidden" name="status" value="rejected">
+                        <x-button type="submit" variant="danger">Tolak</x-button>
+                    </form>
+                @endcan
+                @can('properties.approve_listing')
+                    <form method="POST" action="{{ route('property-review.status', $property) }}"
+                        onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+                        @csrf
+                        <input type="hidden" name="status" value="published">
+                        <x-button type="submit" variant="approve">Setujui</x-button>
+                    </form>
+                @endcan
             @else
                 <form method="POST" action="{{ route('property-review.status', $property) }}"
                     onsubmit="this.querySelector('button[type=submit]').disabled = true;">

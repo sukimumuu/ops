@@ -9,6 +9,7 @@ use App\Http\Controllers\Dashboard\LandDeedController;
 use App\Http\Controllers\Dashboard\ListingController;
 use App\Http\Controllers\Dashboard\NotificationController;
 use App\Http\Controllers\Dashboard\PropertyReviewController;
+use App\Http\Controllers\Dashboard\RolePermissionController;
 use App\Http\Controllers\Dashboard\SavedPropertyController;
 use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\Dashboard\UserController;
@@ -68,7 +69,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/listing', [ListingController::class, 'index'])->name('listing');
         Route::get('/properti-saya', [ListingController::class, 'myProperties'])->name('my-properties');
         Route::get('/permintaan-survei', [ListingController::class, 'requestSurvey'])->name('request-survey');
-        Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])->name('selling-transaction');
+        Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])
+            ->middleware('permission:transactions.view_own_tracker')
+            ->name('selling-transaction');
         Route::get('/rekening-pencairan', [ListingController::class, 'disbursementAccount'])->name('disbursement-account');
     });
     Route::prefix('listing')->name('listing.')->group(function () {
@@ -80,16 +83,22 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/wilayah/regencies/{regencyCode}/districts', [RegionDataController::class, 'districts'])
             ->where('regencyCode', '\\d{2}\\.\\d{2}')
             ->name('regions.districts');
-        Route::post('/langkah-1', [ListingWizardController::class, 'storeStepOne'])->name('step-one');
-        Route::post('/langkah-2', [ListingWizardController::class, 'storeStepTwo'])->name('step-two');
+        Route::post('/langkah-1', [ListingWizardController::class, 'storeStepOne'])
+            ->middleware('permission:properties.create')
+            ->name('step-one');
+        Route::post('/langkah-2', [ListingWizardController::class, 'storeStepTwo'])
+            ->middleware(['permission:properties.create', 'permission:documents.upload_basic'])
+            ->name('step-two');
         Route::post('/ai/ekstrak', [ListingAiController::class, 'extract'])
-            ->middleware('throttle:10,1')
+            ->middleware(['throttle:10,1', 'permission:properties.create'])
             ->name('ai.extract');
         Route::post('/ai/deskripsi', [ListingAiController::class, 'description'])
-            ->middleware('throttle:10,1')
+            ->middleware(['throttle:10,1', 'permission:properties.create'])
             ->name('ai.description');
         Route::get('/tinjau-ulang', [ListingWizardController::class, 'review'])->name('review');
-        Route::post('/buat', [ListingWizardController::class, 'submit'])->name('submit');
+        Route::post('/buat', [ListingWizardController::class, 'submit'])
+            ->middleware('permission:properties.create')
+            ->name('submit');
         Route::get('/photo-url/{propertyPhoto}', [ListingWizardController::class, 'signedPhotoUrl'])->name('photo-url');
     });
 
@@ -107,21 +116,35 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/jadwal-survei', [UserController::class, 'surveySchedule'])->name('survey-schedule');
         Route::post('/jadwal-survei/{appointment}/jadwal-pengganti', [AppointmentController::class, 'respondToReschedule'])
             ->name('survey-schedule.reschedule');
-        Route::get('/transaksi-escrow', [UserController::class, 'transactionEscrow'])->name('transaction-escrow');
+        Route::get('/transaksi-escrow', [UserController::class, 'transactionEscrow'])
+            ->middleware('permission:transactions.view_own_tracker')
+            ->name('transaction-escrow');
     });
 
     Route::post('/jadwal-survei/{appointment}/status', [AppointmentController::class, 'updateStatus'])
         ->name('appointments.status');
 
     Route::name('land-deed.')->group(function () {
-        Route::get('/dashboard-antrian', [LandDeedController::class, 'index'])->name('index');
+        Route::get('/dashboard-antrian', [LandDeedController::class, 'index'])
+            ->middleware('permission:appointments.view_all')
+            ->name('index');
         Route::post('/dashboard-antrian/{appointment}/status', [AppointmentController::class, 'updateStatus'])
             ->name('appointments.status');
-        Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])->name('bpn-check');
-        Route::get('/penandatanganan-ajb', [LandDeedController::class, 'ajbSigning'])->name('ajb-signing');
-        Route::get('/manajemen-akta', [LandDeedController::class, 'deedManagement'])->name('deed-management');
-        Route::get('/validasi-pajak', [LandDeedController::class, 'taxValidation'])->name('tax-validation');
-        Route::get('/resi-balik-nama', [LandDeedController::class, 'transferForOwnership'])->name('transfer-for-ownership');
+        Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])
+            ->middleware('permission:documents.input_bpn_result|transactions.mark_bpn_cleared')
+            ->name('bpn-check');
+        Route::get('/penandatanganan-ajb', [LandDeedController::class, 'ajbSigning'])
+            ->middleware('permission:transactions.schedule_ajb')
+            ->name('ajb-signing');
+        Route::get('/manajemen-akta', [LandDeedController::class, 'deedManagement'])
+            ->middleware('permission:documents.verify_status')
+            ->name('deed-management');
+        Route::get('/validasi-pajak', [LandDeedController::class, 'taxValidation'])
+            ->middleware('permission:documents.verify_status')
+            ->name('tax-validation');
+        Route::get('/resi-balik-nama', [LandDeedController::class, 'transferForOwnership'])
+            ->middleware('permission:documents.verify_status')
+            ->name('transfer-for-ownership');
     });
 
     Route::prefix('superadmin')->name('superadmin.')->group(function () {
@@ -129,32 +152,52 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             Route::get('/manajemen-user', [SuperadminController::class, 'userManagement'])->name('user-management');
             Route::get('/manajemen-user/tambah', [SuperadminController::class, 'createUser'])->name('user-management.create');
             Route::post('/manajemen-user', [SuperadminController::class, 'storeUser'])->name('user-management.store');
+            Route::get('/konfigurasi-sistem', [RolePermissionController::class, 'index'])->name('configuration-system');
+            Route::put('/konfigurasi-sistem/roles/{role}/permissions', [RolePermissionController::class, 'update'])
+                ->whereNumber('role')
+                ->name('configuration-system.permissions.update');
         });
-        Route::get('/transaksi-escrow', [SuperadminController::class, 'transactionAndEscrow'])->name('transaction-and-escrow');
+        Route::get('/transaksi-escrow', [SuperadminController::class, 'transactionAndEscrow'])
+            ->middleware(['role:Superadmin', 'permission:transactions.view_all'])
+            ->name('transaction-and-escrow');
         Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])
-            ->middleware('role:Admin|Superadmin')
+            ->middleware('role:Superadmin')
             ->name('master-data-property');
-        Route::get('/konfigurasi-sistem', [SuperadminController::class, 'configurationSystem'])->name('configuration-system');
-        Route::get('/audit-log', [SuperadminController::class, 'auditLog'])->name('audit-log');
+        Route::get('/audit-log', [SuperadminController::class, 'auditLog'])
+            ->middleware(['role:Superadmin', 'permission:system.view_audit_logs'])
+            ->name('audit-log');
     });
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/manajemen-user', [AdminController::class, 'userManagement'])->name('user-management');
-        Route::get('/transaksi-escrow', [AdminController::class, 'transactionAndEscrow'])->name('transaction-and-escrow');
+        Route::get('/manajemen-user', [AdminController::class, 'userManagement'])
+            ->middleware('permission:users.view_all_users')
+            ->name('user-management');
+        Route::get('/transaksi-escrow', [AdminController::class, 'transactionAndEscrow'])
+            ->middleware('permission:transactions.view_all')
+            ->name('transaction-and-escrow');
         Route::get('/master-data-properti', [AdminController::class, 'masterDataProperty'])
-            ->middleware('role:Admin|Superadmin')
+            ->middleware([
+                'permission:properties.approve_listing|properties.reject_listing',
+                'permission:documents.view_sensitive_pii',
+            ])
             ->name('master-data-property');
-        Route::get('/audit-log', [AdminController::class, 'auditLog'])->name('audit-log');
+        Route::get('/audit-log', [AdminController::class, 'auditLog'])
+            ->middleware('permission:system.view_audit_logs')
+            ->name('audit-log');
     });
 
-    Route::middleware('role:Admin|Superadmin')->prefix('property-review')->name('property-review.')->group(function () {
+    Route::prefix('property-review')->name('property-review.')->group(function () {
         Route::get('/properties/{property}/ppats', [PropertyReviewController::class, 'ppats'])
+            ->middleware('permission:properties.approve_listing|properties.reject_listing')
             ->name('ppats');
         Route::post('/properties/{property}/ppat', [PropertyReviewController::class, 'assignPpat'])
+            ->middleware('permission:properties.approve_listing|properties.reject_listing')
             ->name('assign-ppat');
         Route::post('/properties/{property}/status', [PropertyReviewController::class, 'updateStatus'])
+            ->middleware('permission:properties.approve_listing|properties.reject_listing')
             ->name('status');
         Route::get('/files/{propertyPhoto}', [PropertyReviewController::class, 'showFile'])
+            ->middleware('permission:documents.view_sensitive_pii')
             ->name('file');
     });
 });

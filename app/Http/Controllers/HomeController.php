@@ -249,6 +249,8 @@ class HomeController extends Controller
             return back()->with('error', 'Anda tidak dapat menjadwalkan kunjungan pada properti Anda sendiri.');
         }
 
+        abort_unless($request->user()?->can('appointments.request'), 403);
+
         $hasActiveAppointment = Appointment::query()
             ->where('property_id', $property->id)
             ->where('buyer_id', auth()->id())
