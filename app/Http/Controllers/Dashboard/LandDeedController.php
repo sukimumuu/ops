@@ -32,23 +32,32 @@ class LandDeedController extends Controller
             ->whereHas('property', fn (Builder $query): Builder => $query->where('assigned_ppat_id', $ppat->id))
             ->whereBetween('scheduled_at', [$monthStart, $monthEnd])
             ->with([
-                'buyer:id,name,avatar_path',
+                'buyer:id,name,email,phone,avatar_path',
                 'seller:id,name',
-                'property:id,title,address,city,district,certificate_type,assigned_ppat_id',
+                'property:id,title,address,city,district,certificate_type,url_maps,assigned_ppat_id',
             ])
             ->orderBy('scheduled_at')
             ->get();
 
         $calendarBookings = $appointments->map(fn (Appointment $appointment): array => [
             'id' => $appointment->id,
-            'client_name' => $appointment->buyer->name,
+            'counterpart_name' => $appointment->buyer->name,
+            'counterpart_email' => $appointment->buyer->email,
+            'counterpart_phone' => $appointment->buyer->phone,
             'avatar_url' => $appointment->buyer->avatar_url,
+            'seller_name' => $appointment->seller->name,
             'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
             'time' => $appointment->scheduled_at->format('H:i'),
             'reschedule_date' => $appointment->reschedule_suggested_at?->locale('id')->translatedFormat('l, d F Y'),
             'reschedule_time' => $appointment->reschedule_suggested_at?->format('H:i'),
             'status_key' => $appointment->status,
             'status' => $appointment->statusLabel(),
+            'buyer_intent_key' => $appointment->buyer_intent,
+            'buyer_intent_label' => $appointment->buyerIntentLabel(),
+            'result_notes' => $appointment->result_notes,
+            'result_recorded_at' => $appointment->completed_at
+                ? $appointment->completed_at->locale('id')->translatedFormat('l, d F Y, H:i').' WIB'
+                : null,
             'can_review' => $ppat->can('review', $appointment),
             'status_url' => route('land-deed.appointments.status', $appointment),
             'notes' => $appointment->notes,
@@ -56,7 +65,7 @@ class LandDeedController extends Controller
             'property_certificate' => $appointment->property->certificate_type,
             'property_address' => $appointment->property->address,
             'property_location' => $appointment->property->district.', '.$appointment->property->city,
-            'seller_name' => $appointment->seller->name,
+            'property_maps_url' => $appointment->property->url_maps,
         ])->values();
 
         $appointmentsByDate = $appointments->groupBy(fn (Appointment $appointment): string => $appointment->scheduled_at->toDateString());
@@ -64,15 +73,12 @@ class LandDeedController extends Controller
         $calendarEnd = $monthEnd->copy()->endOfWeek(Carbon::SATURDAY);
         $calendarDays = CarbonPeriod::create($calendarStart, $calendarEnd);
 
-        $timeSlots = Appointment::TIME_SLOTS;
-
         return view('dashboard.land-deed.index', compact(
             'appointments',
             'appointmentsByDate',
             'calendarBookings',
             'calendarDays',
             'month',
-            'timeSlots',
         ));
     }
 

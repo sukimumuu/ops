@@ -467,6 +467,7 @@ it('shows only survey appointments for properties assigned to the signed-in PPAT
     $this->actingAs($ppat)
         ->get(route('land-deed.index', ['month' => '2026-10']))
         ->assertOk()
+        ->assertSee('Kalender jadwal survei')
         ->assertSee('Assigned Survey Client')
         ->assertDontSee('Private Survey Client')
         ->assertViewHas('appointments', fn ($appointments): bool => $appointments->modelKeys() === [$assignedAppointment->id]);

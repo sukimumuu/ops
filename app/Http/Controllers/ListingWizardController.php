@@ -54,7 +54,9 @@ class ListingWizardController extends Controller
         }
 
         $sessionId = session()->getId();
+        $previousStepTwo = $request->session()->get('listing_wizard.step_2', []);
         $photoPaths = [];
+        $stagedFiles = [];
 
         try {
             foreach ($request->file('photos') as $index => $photo) {
@@ -75,21 +77,85 @@ class ListingWizardController extends Controller
             ], 500);
         }
 
-        // Store certificate file
-        $certPath = null;
-        if ($request->hasFile('certificate_file')) {
-            $certPath = $request->file('certificate_file')
-                ->store("properties/tmp/{$sessionId}/certificates", 'local');
+        try {
+            $certificates = [];
+
+            $certificateFiles = [
+                [
+                    'type' => $request->string('jenis_sertifikat')->toString(),
+                    'file' => $request->file('certificate_document'),
+                ],
+            ];
+
+            foreach ($request->input('additional_certificates', []) as $index => $additionalCertificate) {
+                $certificateFiles[] = [
+                    'type' => (string) ($additionalCertificate['jenis_sertifikat'] ?? ''),
+                    'file' => $request->file("additional_certificates.{$index}.certificate_document"),
+                ];
+            }
+
+            foreach ($certificateFiles as $index => $certificateFile) {
+                if (! $certificateFile['file']) {
+                    continue;
+                }
+
+                $path = $certificateFile['file']->store("properties/tmp/{$sessionId}/certificates", 'local');
+                $stagedFiles[] = $path;
+
+                $certificates[] = [
+                    'path' => $path,
+                    'type' => $certificateFile['type'],
+                    'order' => $index,
+                ];
+            }
+
+            $optionalDocuments = [
+                'imb' => filled($previousStepTwo['imb'] ?? null) ? $previousStepTwo['imb'] : null,
+                'pbb' => filled($previousStepTwo['pbb'] ?? null) ? $previousStepTwo['pbb'] : null,
+            ];
+
+            foreach (['imb' => 'imb_document', 'pbb' => 'pbb_document'] as $key => $input) {
+                if (! $request->hasFile($input)) {
+                    continue;
+                }
+
+                $path = $request->file($input)->store("properties/tmp/{$sessionId}/documents", 'local');
+                $stagedFiles[] = $path;
+                $optionalDocuments[$key] = $path;
+            }
+        } catch (Throwable $exception) {
+            Storage::disk('local')->delete($stagedFiles);
+            report($exception);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Dokumen gagal diunggah. Silakan coba lagi.',
+            ], 500);
         }
+
+        $currentCertificatePaths = array_column($certificates, 'path');
+
+        $replacedFiles = array_filter([
+            ...array_column($previousStepTwo['certificates'] ?? [], 'path'),
+            $previousStepTwo['certificate'] ?? null,
+            $previousStepTwo['imb'] ?? null,
+            $previousStepTwo['pbb'] ?? null,
+        ], fn ($path): bool => is_string($path)
+            && ! in_array($path, $currentCertificatePaths, true)
+            && ! in_array($path, $optionalDocuments, true));
+
+        Storage::disk('local')->delete($replacedFiles);
 
         $request->session()->put('listing_wizard.step_2', [
             'photos' => $photoPaths,
-            'certificate' => $certPath,
+            'certificates' => $certificates,
+            'imb' => $optionalDocuments['imb'],
+            'pbb' => $optionalDocuments['pbb'],
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Foto dan sertifikat berhasil diunggah.',
+            'message' => 'Foto dan dokumen berhasil diunggah.',
         ]);
     }
 
@@ -113,6 +179,16 @@ class ListingWizardController extends Controller
                 $type = $propertyType === 'bangunan' ? $step1['building_type'] : $step1['land_type'];
                 $category = $step1['transaction_type'] === 'dijual' ? 'sale' : 'rent';
 
+                $certificates = $step2['certificates'] ?? [];
+
+                if ($certificates === [] && filled($step2['certificate'] ?? null)) {
+                    $certificates = [[
+                        'path' => $step2['certificate'],
+                        'type' => $step1['certificate_type'] ?? null,
+                        'order' => 0,
+                    ]];
+                }
+
                 $property = Property::create([
                     'uuid' => Str::uuid()->toString(),
                     'seller_id' => Auth::id(),
@@ -135,7 +211,7 @@ class ListingWizardController extends Controller
                     'land_contour' => $step1['land_contour'] ?? null,
                     'road_access' => $step1['road_access'] ?? null,
                     'zone_type' => $step1['zone_type'] ?? null,
-                    'certificate_type' => $step1['certificate_type'],
+                    'certificate_type' => $certificates[0]['type'] ?? $step1['certificate_type'] ?? null,
                     'province' => $step1['province'],
                     'province_code' => $step1['province_code'] ?? null,
                     'city' => $step1['city'],
@@ -167,20 +243,51 @@ class ListingWizardController extends Controller
                     ]);
                 }
 
-                if (filled($step2['certificate'] ?? null)) {
-                    $newCertPath = "properties/{$property->id}/certificates/".basename($step2['certificate']);
+                foreach ($certificates as $certificate) {
+                    $stagedPath = $certificate['path'] ?? null;
+
+                    if (blank($stagedPath)) {
+                        continue;
+                    }
+
+                    $newCertPath = "properties/{$property->id}/certificates/".basename($stagedPath);
                     $disk = Storage::disk('local');
 
-                    if (! $disk->move($step2['certificate'], $newCertPath)) {
+                    if (! $disk->move($stagedPath, $newCertPath)) {
                         throw new RuntimeException('The property certificate could not be moved into permanent storage.');
                     }
 
-                    $movedFiles[] = ['disk' => 'local', 'source' => $step2['certificate'], 'destination' => $newCertPath];
+                    $movedFiles[] = ['disk' => 'local', 'source' => $stagedPath, 'destination' => $newCertPath];
 
                     PropertyPhoto::create([
                         'property_id' => $property->id,
                         'file_path' => $newCertPath,
                         'type' => 'certificate',
+                        'certificate_type' => $certificate['type'] ?? null,
+                        'sort_order' => $certificate['order'] ?? 0,
+                    ]);
+                }
+
+                foreach (['imb', 'pbb'] as $documentType) {
+                    $stagedPath = $step2[$documentType] ?? null;
+
+                    if (blank($stagedPath)) {
+                        continue;
+                    }
+
+                    $newDocumentPath = "properties/{$property->id}/documents/".basename($stagedPath);
+                    $disk = Storage::disk('local');
+
+                    if (! $disk->move($stagedPath, $newDocumentPath)) {
+                        throw new RuntimeException('A property document could not be moved into permanent storage.');
+                    }
+
+                    $movedFiles[] = ['disk' => 'local', 'source' => $stagedPath, 'destination' => $newDocumentPath];
+
+                    PropertyPhoto::create([
+                        'property_id' => $property->id,
+                        'file_path' => $newDocumentPath,
+                        'type' => $documentType,
                         'sort_order' => 0,
                     ]);
                 }
@@ -239,19 +346,42 @@ class ListingWizardController extends Controller
             }
         }
 
-        $certificateUrl = null;
-        if (isset($step2['certificate']) && $step2['certificate']) {
-            $certificateUrl = Storage::disk('local')->temporaryUrl(
+        $certificateUrls = [];
+
+        foreach ($step2['certificates'] ?? [] as $certificate) {
+            if (filled($certificate['path'] ?? null)) {
+                $certificateUrls[] = Storage::disk('local')->temporaryUrl(
+                    $certificate['path'],
+                    now()->addMinutes(10)
+                );
+            }
+        }
+
+        if ($certificateUrls === [] && filled($step2['certificate'] ?? null)) {
+            $certificateUrls[] = Storage::disk('local')->temporaryUrl(
                 $step2['certificate'],
                 now()->addMinutes(10)
             );
+        }
+
+        $documentUrls = [];
+
+        foreach (['imb', 'pbb'] as $documentType) {
+            if (filled($step2[$documentType] ?? null)) {
+                $documentUrls[$documentType] = Storage::disk('local')->temporaryUrl(
+                    $step2[$documentType],
+                    now()->addMinutes(10)
+                );
+            }
         }
 
         return response()->json([
             'success' => true,
             'property' => $step1,
             'photo_urls' => $photoUrls,
-            'certificate_url' => $certificateUrl,
+            'certificate_url' => $certificateUrls[0] ?? null,
+            'certificate_urls' => $certificateUrls,
+            'document_urls' => $documentUrls,
         ]);
     }
 

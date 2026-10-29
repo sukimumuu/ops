@@ -68,6 +68,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::name('seller.')->group(function () {
         Route::get('/listing', [ListingController::class, 'index'])->name('listing');
         Route::get('/properti-saya', [ListingController::class, 'myProperties'])->name('my-properties');
+        Route::get('/properti-saya/{property:uuid}', [ListingController::class, 'showProperty'])
+            ->whereUuid('property')
+            ->name('my-properties.show');
+        Route::patch('/properti-saya/{property:uuid}/survei/{appointment}', [AppointmentController::class, 'recordSurveyResult'])
+            ->whereUuid('property')
+            ->whereNumber('appointment')
+            ->name('my-properties.surveys.update');
         Route::get('/permintaan-survei', [ListingController::class, 'requestSurvey'])->name('request-survey');
         Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])
             ->middleware('permission:transactions.view_own_tracker')

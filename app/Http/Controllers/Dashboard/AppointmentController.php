@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Notifications\AppointmentNotification;
+use App\Models\Property;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
@@ -80,6 +82,82 @@ class AppointmentController extends Controller
         };
 
         return back()->with('status', $message);
+    }
+
+    /**
+     * Record the result of a confirmed survey from the seller property page.
+     */
+    public function recordSurveyResult(Request $request, Property $property, Appointment $appointment): RedirectResponse
+    {
+        Gate::authorize('view', $property);
+
+        abort_unless($appointment->property_id === $property->id, 404);
+
+        Gate::authorize('recordResult', $appointment);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in([Appointment::STATUS_COMPLETED, Appointment::STATUS_CANCELLED])],
+            'buyer_intent' => [
+                'nullable',
+                'required_if:status,'.Appointment::STATUS_COMPLETED,
+                'string',
+                Rule::in(Appointment::BUYER_INTENTS),
+            ],
+            'result_notes' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'status.required' => 'Pilih hasil survei.',
+            'status.in' => 'Hasil survei yang dipilih tidak valid.',
+            'buyer_intent.required_if' => 'Pilih keputusan pembeli setelah survei.',
+            'buyer_intent.in' => 'Keputusan pembeli yang dipilih tidak valid.',
+            'result_notes.max' => 'Catatan hasil survei tidak boleh lebih dari 1000 karakter.',
+        ]);
+
+        $buyerIntent = $validated['status'] === Appointment::STATUS_COMPLETED
+            ? $validated['buyer_intent']
+            : null;
+
+        $updated = DB::transaction(function () use ($appointment, $validated, $buyerIntent, $property): int {
+            $updated = Appointment::query()
+                ->whereKey($appointment->getKey())
+                ->where('status', Appointment::STATUS_CONFIRMED)
+                ->update([
+                    'status' => $validated['status'],
+                    'buyer_intent' => $buyerIntent,
+                    'result_notes' => $validated['result_notes'] ?? null,
+                    'completed_at' => $validated['status'] === Appointment::STATUS_COMPLETED ? now() : null,
+                ]);
+
+            if ($updated === 0) {
+                return 0;
+            }
+
+            if ($buyerIntent === Appointment::BUYER_INTENT_DEAL) {
+                Property::query()
+                    ->whereKey($property->getKey())
+                    ->update(['status' => 'reserved']);
+            }
+
+            return $updated;
+        });
+
+        if ($updated === 0) {
+            return back()->withErrors([
+                'status' => 'Hasil survei hanya dapat dicatat untuk survei yang sudah dikonfirmasi.',
+            ]);
+        }
+
+        $message = match (true) {
+            $validated['status'] === Appointment::STATUS_CANCELLED => 'Survei berhasil dibatalkan.',
+            $buyerIntent === Appointment::BUYER_INTENT_DEAL => 'Hasil survei disimpan dan properti ditandai sebagai dipesan.',
+            default => 'Hasil survei berhasil disimpan.',
+        };
+
+        return redirect()
+            ->route('seller.my-properties.show', [
+                'property' => $property->uuid,
+                'appointment' => $appointment->id,
+            ])
+            ->with('status', $message);
     }
 
     /**

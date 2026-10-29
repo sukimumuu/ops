@@ -50,8 +50,6 @@ class StoreListingStepOneRequest extends FormRequest
             'road_access' => ['required_if:property_type,tanah', 'string', 'nullable'],
             'zone_type' => ['nullable', 'string'],
 
-            'certificate_type' => ['required', 'string'],
-
             'province' => ['required', 'string', 'max:100'],
             'province_code' => ['required', 'string', 'regex:/^\\d{2}$/'],
             'city' => ['required', 'string', 'max:100'],
@@ -92,7 +90,6 @@ class StoreListingStepOneRequest extends FormRequest
             'condition.required_if' => 'Kondisi bangunan wajib dipilih.',
             'land_contour.required_if' => 'Kontur tanah wajib dipilih.',
             'road_access.required_if' => 'Akses jalan wajib dipilih.',
-            'certificate_type.required' => 'Jenis sertifikat wajib dipilih.',
             'province.required' => 'Provinsi wajib diisi.',
             'province_code.required' => 'Pilih provinsi dari daftar yang tersedia.',
             'city.required' => 'Kota/Kabupaten wajib diisi.',

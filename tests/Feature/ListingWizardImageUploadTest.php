@@ -55,7 +55,8 @@ it('saves a resized property photo with an embedded watermark to the public disk
 
     $response = $this->postJson(route('listing.step-two'), [
         'photos' => [UploadedFile::fake()->image('house.jpg', 3000, 1500)->size(2048)],
-        'certificate_file' => UploadedFile::fake()->image('certificate.png', 100, 100),
+        'jenis_sertifikat' => 'SHM',
+        'certificate_document' => UploadedFile::fake()->image('certificate.png', 100, 100),
     ]);
 
     $response->assertOk()
@@ -106,7 +107,8 @@ it('rejects an uploaded image larger than 2MB', function () {
 
     $this->postJson(route('listing.step-two'), [
         'photos' => [UploadedFile::fake()->image('house.jpg', 100, 100)->size(2049)],
-        'certificate_file' => UploadedFile::fake()->image('certificate.png', 100, 100),
+        'jenis_sertifikat' => 'SHM',
+        'certificate_document' => UploadedFile::fake()->image('certificate.png', 100, 100),
     ])
         ->assertJsonValidationErrors(['photos.0'])
         ->assertJsonFragment(['Ukuran foto maksimal 2MB.']);
@@ -134,7 +136,8 @@ it('rejects executable content disguised as an image', function () {
 
     $this->postJson(route('listing.step-two'), [
         'photos' => [UploadedFile::fake()->createWithContent('payload.jpg', '<?php echo "unsafe"; ?>')],
-        'certificate_file' => UploadedFile::fake()->image('certificate.png', 100, 100),
+        'jenis_sertifikat' => 'SHM',
+        'certificate_document' => UploadedFile::fake()->image('certificate.png', 100, 100),
     ])
         ->assertJsonValidationErrors(['photos.0']);
 });
@@ -160,7 +163,8 @@ it('returns a friendly error and removes staged photos when image processing fai
             UploadedFile::fake()->image('house-one.jpg', 100, 100),
             UploadedFile::fake()->image('house-two.jpg', 100, 100),
         ],
-        'certificate_file' => UploadedFile::fake()->image('certificate.png', 100, 100),
+        'jenis_sertifikat' => 'SHM',
+        'certificate_document' => UploadedFile::fake()->image('certificate.png', 100, 100),
     ])
         ->assertStatus(500)
         ->assertJsonPath('message', 'Foto gagal diproses. Silakan coba unggah kembali.')
