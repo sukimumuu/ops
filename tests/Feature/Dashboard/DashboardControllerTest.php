@@ -6,12 +6,18 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
 it('shows only the signed-in seller properties and activity', function () {
+    $permission = Permission::firstOrCreate([
+        'name' => 'appointments.confirm_or_reject',
+        'guard_name' => 'web',
+    ]);
     $userRole = Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
+    $userRole->syncPermissions([$permission]);
 
     $seller = User::factory()->create([
         'name' => 'Seller Dashboard',
@@ -120,7 +126,12 @@ it('shows only the signed-in seller properties and activity', function () {
 it('shows only the signed-in buyer surveys and transactions', function () {
     $this->travelTo('2026-10-09 09:00:00');
 
+    $permission = Permission::firstOrCreate([
+        'name' => 'appointments.confirm_or_reject',
+        'guard_name' => 'web',
+    ]);
     $userRole = Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
+    $userRole->syncPermissions([$permission]);
 
     $buyer = User::factory()->create([
         'name' => 'Buyer Dashboard',
@@ -231,6 +242,19 @@ it('shows only the signed-in buyer surveys and transactions', function () {
         ->assertViewMissing('metrics')
         ->assertViewHas('upcomingSurveys', fn ($surveys): bool => $surveys->count() === 2)
         ->assertViewHas('recentTransactions', fn ($transactions): bool => $transactions->count() === 2);
+});
+
+it('hides admin dashboard data when the matching permissions are missing', function () {
+    $adminRole = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole($adminRole);
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertViewHas('metrics', fn (array $metrics): bool => $metrics === [])
+        ->assertViewHas('recentTransactions', fn ($transactions): bool => $transactions->isEmpty())
+        ->assertViewHas('pendingProperties', fn ($properties): bool => $properties->isEmpty());
 });
 
 it('redirects guests to login when opening the dashboard', function () {

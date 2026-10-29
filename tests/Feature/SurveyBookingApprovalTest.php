@@ -3,15 +3,29 @@
 use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\User;
+use App\Notifications\AppointmentNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    foreach (['Admin', 'Superadmin', 'PPAT', 'User'] as $role) {
-        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+    $rolePermissions = [
+        'Admin' => ['appointments.view_all', 'appointments.confirm_or_reject'],
+        'Superadmin' => ['appointments.view_all', 'appointments.confirm_or_reject'],
+        'PPAT' => ['appointments.view_all'],
+        'User' => ['appointments.request', 'appointments.confirm_or_reject'],
+    ];
+
+    foreach ($rolePermissions as $role => $permissions) {
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web'])
+            ->syncPermissions($permissions);
     }
 });
 
@@ -66,6 +80,22 @@ it('allows a seller to approve a survey booking request directly', function () {
         ->assertSessionHas('status', 'Permintaan survei berhasil disetujui.');
 
     expect($appointment->fresh()->status)->toBe('confirmed');
+    expect($buyer->notifications()->first()->data['title'])->toBe('Jadwal survei disetujui');
+});
+
+it('blocks a seller when the appointment review permission is revoked', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    Role::findByName('User')->revokePermissionTo('appointments.confirm_or_reject');
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+
+    $this->actingAs($seller)
+        ->post(route('appointments.status', $appointment), ['status' => 'confirmed'])
+        ->assertForbidden();
+
+    expect($appointment->fresh()->status)->toBe('requested');
 });
 
 it('allows a seller to reject a survey booking request with a suggested schedule', function () {
@@ -90,7 +120,8 @@ it('allows a seller to reject a survey booking request with a suggested schedule
     $appointment->refresh();
 
     expect($appointment->status)->toBe('rejected')
-        ->and($appointment->reschedule_suggested_at->format('Y-m-d H:i'))->toBe($suggestedDate->format('Y-m-d').' 13:00');
+        ->and($appointment->reschedule_suggested_at->format('Y-m-d H:i'))->toBe($suggestedDate->format('Y-m-d').' 13:00')
+        ->and($buyer->notifications()->first()->data['title'])->toBe('Penjual mengajukan jadwal lain');
 });
 
 it('requires a suggested schedule when a seller rejects a survey booking request', function () {
@@ -448,6 +479,7 @@ it('lists only upcoming requested and confirmed surveys in the buyer schedule li
 it('lets a buyer accept a suggested reschedule and confirms the appointment', function () {
     $seller = User::factory()->create();
     $buyer = User::factory()->create();
+    $buyer->assignRole('User');
     $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
 
@@ -464,13 +496,15 @@ it('lets a buyer accept a suggested reschedule and confirms the appointment', fu
 
     expect($appointment->status)->toBe('confirmed')
         ->and($appointment->scheduled_at->format('Y-m-d H:i'))->toBe($suggestedAt->format('Y-m-d H:i'))
-        ->and($appointment->reschedule_suggested_at)->toBeNull();
+        ->and($appointment->reschedule_suggested_at)->toBeNull()
+        ->and($seller->notifications()->first()->data['title'])->toBe('Jadwal pengganti disetujui');
 });
 
 it('does not send an accepted reschedule back to the seller review queue', function () {
     $seller = User::factory()->create();
     $seller->assignRole('User');
     $buyer = User::factory()->create();
+    $buyer->assignRole('User');
     $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
     $appointment->update(['reschedule_suggested_at' => now()->addDays(4)->setTime(15, 30)]);
@@ -489,6 +523,7 @@ it('does not send an accepted reschedule back to the seller review queue', funct
 it('lets a buyer decline a suggested reschedule', function () {
     $seller = User::factory()->create();
     $buyer = User::factory()->create();
+    $buyer->assignRole('User');
     $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
     $appointment->update(['reschedule_suggested_at' => now()->addDays(4)->setTime(9, 0)]);
@@ -502,13 +537,33 @@ it('lets a buyer decline a suggested reschedule', function () {
     $appointment->refresh();
 
     expect($appointment->status)->toBe('rejected')
-        ->and($appointment->reschedule_suggested_at)->toBeNull();
+        ->and($appointment->reschedule_suggested_at)->toBeNull()
+        ->and($seller->notifications()->first()->data['title'])->toBe('Jadwal pengganti ditolak');
+});
+
+it('only lets a user mark their own notifications as read', function () {
+    $owner = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $owner->notify(new AppointmentNotification(
+        'Test notification',
+        'Test message',
+        route('buyer.survey-schedule'),
+    ));
+    $notification = $owner->notifications()->firstOrFail();
+
+    $this->actingAs($otherUser)
+        ->patch(route('notifications.read', $notification->id))
+        ->assertNotFound();
+
+    expect($notification->fresh()->read_at)->toBeNull();
 });
 
 it('prevents other buyers from responding to a reschedule suggestion', function () {
     $seller = User::factory()->create();
     $buyer = User::factory()->create();
+    $buyer->assignRole('User');
     $otherBuyer = User::factory()->create();
+    $otherBuyer->assignRole('User');
     $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
     $appointment->update(['reschedule_suggested_at' => now()->addDays(4)->setTime(9, 0)]);

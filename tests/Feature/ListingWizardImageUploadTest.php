@@ -11,13 +11,30 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Mockery;
 use RuntimeException;
+use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
+
+function listingUploadUser(): User
+{
+    $user = User::factory()->create();
+    $permissions = collect([
+        'properties.create',
+        'documents.upload_basic',
+        'documents.upload_transactional',
+    ])->map(fn (string $name): Permission => Permission::firstOrCreate([
+        'name' => $name,
+        'guard_name' => 'web',
+    ]));
+    $user->givePermissionTo($permissions);
+
+    return $user;
+}
 
 it('saves a resized property photo with an embedded watermark to the public disk', function () {
     Storage::fake('local');
     Storage::fake('public');
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingUploadUser())
         ->withSession([
             'listing_wizard.step_1' => [
                 'property_type' => 'bangunan',
@@ -86,7 +103,7 @@ it('saves a resized property photo with an embedded watermark to the public disk
 
 it('rejects an uploaded image larger than 2MB', function () {
     Storage::fake('public');
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(listingUploadUser());
 
     $this->postJson(route('listing.step-two'), [
         'photos' => [UploadedFile::fake()->image('house.jpg', 100, 100)->size(2049)],
@@ -97,9 +114,25 @@ it('rejects an uploaded image larger than 2MB', function () {
         ->assertJsonFragment(['Ukuran foto maksimal 2MB.']);
 });
 
+it('requires transactional document permission before accepting a certificate', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $user->givePermissionTo(
+        Permission::firstOrCreate(['name' => 'properties.create', 'guard_name' => 'web']),
+        Permission::firstOrCreate(['name' => 'documents.upload_basic', 'guard_name' => 'web']),
+    );
+
+    $this->actingAs($user)
+        ->postJson(route('listing.step-two'), [
+            'photos' => [UploadedFile::fake()->image('house.jpg', 100, 100)],
+            'certificate_file' => UploadedFile::fake()->image('certificate.png', 100, 100),
+        ])
+        ->assertForbidden();
+});
+
 it('rejects executable content disguised as an image', function () {
     Storage::fake('public');
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(listingUploadUser());
 
     $this->postJson(route('listing.step-two'), [
         'photos' => [UploadedFile::fake()->createWithContent('payload.jpg', '<?php echo "unsafe"; ?>')],
@@ -111,7 +144,7 @@ it('rejects executable content disguised as an image', function () {
 
 it('returns a friendly error and removes staged photos when image processing fails', function () {
     Storage::fake('public');
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(listingUploadUser());
 
     $existingPath = 'properties/tmp/session/photos/processed.jpg';
     Storage::disk('public')->put($existingPath, 'processed');
@@ -143,7 +176,7 @@ it('returns a friendly error and removes staged photos when image processing fai
 it('rolls back property creation and restores staged photos when a stored photo cannot be moved', function () {
     Storage::fake('local');
     Storage::fake('public');
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingUploadUser())
         ->withSession([
             'listing_wizard.step_1' => [
                 'property_type' => 'bangunan',

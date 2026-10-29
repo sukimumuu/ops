@@ -45,7 +45,8 @@
         @endforeach
     </section>
 
-    <section aria-labelledby="recent-transactions-heading" class="space-y-4">
+    @if (auth()->user()->hasRole('Superadmin') || auth()->user()->can('transactions.view_all'))
+        <section aria-labelledby="recent-transactions-heading" class="space-y-4">
         <div class="flex items-end justify-between gap-4">
             <div>
                 <h2 id="recent-transactions-heading" class="font-heading text-lg font-bold text-secondary">Transaksi
@@ -117,9 +118,14 @@
                 </tr>
             @endforelse
         </x-table>
-    </section>
+        </section>
+    @endif
 
-    <section aria-labelledby="pending-properties-heading" class="space-y-4">
+    @if (
+        auth()->user()->hasRole('Superadmin') ||
+            (auth()->user()->canAny(['properties.approve_listing', 'properties.reject_listing']) &&
+                auth()->user()->can('documents.view_sensitive_pii')))
+        <section aria-labelledby="pending-properties-heading" class="space-y-4">
         <div class="flex items-end justify-between gap-4">
             <div>
                 <h2 id="pending-properties-heading" class="font-heading text-lg font-bold text-secondary">Properti
@@ -160,5 +166,6 @@
                 </tr>
             @endforelse
         </x-table>
-    </section>
+        </section>
+    @endif
 </div>

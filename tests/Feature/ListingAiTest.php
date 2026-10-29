@@ -4,8 +4,20 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
+
+function listingAiUser(): User
+{
+    $user = User::factory()->create();
+    $user->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'properties.create',
+        'guard_name' => 'web',
+    ]));
+
+    return $user;
+}
 
 function fakeGroqMessage(string $content): array
 {
@@ -38,7 +50,7 @@ it('extracts listing data from unstructured text and normalizes it', function ()
     ]);
     config(['services.groq.api_key' => 'test-api-key']);
 
-    $response = $this->actingAs(User::factory()->create())
+    $response = $this->actingAs(listingAiUser())
         ->postJson(route('listing.ai.extract'), [
             'text' => 'Dijual rumah 2 lantai di Bintaro, luas bangunan 120 meter persegi, luas tanah 150 meter persegi, harga 1,8 miliar, terdiri dari 3 kamar tidur dan 2 kamar mandi.',
         ]);
@@ -82,7 +94,7 @@ it('drops unsupported categorical values while keeping valid fields', function (
     ]);
     config(['services.groq.api_key' => 'test-api-key']);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingAiUser())
         ->postJson(route('listing.ai.extract'), [
             'text' => 'Dijual rumah di Bintaro, harga 1,8 miliar, sertifikat HGB.',
         ])
@@ -101,6 +113,12 @@ it('requires authentication before using the listing AI endpoints', function () 
         ->assertUnauthorized();
 });
 
+it('blocks listing AI when the user does not have listing permission', function () {
+    $this->actingAs(User::factory()->create())
+        ->postJson(route('listing.ai.extract'), ['text' => 'Dijual rumah di Bintaro.'])
+        ->assertForbidden();
+});
+
 it('returns a safe validation error when the provider response is not valid JSON', function () {
     Http::preventStrayRequests();
     Http::fake([
@@ -110,7 +128,7 @@ it('returns a safe validation error when the provider response is not valid JSON
     ]);
     config(['services.groq.api_key' => 'test-api-key']);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingAiUser())
         ->postJson(route('listing.ai.extract'), [
             'text' => 'Dijual rumah di Bintaro dengan harga menarik.',
         ])
@@ -131,7 +149,7 @@ it('retries without JSON mode when the provider rejects the response format', fu
     ]);
     config(['services.groq.api_key' => 'test-api-key']);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingAiUser())
         ->postJson(route('listing.ai.extract'), [
             'text' => 'Dijual rumah di Bintaro dengan harga 1,8 miliar.',
         ])
@@ -151,7 +169,7 @@ it('returns a service unavailable response when the provider fails', function ()
     ]);
     config(['services.groq.api_key' => 'test-api-key']);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingAiUser())
         ->postJson(route('listing.ai.extract'), [
             'text' => 'Dijual rumah di Bintaro dengan harga 1 miliar.',
         ])
@@ -161,7 +179,7 @@ it('returns a service unavailable response when the provider fails', function ()
 });
 
 it('validates the extraction input', function () {
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingAiUser())
         ->postJson(route('listing.ai.extract'), ['text' => 'pendek'])
         ->assertStatus(422)
         ->assertJsonValidationErrors('text');
@@ -176,7 +194,7 @@ it('generates a property description from the latest form values', function () {
     ]);
     config(['services.groq.api_key' => 'test-api-key']);
 
-    $response = $this->actingAs(User::factory()->create())
+    $response = $this->actingAs(listingAiUser())
         ->postJson(route('listing.ai.description'), [
             'property_type' => 'bangunan',
             'building_type' => 'rumah',
@@ -207,7 +225,7 @@ it('generates a property description from the latest form values', function () {
 });
 
 it('requires at least one useful field before generating a description', function () {
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingAiUser())
         ->postJson(route('listing.ai.description'), [
             'province' => 'Banten',
         ])

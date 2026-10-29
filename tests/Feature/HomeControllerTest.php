@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
 
@@ -276,6 +277,10 @@ it('redirects guests to login when attempting to schedule a visit', function () 
 it('allows authenticated buyers to schedule a visit', function () {
     $seller = User::factory()->create(['name' => 'Pemilik']);
     $buyer = User::factory()->create(['name' => 'Calon Pembeli']);
+    $buyer->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'appointments.request',
+        'guard_name' => 'web',
+    ]));
     $uuid = (string) Str::uuid();
     $property = Property::query()->create([
         'uuid' => $uuid,
@@ -320,6 +325,17 @@ it('allows authenticated buyers to schedule a visit', function () {
         ->and($appointment->status)->toBe('requested')
         ->and($appointment->scheduled_at->format('Y-m-d'))->toBe($targetDate)
         ->and($appointment->scheduled_at->format('H:i'))->toBe('13:00');
+
+    $sellerNotification = $seller->notifications()->first();
+    expect($sellerNotification->data['title'])->toBe('Permintaan jadwal survei baru')
+        ->and($sellerNotification->data['message'])->toContain('Calon Pembeli')
+        ->and($sellerNotification->data['url'])->toBe(route('seller.request-survey'));
+
+    $this->actingAs($seller)
+        ->get(route('notifications.unread'))
+        ->assertOk()
+        ->assertJsonPath('unread_count', 1)
+        ->assertJsonPath('notifications.0.title', 'Permintaan jadwal survei baru');
 });
 
 it('prevents seller from scheduling a visit on their own property', function () {

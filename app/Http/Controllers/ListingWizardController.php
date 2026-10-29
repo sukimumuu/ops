@@ -49,6 +49,10 @@ class ListingWizardController extends Controller
      */
     public function storeStepTwo(StoreListingStepTwoRequest $request, ImageWatermarkService $imageWatermarkService): JsonResponse
     {
+        if ($request->hasFile('certificate_file')) {
+            abort_unless($request->user()?->can('documents.upload_transactional'), 403);
+        }
+
         $sessionId = session()->getId();
         $previousStepTwo = $request->session()->get('listing_wizard.step_2', []);
         $photoPaths = [];

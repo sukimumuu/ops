@@ -4,8 +4,20 @@ use App\Models\Property;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
+
+function listingLocationUser(): User
+{
+    $user = User::factory()->create();
+    $user->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'properties.create',
+        'guard_name' => 'web',
+    ]));
+
+    return $user;
+}
 
 it('renders the cascading location fields and restores saved selections', function () {
     $this->actingAs(User::factory()->create())
@@ -48,7 +60,7 @@ it('returns wilayah data and caches province requests', function () {
 });
 
 it('rejects a city code that does not belong to the selected province', function () {
-    $response = $this->actingAs(User::factory()->create())
+    $response = $this->actingAs(listingLocationUser())
         ->postJson(route('listing.step-one'), [
             'property_type' => 'bangunan',
             'building_type' => 'rumah',
@@ -78,7 +90,7 @@ it('rejects a city code that does not belong to the selected province', function
 });
 
 it('accepts matching hierarchical region codes in step one', function () {
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingLocationUser())
         ->postJson(route('listing.step-one'), [
             'property_type' => 'tanah',
             'land_type' => 'kavling',
@@ -105,8 +117,16 @@ it('accepts matching hierarchical region codes in step one', function () {
         ->assertSessionHas('listing_wizard.step_1.district_code', '36.74.03');
 });
 
+it('prevents a role without listing permission from saving listing details', function () {
+    $this->actingAs(User::factory()->create())
+        ->postJson(route('listing.step-one'), [])
+        ->assertForbidden();
+
+    expect(session('listing_wizard.step_1'))->toBeNull();
+});
+
 it('persists selected region codes with the existing region names', function () {
-    $seller = User::factory()->create();
+    $seller = listingLocationUser();
 
     $stepOne = [
         'property_type' => 'bangunan',
@@ -151,7 +171,7 @@ it('persists selected region codes with the existing region names', function () 
 });
 
 it('accepts a rent period when the transaction type is disewakan', function () {
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(listingLocationUser())
         ->postJson(route('listing.step-one'), [
             'property_type' => 'bangunan',
             'building_type' => 'rumah',
