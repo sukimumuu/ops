@@ -5,12 +5,18 @@ use App\Models\Property;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
+    $permission = Permission::firstOrCreate([
+        'name' => 'appointments.confirm_or_reject',
+        'guard_name' => 'web',
+    ]);
+    Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web'])
+        ->syncPermissions([$permission]);
 });
 
 function createSellerDetailProperty(User $seller, array $attributes = []): Property

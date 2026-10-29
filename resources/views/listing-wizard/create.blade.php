@@ -443,7 +443,7 @@
                                     </div>
                                 </div>
 
-                                <div class="wizard-form-grid grid-2 mt-4">
+                                <div class="wizard-form-grid mt-4">
                                     <div class="wizard-field">
                                         <label class="wz-label">Kondisi bangunan <span
                                                 class="wz-required">*</span></label>
@@ -455,21 +455,6 @@
                                         </select>
                                         <template x-if="errors.condition">
                                             <p class="wz-error" x-text="errors.condition"></p>
-                                        </template>
-                                    </div>
-                                    <div class="wizard-field">
-                                        <label class="wz-label">Jenis sertifikat <span
-                                                class="wz-required">*</span></label>
-                                        <select x-model="form.certificate_type" class="wz-input">
-                                            <option value="">Pilih sertifikat...</option>
-                                            <option value="SHM">SHM — Hak Milik</option>
-                                            <option value="SHGB">SHGB — Hak Guna Bangunan</option>
-                                            <option value="GIRIK">Girik</option>
-                                            <option value="AJB">AJB</option>
-                                            <option value="OTHER">Lainnya</option>
-                                        </select>
-                                        <template x-if="errors.certificate_type">
-                                            <p class="wz-error" x-text="errors.certificate_type"></p>
                                         </template>
                                     </div>
                                 </div>
@@ -721,22 +706,7 @@
                                     </div>
                                 </div>
 
-                                <div class="wizard-form-grid grid-2 mt-4">
-                                    <div class="wizard-field">
-                                        <label class="wz-label">Jenis sertifikat <span
-                                                class="wz-required">*</span></label>
-                                        <select x-model="form.certificate_type" class="wz-input">
-                                            <option value="">Pilih sertifikat...</option>
-                                            <option value="SHM">SHM — Hak Milik</option>
-                                            <option value="SHGB">SHGB — Hak Guna Bangunan</option>
-                                            <option value="GIRIK">Girik</option>
-                                            <option value="AJB">AJB</option>
-                                            <option value="OTHER">Lainnya</option>
-                                        </select>
-                                        <template x-if="errors.certificate_type">
-                                            <p class="wz-error" x-text="errors.certificate_type"></p>
-                                        </template>
-                                    </div>
+                                <div class="wizard-form-grid mt-4">
                                     <div class="wizard-field">
                                         <label class="wz-label">Peruntukan zona</label>
                                         <select x-model="form.zone_type" class="wz-input">
@@ -841,57 +811,132 @@
                     <div class="wizard-divider"></div>
                     <div class="wizard-section">
                         <h3 class="wizard-section-title">Sertifikat & dokumen legal</h3>
-                        <p class="wizard-section-subtitle">Upload sertifikat properti. File diamankan menggunakan Signed
-                            URL.</p>
+                        <p class="wizard-section-subtitle">Unggah sertifikat properti beserta dokumen pendukung. File
+                            diamankan menggunakan Signed URL.</p>
 
-                        <div class="mt-4">
-                            <label class="wz-cert-upload" :class="{ 'uploaded': certificateFile }">
-                                <div class="wz-cert-icon" :class="{ 'uploaded': certificateFile }">
-                                    <template x-if="!certificateFile">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                        </svg>
-                                    </template>
-                                    <template x-if="certificateFile">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </template>
-                                </div>
-                                <div class="wz-cert-info">
-                                    <template x-if="!certificateFile">
-                                        <div>
-                                            <p class="wz-cert-title">Klik untuk upload sertifikat</p>
-                                            <p class="wz-cert-desc">Format: PDF, JPEG, PNG · Maks. 10MB</p>
+                        {{-- Main certificate entries --}}
+                        <div class="wz-cert-list mt-4">
+                            <template x-for="(certificate, index) in certificates" :key="certificate.key">
+                                <div class="wz-cert-card" data-certificate-entry>
+                                    {{-- Initial state: type + dropzone side by side --}}
+                                    <div class="wz-cert-form" x-show="!certificate.file">
+                                        <div class="wz-cert-col">
+                                            <label class="wz-label" :for="'jenis-sertifikat-' + index">Jenis surat <span
+                                                    class="wz-required">*</span></label>
+                                            <select :id="'jenis-sertifikat-' + index"
+                                                x-model="certificate.jenis_sertifikat"
+                                                :name="certificateFieldName(index, 'jenis_sertifikat')" class="wz-input">
+                                                <option value="">Pilih jenis surat</option>
+                                                <option value="SHM">SHM — Sertifikat Hak Milik</option>
+                                                <option value="SHGB">SHGB — Hak Guna Bangunan</option>
+                                                <option value="GIRIK">Girik</option>
+                                                <option value="AJB">AJB — Akta Jual Beli</option>
+                                                <option value="OTHER">Lainnya</option>
+                                            </select>
+                                            <template x-if="certificateError(index, 'jenis_sertifikat')">
+                                                <p class="wz-error" x-text="certificateError(index, 'jenis_sertifikat')">
+                                                </p>
+                                            </template>
                                         </div>
-                                    </template>
-                                    <template x-if="certificateFile">
-                                        <div>
-                                            <p class="wz-cert-title uploaded" x-text="certificateFile.name"></p>
-                                            <p class="wz-cert-desc uploaded"
-                                                x-text="formatFileSize(certificateFile.size)"></p>
+
+                                        <div class="wz-cert-col">
+                                            <span class="wz-label">Upload file <span class="wz-required">*</span></span>
+                                            <label class="wz-dropzone" :for="'certificate-input-' + index"
+                                                :class="{ 'is-dragging': dragging === 'certificate-' + index }"
+                                                @dragenter.prevent="dragging = 'certificate-' + index"
+                                                @dragover.prevent="dragging = 'certificate-' + index"
+                                                @dragleave.prevent="dragging = ''"
+                                                @drop.prevent="handleCertificateDrop($event, index)">
+                                                <span class="wz-dropzone-icon" aria-hidden="true">
+                                                    <x-cloud-upload-icon class="h-10 w-10" />
+                                                </span>
+                                                <span class="wz-dropzone-text">
+                                                    <span class="wz-dropzone-title">Pilih file</span>
+                                                    <span class="wz-dropzone-desc">atau drag &amp; drop</span>
+                                                </span>
+                                                <input type="file" :id="'certificate-input-' + index"
+                                                    :name="certificateFieldName(index, 'certificate_document')"
+                                                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                                    class="sr-only" :disabled="!!certificate.file"
+                                                    @change="handleCertificateUpload($event, index)">
+                                            </label>
+                                            <p class="wz-file-hint">PDF, JPG, atau PNG · Maks. 10MB</p>
+                                            <template x-if="certificateError(index, 'certificate_document')">
+                                                <p class="wz-error" x-text="certificateError(index, 'certificate_document')">
+                                                </p>
+                                            </template>
                                         </div>
-                                    </template>
+
+                                        <button type="button" x-show="index > 0"
+                                            @click="removeCertificateEntry(index)" class="wz-cert-cancel">
+                                            Batalkan sertifikat tambahan
+                                        </button>
+                                    </div>
+
+                                    {{-- Selected state: uploaded file + add button --}}
+                                    <div class="wz-cert-selected" x-show="certificate.file">
+                                        <div class="wz-file-item">
+                                            <span class="wz-file-icon" aria-hidden="true">
+                                                <svg class="h-6 w-6" fill="none" stroke="currentColor"
+                                                    stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8m-5-5l5 5m-5-5v5h5M9 13h6M9 17h4" />
+                                                </svg>
+                                            </span>
+                                            <span class="wz-file-info">
+                                                <span class="wz-file-name" x-text="certificate.file?.name"></span>
+                                                <span class="wz-file-meta" x-text="fileMeta(certificate.file)"></span>
+                                            </span>
+                                            <button type="button" class="wz-file-remove"
+                                                @click="removeCertificateFile(index, $event)"
+                                                :aria-label="'Hapus file ' + (certificate.file?.name || 'sertifikat')">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor"
+                                                    stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <button type="button" class="wz-cert-add"
+                                            x-show="index === certificates.length - 1 && certificates.length < maxCertificates"
+                                            @click="addCertificateEntry()">
+                                            <span class="wz-cert-add-left">
+                                                <span class="wz-cert-add-icon" aria-hidden="true">
+                                                    <x-cloud-upload-icon class="h-8 w-8" />
+                                                </span>
+                                                <span class="wz-cert-add-text">
+                                                    <span class="wz-cert-add-title">Tambah Sertifikat</span>
+                                                    <span class="wz-cert-add-desc">Klik untuk upload file</span>
+                                                </span>
+                                            </span>
+                                            <span class="wz-cert-add-plus" aria-hidden="true">
+                                                <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                                    stroke-width="2.2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M12 4v16m8-8H4" />
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <template x-if="certificateFile">
-                                    <button @click.prevent="removeCertificate()" class="wz-cert-remove">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </template>
-                                <input type="file" accept=".pdf,image/jpeg,image/png" class="hidden"
-                                    @change="handleCertificateUpload($event)">
-                            </label>
-                            <template x-if="errors.certificate_file">
-                                <p class="wz-error mt-2" x-text="errors.certificate_file"></p>
                             </template>
+                        </div>
+
+                        {{-- Optional supporting documents --}}
+                        <div class="wz-doc-list">
+                            @include('listing-wizard.partials.document-upload', [
+                                'key' => 'imb',
+                                'inputId' => 'imb-document-input',
+                                'name' => 'imb_document',
+                                'label' => 'Upload IMB / PBG (Optional)',
+                            ])
+                            @include('listing-wizard.partials.document-upload', [
+                                'key' => 'pbb',
+                                'inputId' => 'pbb-document-input',
+                                'name' => 'pbb_document',
+                                'label' => 'Upload SPPT dan STTS PBB (Optional)',
+                            ])
                         </div>
 
                         {{-- Security Info --}}
@@ -991,7 +1036,7 @@
                                 </div>
                                 <div class="wz-review-item">
                                     <span class="wz-review-label">Sertifikat</span>
-                                    <span class="wz-review-value" x-text="form.certificate_type || '-'"></span>
+                                    <span class="wz-review-value" x-text="certificateTypeLabel()"></span>
                                 </div>
                                 <div class="wz-review-item">
                                     <span class="wz-review-label">Luas tanah</span>
@@ -1092,18 +1137,31 @@
                             </div>
                             <div class="wz-review-item mt-3">
                                 <span class="wz-review-label">Sertifikat</span>
-                                <template x-if="certificateFile">
-                                    <div class="wz-review-cert-badge">
+                                <template x-for="(certificate, index) in certificates" :key="'review-cert-' + certificate.key">
+                                    <div class="wz-review-cert-badge" x-show="certificate.file">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
                                             viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round"
                                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <span x-text="certificateFile.name"></span>
+                                        <span x-text="certificate.file?.name"></span>
                                     </div>
                                 </template>
-                                <template x-if="!certificateFile">
+                                <template x-if="!hasCertificateFile()">
                                     <span class="wz-review-empty">Belum diunggah</span>
+                                </template>
+                            </div>
+                            <div class="wz-review-item mt-3" x-show="optionalDocuments.imb.file || optionalDocuments.pbb.file">
+                                <span class="wz-review-label">Dokumen pendukung</span>
+                                <template x-if="optionalDocuments.imb.file">
+                                    <p class="wz-review-desc">
+                                        IMB / PBG: <span x-text="optionalDocuments.imb.file.name"></span>
+                                    </p>
+                                </template>
+                                <template x-if="optionalDocuments.pbb.file">
+                                    <p class="wz-review-desc">
+                                        SPPT &amp; STTS PBB: <span x-text="optionalDocuments.pbb.file.name"></span>
+                                    </p>
                                 </template>
                             </div>
                         </div>
@@ -2129,94 +2187,301 @@
             color: #FC4907;
         }
 
-        /* ===== CERTIFICATE UPLOAD ===== */
-        .wz-cert-upload {
+        /* ===== CERTIFICATE & DOCUMENT UPLOAD ===== */
+        .wz-cert-list {
             display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px;
-            border: 2px dashed #cbd5e1;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: #fafbfc;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        .wz-cert-upload:hover {
+        .wz-cert-card {
+            position: relative;
+            padding: 18px;
+            border: 1px solid rgba(44, 62, 80, 0.16);
+            border-radius: 16px;
+            background: #fff;
+        }
+
+        .wz-cert-form {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .wz-cert-col {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .wz-cert-col + .wz-cert-col {
+            padding-left: 24px;
+            border-left: 1px solid rgba(44, 62, 80, 0.12);
+        }
+
+        @media (max-width: 639px) {
+            .wz-cert-form {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .wz-cert-col + .wz-cert-col {
+                padding-left: 0;
+                padding-top: 16px;
+                border-left: none;
+                border-top: 1px solid rgba(44, 62, 80, 0.12);
+            }
+        }
+
+        .wz-cert-cancel {
+            grid-column: 1 / -1;
+            justify-self: start;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-family: 'Manrope', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .wz-cert-cancel:hover {
+            color: #FC4907;
+        }
+
+        .wz-cert-cancel:focus-visible {
+            outline: 2px solid rgba(252, 73, 7, 0.4);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        .wz-dropzone {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 16px;
+            border: 1.5px dashed rgba(44, 62, 80, 0.28);
+            border-radius: 12px;
+            background: #F8FAFC;
+            cursor: pointer;
+            transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .wz-dropzone:hover,
+        .wz-dropzone.is-dragging {
             border-color: #FC4907;
             background: #FFF7F4;
         }
 
-        .wz-cert-upload.uploaded {
-            border-color: #10b981;
-            border-style: solid;
-            background: #f0fdf4;
+        .wz-dropzone:focus-within {
+            border-color: #FC4907;
+            box-shadow: 0 0 0 3px rgba(252, 73, 7, 0.12);
         }
 
-        .wz-cert-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+        .wz-dropzone-icon {
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            background: rgba(252, 73, 7, 0.08);
+            width: 40px;
+            height: 40px;
             color: #FC4907;
-            transition: all 0.2s;
         }
 
-        .wz-cert-upload:hover .wz-cert-icon:not(.uploaded) {
-            background: rgba(252, 73, 7, 0.15);
-        }
-
-        .wz-cert-icon.uploaded {
-            background: #dcfce7;
-            color: #10b981;
-        }
-
-        .wz-cert-info {
-            flex: 1;
+        .wz-dropzone-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
             min-width: 0;
         }
 
-        .wz-cert-title {
+        .wz-dropzone-title {
+            font-family: 'Manrope', sans-serif;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 700;
             color: #2C3E50;
         }
 
-        .wz-cert-title.uploaded {
-            color: #166534;
-        }
-
-        .wz-cert-desc {
+        .wz-dropzone-desc {
+            font-family: 'Manrope', sans-serif;
             font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .wz-file-hint {
+            margin-top: 6px;
+            font-family: 'Manrope', sans-serif;
+            font-size: 11px;
             color: #94a3b8;
-            margin-top: 2px;
         }
 
-        .wz-cert-desc.uploaded {
-            color: #22c55e;
+        .wz-cert-selected {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .wz-cert-remove {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: #fee2e2;
-            color: #ef4444;
-            border: none;
-            cursor: pointer;
+        .wz-file-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            border: 1px solid rgba(44, 62, 80, 0.14);
+            border-radius: 12px;
+            background: #F8FAFC;
+        }
+
+        .wz-file-icon {
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            transition: all 0.2s;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: rgba(252, 73, 7, 0.1);
+            color: #FC4907;
         }
 
-        .wz-cert-remove:hover {
-            background: #fecaca;
+        .wz-file-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .wz-file-name {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: 'Manrope', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #2C3E50;
+        }
+
+        .wz-file-meta {
+            font-family: 'Manrope', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .wz-file-remove {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .wz-file-remove:hover {
+            background: #fff;
+            color: #FC4907;
+        }
+
+        .wz-file-remove:focus-visible {
+            outline: 2px solid rgba(252, 73, 7, 0.5);
+            outline-offset: 2px;
+        }
+
+        .wz-cert-add {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            width: 100%;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 12px;
+            background: #FC4907;
+            color: #fff;
+            font-family: 'Manrope', sans-serif;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .wz-cert-add:hover {
+            background: #e04006;
+        }
+
+        .wz-cert-add:active {
+            transform: translateY(1px);
+        }
+
+        .wz-cert-add:focus-visible {
+            outline: 2px solid #2C3E50;
+            outline-offset: 2px;
+        }
+
+        .wz-cert-add-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            text-align: left;
+        }
+
+        .wz-cert-add-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .wz-cert-add-text {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+        }
+
+        .wz-cert-add-title {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .wz-cert-add-desc {
+            font-size: 11px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .wz-cert-add-plus {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .wz-doc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .wz-doc-upload {
+            display: flex;
+            flex-direction: column;
         }
 
         /* ===== INFO BOX ===== */
@@ -2547,7 +2812,6 @@
                     bathrooms: 'Kamar mandi',
                     floors: 'Jumlah lantai',
                     condition: 'Kondisi bangunan',
-                    certificate_type: 'Sertifikat',
                     negotiable: 'Harga nego',
                     front_width: 'Lebar depan',
                     land_contour: 'Kontur tanah',
@@ -2634,7 +2898,6 @@
                     bathrooms: '',
                     floors: '',
                     condition: '',
-                    certificate_type: '',
                     province: '',
                     province_code: '',
                     city: '',
@@ -2655,7 +2918,22 @@
                 errors: {},
                 photoFiles: [],
                 photoPreviews: [],
-                certificateFile: null,
+
+                // Certificate & legal document state
+                maxCertificates: 5,
+                certificateKeySeq: 1,
+                certificates: [
+                    { key: 0, jenis_sertifikat: '', file: null, errors: {} },
+                ],
+                optionalDocuments: {
+                    imb: { file: null, error: '' },
+                    pbb: { file: null, error: '' },
+                },
+                optionalDocumentInputIds: {
+                    imb: 'imb-document-input',
+                    pbb: 'pbb-document-input',
+                },
+                dragging: '',
 
                 formatCurrency(value) {
                     let num = value.replace(/\D/g, '');
@@ -2765,7 +3043,6 @@
                         'bathrooms',
                         'floors',
                         'condition',
-                        'certificate_type',
                         'negotiable',
                         'front_width',
                         'land_contour',
@@ -2856,7 +3133,6 @@
                         'bathrooms',
                         'floors',
                         'condition',
-                        'certificate_type',
                         'land_contour',
                         'road_access',
                         'zone_type',
@@ -3270,20 +3546,208 @@
                     this.photoPreviews.splice(index, 1);
                 },
 
-                handleCertificateUpload(event) {
-                    const file = event.target.files[0];
+                handleCertificateUpload(event, index) {
+                    const file = event.target.files?.[0];
                     if (!file) return;
-                    if (file.size > 10 * 1024 * 1024) {
-                        this.errors.certificate_file = 'Ukuran sertifikat maksimal 10MB.';
+
+                    const error = this.validateDocumentFile(file);
+
+                    if (error) {
+                        this.setCertificateError(index, 'certificate_document', error);
+                        event.target.value = '';
                         return;
                     }
-                    this.certificateFile = file;
-                    this.errors.certificate_file = null;
-                    event.target.value = '';
+
+                    this.applyCertificateFile(index, file);
                 },
 
-                removeCertificate() {
-                    this.certificateFile = null;
+                handleCertificateDrop(event, index) {
+                    this.dragging = '';
+
+                    const file = event.dataTransfer?.files?.[0];
+                    if (!file) return;
+
+                    const error = this.validateDocumentFile(file);
+
+                    if (error) {
+                        this.setCertificateError(index, 'certificate_document', error);
+                        return;
+                    }
+
+                    this.applyCertificateFile(index, file);
+                },
+
+                applyCertificateFile(index, file) {
+                    const certificate = this.certificates[index];
+                    if (!certificate) return;
+
+                    certificate.file = file;
+                    certificate.errors = {};
+                    delete this.errors[this.serverCertificateErrorKey(index, 'certificate_document')];
+                },
+
+                setCertificateError(index, field, message) {
+                    const certificate = this.certificates[index];
+                    if (!certificate) return;
+
+                    certificate.errors = { ...certificate.errors, [field]: message };
+                },
+
+                removeCertificateFile(index, event = null) {
+                    const certificate = this.certificates[index];
+                    if (certificate) {
+                        certificate.file = null;
+                        certificate.errors = {};
+                    }
+
+                    const entry = event?.target?.closest('[data-certificate-entry]') ??
+                        document.querySelectorAll('[data-certificate-entry]')[index];
+                    const input = entry?.querySelector('input[type="file"]');
+                    if (input) input.value = '';
+
+                    delete this.errors[this.serverCertificateErrorKey(index, 'certificate_document')];
+                },
+
+                addCertificateEntry() {
+                    if (this.certificates.length >= this.maxCertificates) return;
+
+                    this.certificates.push({
+                        key: this.certificateKeySeq++,
+                        jenis_sertifikat: '',
+                        file: null,
+                        errors: {},
+                    });
+
+                    this.$nextTick(() => {
+                        const entries = document.querySelectorAll('[data-certificate-entry]');
+                        entries[entries.length - 1]?.querySelector('select')?.focus();
+                    });
+                },
+
+                removeCertificateEntry(index) {
+                    if (index === 0) {
+                        this.removeCertificateFile(0);
+                        return;
+                    }
+
+                    this.certificates.splice(index, 1);
+
+                    Object.keys(this.errors)
+                        .filter((key) => key.startsWith('additional_certificates.'))
+                        .forEach((key) => delete this.errors[key]);
+                },
+
+                handleOptionalDocumentUpload(event, key) {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+
+                    const error = this.validateDocumentFile(file);
+
+                    if (error) {
+                        this.optionalDocuments[key].error = error;
+                        event.target.value = '';
+                        return;
+                    }
+
+                    this.applyOptionalDocument(key, file);
+                },
+
+                handleOptionalDocumentDrop(event, key) {
+                    this.dragging = '';
+
+                    const file = event.dataTransfer?.files?.[0];
+                    if (!file) return;
+
+                    const error = this.validateDocumentFile(file);
+
+                    if (error) {
+                        this.optionalDocuments[key].error = error;
+                        return;
+                    }
+
+                    this.applyOptionalDocument(key, file);
+                },
+
+                applyOptionalDocument(key, file) {
+                    if (!this.optionalDocuments[key]) return;
+
+                    this.optionalDocuments[key].file = file;
+                    this.optionalDocuments[key].error = '';
+                    delete this.errors[`${key}_document`];
+                },
+
+                removeOptionalDocument(key) {
+                    if (!this.optionalDocuments[key]) return;
+
+                    this.optionalDocuments[key].file = null;
+                    this.optionalDocuments[key].error = '';
+                    delete this.errors[`${key}_document`];
+
+                    const input = document.getElementById(this.optionalDocumentInputIds[key]);
+                    if (input) input.value = '';
+                },
+
+                validateDocumentFile(file) {
+                    if (!file) return 'Pilih file terlebih dahulu.';
+                    if (!this.isAcceptedDocument(file)) return 'Format file harus PDF, JPG, atau PNG.';
+                    if (file.size > 10 * 1024 * 1024) return 'Ukuran file maksimal 10MB.';
+
+                    return '';
+                },
+
+                isAcceptedDocument(file) {
+                    const extension = (file.name.split('.').pop() || '').toLowerCase();
+                    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+                    const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+
+                    return allowedExtensions.includes(extension) &&
+                        (file.type === '' || allowedMimeTypes.includes(file.type));
+                },
+
+                certificateFieldName(index, field) {
+                    return index === 0 ? field : `additional_certificates[${index - 1}][${field}]`;
+                },
+
+                serverCertificateErrorKey(index, field) {
+                    return index === 0 ? field : `additional_certificates.${index - 1}.${field}`;
+                },
+
+                certificateError(index, field) {
+                    const localError = this.certificates[index]?.errors?.[field];
+
+                    if (localError) return localError;
+
+                    return this.errors?.[this.serverCertificateErrorKey(index, field)] || '';
+                },
+
+                certificateTypeLabel() {
+                    const labels = {
+                        SHM: 'SHM — Hak Milik',
+                        SHGB: 'SHGB — Hak Guna Bangunan',
+                        GIRIK: 'Girik',
+                        AJB: 'AJB — Akta Jual Beli',
+                        OTHER: 'Lainnya',
+                    };
+
+                    return labels[this.certificates[0]?.jenis_sertifikat] || '-';
+                },
+
+                hasCertificateFile() {
+                    return this.certificates.some((certificate) => certificate.file);
+                },
+
+                fileMeta(file) {
+                    if (!file) return '';
+
+                    return `${this.formatFileSize(file.size)} • ${this.fileTypeLabel(file)}`;
+                },
+
+                fileTypeLabel(file) {
+                    if (!file?.name) return 'FILE';
+
+                    const extension = (file.name.split('.').pop() || '').toUpperCase();
+
+                    return extension === 'JPEG' ? 'JPG' : extension;
                 },
 
                 goToStep(step) {
@@ -3347,15 +3811,37 @@
 
                 async submitStepTwo() {
                     this.errors = {};
+                    this.certificates.forEach((certificate) => {
+                        certificate.errors = {};
+                    });
 
                     if (this.photoFiles.length === 0) {
                         this.errors.photos = 'Minimal 1 foto properti wajib diunggah.';
                         return;
                     }
-                    if (!this.certificateFile) {
-                        this.errors.certificate_file = 'File sertifikat wajib diunggah.';
-                        return;
-                    }
+
+                    let hasCertificateError = false;
+
+                    this.certificates.forEach((certificate) => {
+                        if (!certificate.jenis_sertifikat) {
+                            certificate.errors = {
+                                ...certificate.errors,
+                                jenis_sertifikat: 'Jenis surat wajib dipilih.',
+                            };
+                            hasCertificateError = true;
+                        }
+
+                        if (!certificate.file) {
+                            certificate.errors = {
+                                ...certificate.errors,
+                                certificate_document: 'File sertifikat wajib diunggah.',
+                            };
+                            hasCertificateError = true;
+                        }
+                    });
+
+                    if (hasCertificateError) return;
+
                     if (!this.agreedTerms) return;
 
                     this.isLoading = true;
@@ -3363,7 +3849,25 @@
                     try {
                         const formData = new FormData();
                         this.photoFiles.forEach(file => formData.append('photos[]', file));
-                        formData.append('certificate_file', this.certificateFile);
+
+                        this.certificates.forEach((certificate, index) => {
+                            formData.append(
+                                this.certificateFieldName(index, 'jenis_sertifikat'),
+                                certificate.jenis_sertifikat
+                            );
+                            formData.append(
+                                this.certificateFieldName(index, 'certificate_document'),
+                                certificate.file
+                            );
+                        });
+
+                        if (this.optionalDocuments.imb.file) {
+                            formData.append('imb_document', this.optionalDocuments.imb.file);
+                        }
+
+                        if (this.optionalDocuments.pbb.file) {
+                            formData.append('pbb_document', this.optionalDocuments.pbb.file);
+                        }
 
                         const url = '{{ route('listing.step-two') }}';
 

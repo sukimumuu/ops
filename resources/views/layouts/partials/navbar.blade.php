@@ -65,68 +65,88 @@
                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                     <a href="{{ route('dashboard') }}">Dashboard</a>
                 </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.user-management')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('admin.user-management') }}">Manajemen Pengguna</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.master-data-property')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('admin.master-data-property') }}">Master Data Properti</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.transaction-and-escrow')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('admin.transaction-and-escrow') }}">Transaksi & Escrow</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.audit-log')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('admin.audit-log') }}">Audit Log</a>
-                </li>
+                @can('users.view_all_users')
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.user-management')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('admin.user-management') }}">Manajemen Pengguna</a>
+                    </li>
+                @endcan
+                @can('documents.view_sensitive_pii')
+                    @canany(['properties.approve_listing', 'properties.reject_listing'])
+                        <li
+                            class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.master-data-property')
+                                ? 'border-b-6 border-b-primary text-primary'
+                                : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                            <a href="{{ route('admin.master-data-property') }}">Master Data Properti</a>
+                        </li>
+                    @endcanany
+                @endcan
+                @can('transactions.view_all')
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.transaction-and-escrow')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('admin.transaction-and-escrow') }}">Transaksi & Escrow</a>
+                    </li>
+                @endcan
+                @can('system.view_audit_logs')
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('admin.audit-log')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('admin.audit-log') }}">Audit Log</a>
+                    </li>
+                @endcan
             @endrole
             @role('PPAT')
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.index')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('land-deed.index') }}">Dashboard Antrian</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.bpn-check')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('land-deed.bpn-check') }}">Pengecekan BPN</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.tax-validation')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('land-deed.tax-validation') }}">Validasi Pajak</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.ajb-signing')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('land-deed.ajb-signing') }}">Jadwal Penandatanganan AJB</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.deed-management')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('land-deed.deed-management') }}">Manajemen Akta</a>
-                </li>
-                <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.transfer-for-ownership')
-                        ? 'border-b-6 border-b-primary text-primary'
-                        : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                    <a href="{{ route('land-deed.transfer-for-ownership') }}">Resi Balik Nama</a>
-                </li>
+                @can('appointments.view_all')
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.index')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('land-deed.index') }}">Dashboard Antrian</a>
+                    </li>
+                @endcan
+                @canany(['documents.input_bpn_result', 'transactions.mark_bpn_cleared'])
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.bpn-check')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('land-deed.bpn-check') }}">Pengecekan BPN</a>
+                    </li>
+                @endcanany
+                @can('documents.verify_status')
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.tax-validation')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('land-deed.tax-validation') }}">Validasi Pajak</a>
+                    </li>
+                @endcan
+                @can('transactions.schedule_ajb')
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.ajb-signing')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('land-deed.ajb-signing') }}">Jadwal Penandatanganan AJB</a>
+                    </li>
+                @endcan
+                @can('documents.verify_status')
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.deed-management')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('land-deed.deed-management') }}">Manajemen Akta</a>
+                    </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.transfer-for-ownership')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('land-deed.transfer-for-ownership') }}">Resi Balik Nama</a>
+                    </li>
+                @endcan
             @endrole
             @role('User')
                 @if (request()->routeIS('buyer.*') || request()->routeIs('dashboard'))
@@ -172,12 +192,14 @@
                             : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                         <a href="{{ route('seller.request-survey') }}">Permintaan Survei Masuk</a>
                     </li>
-                    <li
-                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.selling-transaction')
-                            ? 'border-b-6 border-b-primary text-primary'
-                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                        <a href="{{ route('seller.selling-transaction') }}">Transaksi Penjualan</a>
-                    </li>
+                    @can('transactions.view_own_tracker')
+                        <li
+                            class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.selling-transaction')
+                                ? 'border-b-6 border-b-primary text-primary'
+                                : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                            <a href="{{ route('seller.selling-transaction') }}">Transaksi Penjualan</a>
+                        </li>
+                    @endcan
                     <li
                         class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.disbursement-account')
                             ? 'border-b-6 border-b-primary text-primary'

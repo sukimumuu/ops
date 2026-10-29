@@ -6,13 +6,26 @@ use App\Models\User;
 use App\Notifications\AppointmentNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    foreach (['Admin', 'Superadmin', 'PPAT', 'User'] as $role) {
-        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+    $rolePermissions = [
+        'Admin' => ['appointments.view_all', 'appointments.confirm_or_reject'],
+        'Superadmin' => ['appointments.view_all', 'appointments.confirm_or_reject'],
+        'PPAT' => ['appointments.view_all'],
+        'User' => ['appointments.request', 'appointments.confirm_or_reject'],
+    ];
+
+    foreach ($rolePermissions as $role => $permissions) {
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web'])
+            ->syncPermissions($permissions);
     }
 });
 
@@ -68,6 +81,21 @@ it('allows a seller to approve a survey booking request directly', function () {
 
     expect($appointment->fresh()->status)->toBe('confirmed');
     expect($buyer->notifications()->first()->data['title'])->toBe('Jadwal survei disetujui');
+});
+
+it('blocks a seller when the appointment review permission is revoked', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    Role::findByName('User')->revokePermissionTo('appointments.confirm_or_reject');
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller);
+    $appointment = createSurveyBooking($seller, $buyer, $property);
+
+    $this->actingAs($seller)
+        ->post(route('appointments.status', $appointment), ['status' => 'confirmed'])
+        ->assertForbidden();
+
+    expect($appointment->fresh()->status)->toBe('requested');
 });
 
 it('allows a seller to reject a survey booking request with a suggested schedule', function () {
@@ -451,6 +479,7 @@ it('lists only upcoming requested and confirmed surveys in the buyer schedule li
 it('lets a buyer accept a suggested reschedule and confirms the appointment', function () {
     $seller = User::factory()->create();
     $buyer = User::factory()->create();
+    $buyer->assignRole('User');
     $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
 
@@ -475,6 +504,7 @@ it('does not send an accepted reschedule back to the seller review queue', funct
     $seller = User::factory()->create();
     $seller->assignRole('User');
     $buyer = User::factory()->create();
+    $buyer->assignRole('User');
     $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
     $appointment->update(['reschedule_suggested_at' => now()->addDays(4)->setTime(15, 30)]);
@@ -493,6 +523,7 @@ it('does not send an accepted reschedule back to the seller review queue', funct
 it('lets a buyer decline a suggested reschedule', function () {
     $seller = User::factory()->create();
     $buyer = User::factory()->create();
+    $buyer->assignRole('User');
     $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
     $appointment->update(['reschedule_suggested_at' => now()->addDays(4)->setTime(9, 0)]);
@@ -530,7 +561,9 @@ it('only lets a user mark their own notifications as read', function () {
 it('prevents other buyers from responding to a reschedule suggestion', function () {
     $seller = User::factory()->create();
     $buyer = User::factory()->create();
+    $buyer->assignRole('User');
     $otherBuyer = User::factory()->create();
+    $otherBuyer->assignRole('User');
     $property = createSurveyBookingProperty($seller);
     $appointment = createSurveyBooking($seller, $buyer, $property, 'rejected');
     $appointment->update(['reschedule_suggested_at' => now()->addDays(4)->setTime(9, 0)]);

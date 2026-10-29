@@ -19,7 +19,7 @@ class PropertyReviewController extends Controller
 {
     public function ppats(Request $request, Property $property): JsonResponse
     {
-        Gate::authorize('review', $property);
+        Gate::authorize('approve', $property);
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
@@ -68,7 +68,7 @@ class PropertyReviewController extends Controller
 
     public function assignPpat(Request $request, Property $property): JsonResponse
     {
-        Gate::authorize('review', $property);
+        Gate::authorize('approve', $property);
 
         $validated = $request->validate([
             'ppat_id' => ['required', 'integer', 'exists:users,id'],
@@ -107,6 +107,10 @@ class PropertyReviewController extends Controller
         $validated = $request->validate([
             'status' => ['required', Rule::in(['published', 'rejected'])],
         ]);
+        Gate::authorize(
+            $validated['status'] === 'published' ? 'approve' : 'reject',
+            $property,
+        );
 
         $updated = Property::query()
             ->whereKey($property->getKey())
@@ -128,7 +132,7 @@ class PropertyReviewController extends Controller
 
     public function showFile(PropertyPhoto $propertyPhoto): StreamedResponse
     {
-        Gate::authorize('review', $propertyPhoto->property);
+        Gate::authorize('viewSensitiveDocument', $propertyPhoto->property);
 
         $path = $propertyPhoto->file_path;
         $publicDisk = Storage::disk('public');

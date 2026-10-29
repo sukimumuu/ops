@@ -48,7 +48,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('fill-property-form', function (?User $user): bool {
-            return $user !== null && ! $user->hasAnyRole(self::CHATBOT_RESTRICTED_ROLES);
+            return $user !== null && $user->can('properties.create');
         });
     }
 }

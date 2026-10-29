@@ -4,9 +4,26 @@ use App\Models\Property;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    $superadminRole = Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
+    $permissions = [
+        'users.view_all_users',
+        'properties.approve_listing',
+        'properties.reject_listing',
+        'documents.view_sensitive_pii',
+    ];
+
+    foreach ($permissions as $permission) {
+        Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+    }
+
+    $superadminRole->syncPermissions($permissions);
+});
 
 it('filters users by search and role for admins and superadmins', function () {
     Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);

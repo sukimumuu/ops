@@ -121,6 +121,18 @@ class HomeController extends Controller
         $isSaved = $request->user() !== null
             && $request->user()->savedProperties()->whereKey($property->getKey())->exists();
 
+        $activeAppointment = $request->user() === null
+            ? null
+            : Appointment::query()
+                ->where('property_id', $property->getKey())
+                ->where('buyer_id', $request->user()->getKey())
+                ->whereIn('status', [Appointment::STATUS_REQUESTED, Appointment::STATUS_CONFIRMED])
+                ->where('scheduled_at', '>=', now())
+                ->latest('scheduled_at')
+                ->first();
+
+        $timeSlots = Appointment::TIME_SLOTS;
+
         $property->setAttribute(
             'photo_urls',
             $property->photos
@@ -257,6 +269,8 @@ class HomeController extends Controller
         if (auth()->id() === $property->seller_id) {
             return back()->with('error', 'Anda tidak dapat menjadwalkan kunjungan pada properti Anda sendiri.');
         }
+
+        abort_unless($request->user()?->can('appointments.request'), 403);
 
         $hasActiveAppointment = Appointment::query()
             ->where('property_id', $property->id)

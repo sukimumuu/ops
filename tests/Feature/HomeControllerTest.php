@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 
 uses(RefreshDatabase::class);
 
@@ -276,6 +277,10 @@ it('redirects guests to login when attempting to schedule a visit', function () 
 it('allows authenticated buyers to schedule a visit', function () {
     $seller = User::factory()->create(['name' => 'Pemilik']);
     $buyer = User::factory()->create(['name' => 'Calon Pembeli']);
+    $buyer->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'appointments.request',
+        'guard_name' => 'web',
+    ]));
     $uuid = (string) Str::uuid();
     $property = Property::query()->create([
         'uuid' => $uuid,

@@ -63,7 +63,19 @@ class Property extends Model
 
     public function certificate(): HasMany
     {
-        return $this->hasMany(PropertyPhoto::class)->where('type', 'certificate');
+        return $this->hasMany(PropertyPhoto::class)
+            ->where('type', 'certificate')
+            ->orderBy('sort_order');
+    }
+
+    /**
+     * Supporting legal documents (IMB/PBG and SPPT/STTS PBB).
+     */
+    public function supportingDocuments(): HasMany
+    {
+        return $this->hasMany(PropertyPhoto::class)
+            ->whereIn('type', ['imb', 'pbb'])
+            ->orderBy('sort_order');
     }
 
     /**
