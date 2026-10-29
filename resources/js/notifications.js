@@ -161,6 +161,18 @@ if (notificationCenter) {
         return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
     };
 
+    const subscribeForPush = async (registration) => {
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: decodeVapidPublicKey(vapidPublicKey),
+        });
+
+        await savePushSubscription(subscription);
+        updatePushButton(true);
+
+        return subscription;
+    };
+
     const initializeBrowserNotifications = async () => {
         if (!pushSupported) {
             return;
@@ -200,12 +212,7 @@ if (notificationCenter) {
                     throw new Error(`Browser notification permission is ${permission}.`);
                 }
 
-                subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: decodeVapidPublicKey(vapidPublicKey),
-                });
-                await savePushSubscription(subscription);
-                updatePushButton(true);
+                subscription = await subscribeForPush(registration);
             } catch (error) {
                 console.error('Unable to update browser notification subscription.', error);
                 window.alert('Notifikasi browser tidak dapat diaktifkan. Periksa izin browser dan coba lagi.');
@@ -213,6 +220,28 @@ if (notificationCenter) {
                 browserNotificationsToggle.disabled = false;
             }
         });
+
+        if (
+            notificationCenter.dataset.autoRequestPermission === 'true'
+            && Notification.permission === 'default'
+            && !sessionStorage.getItem('browser-push-permission-requested')
+        ) {
+            sessionStorage.setItem('browser-push-permission-requested', 'true');
+
+            try {
+                await Notification.requestPermission();
+            } catch (error) {
+                console.error('Unable to request browser notification permission automatically.', error);
+            }
+        }
+
+        if (Notification.permission === 'granted' && !subscription) {
+            try {
+                subscription = await subscribeForPush(registration);
+            } catch (error) {
+                console.error('Unable to subscribe to browser notifications automatically.', error);
+            }
+        }
     };
 
     document.addEventListener('click', (event) => {

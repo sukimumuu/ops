@@ -146,6 +146,22 @@ class AppointmentController extends Controller
             ]);
         }
 
+        $appointment->refresh()->load('buyer');
+        $isCancelled = $appointment->status === Appointment::STATUS_CANCELLED;
+        $resultMessage = $isCancelled
+            ? 'Survei '.$property->title.' dibatalkan oleh penjual.'
+            : 'Hasil survei '.$property->title.' telah dicatat: '.$appointment->buyerIntentLabel().'.';
+
+        if (filled($appointment->result_notes)) {
+            $resultMessage .= ' Catatan: '.$appointment->result_notes;
+        }
+
+        $appointment->buyer->notify(new AppointmentNotification(
+            $isCancelled ? 'Survei dibatalkan' : 'Hasil survei tersedia',
+            $resultMessage,
+            route('buyer.survey-schedule'),
+        ));
+
         $message = match (true) {
             $validated['status'] === Appointment::STATUS_CANCELLED => 'Survei berhasil dibatalkan.',
             $buyerIntent === Appointment::BUYER_INTENT_DEAL => 'Hasil survei disimpan dan properti ditandai sebagai dipesan.',

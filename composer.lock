@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "62a5085cc6e7079045adff380c6a59b4",
+    "content-hash": "6981e699840a6abd3c7db663a10e4a8c",
     "packages": [
         {
             "name": "brick/math",
@@ -1199,6 +1199,76 @@
                 }
             ],
             "time": "2026-10-10T05:44:05+00:00"
+        },
+        {
+            "name": "laravel-notification-channels/webpush",
+            "version": "13.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel-notification-channels/webpush.git",
+                "reference": "53d950ca03b16bb49c45e3332c07a87c7d06a3b1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel-notification-channels/webpush/zipball/53d950ca03b16bb49c45e3332c07a87c7d06a3b1",
+                "reference": "53d950ca03b16bb49c45e3332c07a87c7d06a3b1",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/psr7": "^2.0|^3.0",
+                "illuminate/http": "^12.0|^13.13",
+                "illuminate/notifications": "^12.0|^13.13",
+                "illuminate/support": "^12.0|^13.13",
+                "minishlink/web-push": "^11.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.1",
+                "laravel/pint": "^1.25",
+                "mockery/mockery": "^1.0",
+                "orchestra/testbench": "^9.2|^10.0|^11.0",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpunit/phpunit": "^11.5.3|^12.5.12|^13.1.11",
+                "rector/rector": "^2.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "NotificationChannels\\WebPush\\WebPushServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "NotificationChannels\\WebPush\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Cretu Eusebiu",
+                    "email": "me@cretueusebiu.com",
+                    "homepage": "http://cretueusebiu.com",
+                    "role": "Developer"
+                },
+                {
+                    "name": "Joost de Bruijn",
+                    "email": "joost@aqualabs.nl",
+                    "role": "Maintainer"
+                }
+            ],
+            "description": "Web Push Notifications driver for Laravel.",
+            "homepage": "https://github.com/laravel-notification-channels/webpush",
+            "support": {
+                "issues": "https://github.com/laravel-notification-channels/webpush/issues",
+                "source": "https://github.com/laravel-notification-channels/webpush/tree/13.0.1"
+            },
+            "time": "2026-09-08T18:36:50+00:00"
         },
         {
             "name": "laravel/framework",

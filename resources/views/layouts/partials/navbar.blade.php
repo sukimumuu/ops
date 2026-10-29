@@ -201,7 +201,8 @@
             data-read-url="{{ route('notifications.read', ['notification' => '__notification__']) }}"
             data-subscription-url="{{ route('notifications.subscriptions.store') }}"
             data-subscription-delete-url="{{ route('notifications.subscriptions.destroy', ['endpointHash' => str_repeat('0', 64)]) }}"
-            data-vapid-public-key="{{ config('services.webpush.private_key') && config('services.webpush.subject') ? config('services.webpush.public_key') : '' }}"
+            data-vapid-public-key="{{ config('webpush.vapid.public_key') && config('webpush.vapid.private_key') ? config('webpush.vapid.public_key') : '' }}"
+            data-auto-request-permission="{{ request()->routeIs('dashboard') ? 'true' : 'false' }}"
             data-csrf-token="{{ csrf_token() }}"
             x-data="{ notifOpen: false }" class="relative">
             <button @click="notifOpen = !notifOpen"

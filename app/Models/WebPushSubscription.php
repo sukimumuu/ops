@@ -2,11 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use NotificationChannels\WebPush\PushSubscription as BasePushSubscription;
 
-class WebPushSubscription extends Model
+class WebPushSubscription extends BasePushSubscription
 {
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'endpoint_hash',
+        'endpoint',
+        'public_key',
+        'auth_token',
+        'content_encoding',
+    ];
 
     /**
      * @return array<string, string>

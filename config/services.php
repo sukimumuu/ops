@@ -35,12 +35,6 @@ return [
         ],
     ],
 
-    'webpush' => [
-        'public_key' => env('WEBPUSH_VAPID_PUBLIC_KEY'),
-        'private_key' => env('WEBPUSH_VAPID_PRIVATE_KEY'),
-        'subject' => env('WEBPUSH_VAPID_SUBJECT'),
-    ],
-
     'groq' => [
         'api_key' => env('GROQ_API_KEY'),
         'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),

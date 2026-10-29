@@ -136,7 +136,12 @@ it('reserves the property when the buyer agrees to proceed after a survey', func
         ->and($appointment->buyer_intent)->toBe(Appointment::BUYER_INTENT_DEAL)
         ->and($appointment->result_notes)->toBe('Calon pembeli tertarik dan akan melanjutkan diskusi harga.')
         ->and($appointment->completed_at)->not->toBeNull()
-        ->and($property->fresh()->status)->toBe('reserved');
+        ->and($property->fresh()->status)->toBe('reserved')
+        ->and($buyer->notifications()->first()->data)->toBe([
+            'title' => 'Hasil survei tersedia',
+            'message' => 'Hasil survei Rumah Detail Penjual telah dicatat: Berminat membeli. Catatan: Calon pembeli tertarik dan akan melanjutkan diskusi harga.',
+            'url' => route('buyer.survey-schedule'),
+        ]);
 
     $this->actingAs($seller)
         ->get(route('seller.my-properties.show', [
@@ -264,7 +269,12 @@ it('lets a seller cancel a confirmed survey and clears its completion time', fun
     expect($appointment->status)->toBe(Appointment::STATUS_CANCELLED)
         ->and($appointment->buyer_intent)->toBeNull()
         ->and($appointment->result_notes)->toBe('Calon pembeli membatalkan kunjungan.')
-        ->and($appointment->completed_at)->toBeNull();
+        ->and($appointment->completed_at)->toBeNull()
+        ->and($buyer->notifications()->first()->data)->toBe([
+            'title' => 'Survei dibatalkan',
+            'message' => 'Survei Rumah Detail Penjual dibatalkan oleh penjual. Catatan: Calon pembeli membatalkan kunjungan.',
+            'url' => route('buyer.survey-schedule'),
+        ]);
 });
 
 it('only records results for confirmed surveys', function () {
@@ -292,7 +302,8 @@ it('only records results for confirmed surveys', function () {
         ->and($appointment->buyer_intent)->toBeNull()
         ->and($appointment->result_notes)->toBeNull()
         ->and($appointment->completed_at)->toBeNull()
-        ->and($property->fresh()->status)->toBe('published');
+        ->and($property->fresh()->status)->toBe('published')
+        ->and($buyer->notifications()->exists())->toBeFalse();
 });
 
 it('selects an older confirmed survey for result entry', function () {

@@ -53,9 +53,8 @@ class NotificationController extends Controller
     public function storeSubscription(Request $request): JsonResponse
     {
         abort_unless(
-            config('services.webpush.public_key')
-                && config('services.webpush.private_key')
-                && config('services.webpush.subject'),
+            config('webpush.vapid.public_key')
+                && config('webpush.vapid.private_key'),
             503,
             'Notifikasi browser belum dikonfigurasi.',
         );

@@ -9,7 +9,7 @@ self.addEventListener('push', (event) => {
         body: payload.body,
         icon: '/favicon.ico',
         badge: '/favicon.ico',
-        data: { url: payload.url },
+        data: { url: payload.data?.url || payload.url },
     }));
 });
 
