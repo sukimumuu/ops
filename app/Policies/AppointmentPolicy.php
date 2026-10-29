@@ -21,32 +21,11 @@ class AppointmentPolicy
             || $appointment->property?->seller_id === $user->id;
     }
 
-<<<<<<< Updated upstream
-=======
     public function recordResult(User $user, Appointment $appointment): bool
     {
         return $user->can('appointments.confirm_or_reject')
             && ($appointment->seller_id === $user->id
                 || $appointment->property?->seller_id === $user->id);
-    }
-
->>>>>>> Stashed changes
-    /**
-     * Determine whether the seller may record the result of a confirmed survey.
-     */
-    public function recordResult(User $user, Appointment $appointment): bool
-    {
-        return $appointment->seller_id === $user->id
-            || $appointment->property?->seller_id === $user->id;
-    }
-
-    /**
-     * Determine whether the seller may record the result of a confirmed survey.
-     */
-    public function recordResult(User $user, Appointment $appointment): bool
-    {
-        return $appointment->seller_id === $user->id
-            || $appointment->property?->seller_id === $user->id;
     }
 
     /**
