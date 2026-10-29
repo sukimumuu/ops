@@ -11,8 +11,10 @@
     "require": {
         "php": "^8.3",
         "intervention/image": "^4.3",
+        "laravel-notification-channels/webpush": "^13.0",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
+        "minishlink/web-push": "^11.0",
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {

@@ -64,6 +64,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/notifikasi/belum-dibaca', [NotificationController::class, 'unread'])->name('notifications.unread');
     Route::patch('/notifikasi/{notification}/dibaca', [NotificationController::class, 'markAsRead'])
         ->name('notifications.read');
+    Route::post('/notifikasi/subscriptions', [NotificationController::class, 'storeSubscription'])
+        ->middleware('throttle:10,1')
+        ->name('notifications.subscriptions.store');
+    Route::delete('/notifikasi/subscriptions/{endpointHash}', [NotificationController::class, 'destroySubscription'])
+        ->where('endpointHash', '[a-f0-9]{64}')
+        ->name('notifications.subscriptions.destroy');
 
     Route::name('seller.')->group(function () {
         Route::get('/listing', [ListingController::class, 'index'])->name('listing');

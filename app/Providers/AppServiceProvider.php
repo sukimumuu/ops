@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use NotificationChannels\WebPush\Events\NotificationFailed;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +31,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen(NotificationFailed::class, function (NotificationFailed $event): void {
+            Log::warning('Browser push notification delivery failed.', [
+                'user_id' => $event->subscription->user_id,
+                'subscription_id' => $event->subscription->getKey(),
+                'reason' => $event->report->getReason(),
+            ]);
+        });
+
         Gate::define('use-chatbot', function (?User $user): bool {
             if ($user === null) {
                 return true;
