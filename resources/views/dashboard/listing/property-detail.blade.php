@@ -2,29 +2,32 @@
 @section('page-title', 'Detail Properti')
 @section('content')
     @php
-        $propertyFacts = array_filter([
-            'Tipe properti' => $property->property_type === 'tanah' ? 'Tanah' : 'Bangunan',
-            'Jenis' => filled($property->type) ? ucfirst((string) $property->type) : null,
-            'Kategori' => $property->category === 'rent' ? 'Disewakan' : 'Dijual',
-            'Sertifikat' => $property->certificate_type,
-            'Luas tanah' => filled($property->land_area_sqm)
-                ? number_format((float) $property->land_area_sqm, 0, ',', '.').' m²'
-                : null,
-            'Luas bangunan' => filled($property->building_area_sqm)
-                ? number_format((float) $property->building_area_sqm, 0, ',', '.').' m²'
-                : null,
-            'Kamar tidur' => filled($property->rooms) ? $property->rooms.' KT' : null,
-            'Kamar mandi' => filled($property->bathrooms) ? $property->bathrooms.' KM' : null,
-            'Lantai' => $property->floors,
-            'Kondisi' => $property->condition,
-            'Lebar depan' => filled($property->front_width)
-                ? number_format((float) $property->front_width, 0, ',', '.').' m'
-                : null,
-            'Kontur tanah' => $property->land_contour,
-            'Akses jalan' => $property->road_access,
-            'Zona' => $property->zone_type,
-            'PPAT' => $property->assignedPpat?->name,
-        ], fn ($value): bool => filled($value));
+        $propertyFacts = array_filter(
+            [
+                'Tipe properti' => $property->property_type === 'tanah' ? 'Tanah' : 'Bangunan',
+                'Jenis' => filled($property->type) ? ucfirst((string) $property->type) : null,
+                'Kategori' => $property->category === 'rent' ? 'Disewakan' : 'Dijual',
+                'Sertifikat' => $property->certificate_type,
+                'Luas tanah' => filled($property->land_area_sqm)
+                    ? number_format((float) $property->land_area_sqm, 0, ',', '.') . ' m²'
+                    : null,
+                'Luas bangunan' => filled($property->building_area_sqm)
+                    ? number_format((float) $property->building_area_sqm, 0, ',', '.') . ' m²'
+                    : null,
+                'Kamar tidur' => filled($property->rooms) ? $property->rooms . ' KT' : null,
+                'Kamar mandi' => filled($property->bathrooms) ? $property->bathrooms . ' KM' : null,
+                'Lantai' => $property->floors,
+                'Kondisi' => $property->condition,
+                'Lebar depan' => filled($property->front_width)
+                    ? number_format((float) $property->front_width, 0, ',', '.') . ' m'
+                    : null,
+                'Kontur tanah' => $property->land_contour,
+                'Akses jalan' => $property->road_access,
+                'Zona' => $property->zone_type,
+                'PPAT' => $property->assignedPpat?->name,
+            ],
+            fn($value): bool => filled($value),
+        );
 
         $progressTone = match ($progress['tone']) {
             'amber' => [
@@ -50,22 +53,24 @@
         };
 
         $progressSteps = ['Pengajuan survei', 'Konfirmasi jadwal', 'Survei selesai'];
-        $rentPeriod = $property->category === 'rent'
-            ? match ($property->rent_period) {
-                'bulan' => '/ bulan',
-                'tahun' => '/ tahun',
-                'minggu' => '/ minggu',
-                'hari' => '/ hari',
-                default => null,
-            }
-            : null;
+        $rentPeriod =
+            $property->category === 'rent'
+                ? match ($property->rent_period) {
+                    'bulan' => '/ bulan',
+                    'tahun' => '/ tahun',
+                    'minggu' => '/ minggu',
+                    'hari' => '/ hari',
+                    default => null,
+                }
+                : null;
     @endphp
 
     <div class="mx-auto w-full max-w-7xl space-y-6 font-sans text-slate-700">
         <div>
             <nav aria-label="Breadcrumb"
                 class="mb-3 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 sm:text-sm">
-                <a href="{{ route('home') }}" class="rounded transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                <a href="{{ route('home') }}"
+                    class="rounded transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
                     Beranda
                 </a>
                 <span aria-hidden="true" class="text-slate-300">&gt;</span>
@@ -130,8 +135,7 @@
                             Lihat properti publik
                             <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
                                 aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M14 5h5v5m0-5-9 9M19 14v5H5V5h5" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 5h5v5m0-5-9 9M19 14v5H5V5h5" />
                             </svg>
                         </a>
                     @endif
@@ -213,7 +217,7 @@
                                         Luas bangunan
                                     </dt>
                                     <dd class="mt-1 text-sm font-bold text-secondary">
-                                        {{ filled($property->building_area_sqm) ? number_format((float) $property->building_area_sqm, 0, ',', '.').' m²' : '-' }}
+                                        {{ filled($property->building_area_sqm) ? number_format((float) $property->building_area_sqm, 0, ',', '.') . ' m²' : '-' }}
                                     </dd>
                                 </div>
                                 <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
@@ -221,7 +225,7 @@
                                         Kamar tidur
                                     </dt>
                                     <dd class="mt-1 text-sm font-bold text-secondary">
-                                        {{ filled($property->rooms) ? $property->rooms.' KT' : '-' }}
+                                        {{ filled($property->rooms) ? $property->rooms . ' KT' : '-' }}
                                     </dd>
                                 </div>
                                 <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
@@ -229,7 +233,7 @@
                                         Kamar mandi
                                     </dt>
                                     <dd class="mt-1 text-sm font-bold text-secondary">
-                                        {{ filled($property->bathrooms) ? $property->bathrooms.' KM' : '-' }}
+                                        {{ filled($property->bathrooms) ? $property->bathrooms . ' KM' : '-' }}
                                     </dd>
                                 </div>
                             </dl>
@@ -255,7 +259,7 @@
                 </x-card-dashboard>
 
                 <x-card-dashboard id="survey" title="Survei properti"
-                    subtitle="Hasil dan progres survei terbaru untuk properti ini">
+                    subtitle="{{ $selectedAppointment?->buyer_intent === \App\Models\Appointment::BUYER_INTENT_DEAL ? 'Tahapan transaksi setelah pembeli berminat melanjutkan' : 'Hasil dan progres survei terbaru untuk properti ini' }}">
                     <x-slot name="actions">
                         <a href="{{ route('seller.request-survey') }}"
                             class="text-sm font-semibold text-primary hover:underline">
@@ -263,8 +267,140 @@
                         </a>
                     </x-slot>
 
-                    @if ($selectedAppointment === null)
-                        <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center">
+                    @if ($selectedAppointment?->buyer_intent === \App\Models\Appointment::BUYER_INTENT_DEAL)
+                        @php
+                            $deedTimelineSteps = [
+                                [
+                                    'title' => 'Pilih Jadwal Temu PPAT',
+                                    'icon' =>
+                                        'M8 3v3m8-3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13H4V6a1 1 0 0 1 1-1Zm2 7h3m-3 4h3m3-4h3',
+                                ],
+                                [
+                                    'title' => 'Pembayaran DP',
+                                    'icon' =>
+                                        'M3 7h18v12H3zM7 11h.01M17 15h.01M12 11a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM6 4h12',
+                                ],
+                                [
+                                    'title' => 'Pengecekan Legalitas BPN',
+                                    'icon' => 'M6 3h8l4 4v5m-4-9v5h5m-13-5v18h6m-2-12h5m-5 4h4m4 5 2 2 4-4',
+                                ],
+                                [
+                                    'title' => 'Validasi Pajak (Pph & BPHTB)',
+                                    'icon' =>
+                                        'M5 3 7 4.5 9 3l2 1.5L13 3l2 1.5L17 3l2 1.5V21l-2-1.5L15 21l-2-1.5L11 21l-2-1.5L7 21l-2-1.5V3Zm4 6h6m-6 4h6m-6 4h3',
+                                ],
+                                [
+                                    'title' => 'Penjadwalan & TTD Akta Jual Beli (Offline)',
+                                    'icon' => 'm4 16.5-.5 4 4-.5L19 8.5 15.5 5 4 16.5Zm9.5-9.5 4 4M14 4l3-3 4 4-3 3',
+                                ],
+                                [
+                                    'title' => 'Eksekusi Pencairan Escrow (Release Funds)',
+                                    'icon' => 'M3 8h18M5 8v9m4-9v9m6-9v9m4-9v9M3 19h18M12 3l9 4H3l9-4Zm-8 18h16',
+                                ],
+                                [
+                                    'title' => 'Balik Nama Sertifikat (Tahap Akhir)',
+                                    'icon' => 'M7 3h10v13H7zM10 7h4m-4 3h4m-2 5v6l2-1.5L16 21v-6',
+                                ],
+                            ];
+                        @endphp
+
+                        <div x-data="{ ppatDateOpen: false }" class="space-y-5">
+                            <div
+                                class="flex flex-col gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="font-heading font-bold text-secondary">
+                                        {{ $selectedAppointment->buyer->name }}
+                                    </p>
+                                    <p class="mt-1 text-xs text-emerald-700">
+                                        Keputusan pembeli: <span class="font-bold">Berminat membeli</span>
+                                    </p>
+                                </div>
+                                @if ($selectedAppointment->completed_at)
+                                    <p class="text-xs font-medium text-emerald-700">
+                                        Survei selesai
+                                        {{ $selectedAppointment->completed_at->locale('id')->translatedFormat('d F Y') }}
+                                    </p>
+                                @endif
+                            </div>
+
+                            <div class="relative">
+                                <span aria-hidden="true"
+                                    class="absolute bottom-5 left-5 top-5 w-px bg-slate-200 sm:left-1/2 sm:-translate-x-1/2"></span>
+
+                                <ol class="space-y-4 sm:space-y-5">
+                                    @foreach ($deedTimelineSteps as $index => $step)
+                                        <li
+                                            class="relative grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] sm:gap-x-4">
+
+                                            <div @class([
+                                                'col-start-2 row-start-1 rounded-xl border p-3 sm:p-4',
+                                                'border-primary/20 bg-primary/5 sm:col-start-1' => $index === 0,
+                                                'border-slate-200 bg-white sm:col-start-3' =>
+                                                    $index !== 0 && $index % 2 === 1,
+                                                'border-slate-200 bg-white sm:col-start-1' =>
+                                                    $index !== 0 && $index % 2 === 0,
+                                            ])>
+                                                <div @class([
+                                                    'flex items-start gap-3',
+                                                    'sm:flex-row-reverse sm:text-right' =>
+                                                        $index === 0 || ($index !== 0 && $index % 2 === 0),
+                                                ])>
+                                                    <span @class([
+                                                        'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg',
+                                                        'bg-primary/10 text-primary' => $index === 0,
+                                                        'bg-slate-100 text-slate-500' => $index !== 0,
+                                                    ]) aria-hidden="true">
+                                                        <svg class="size-5" fill="none" stroke="currentColor"
+                                                            stroke-width="1.7" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                d="{{ $step['icon'] }}" />
+                                                        </svg>
+                                                    </span>
+                                                    <div class="min-w-0 flex-1">
+                                                        <p
+                                                            class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                            Tahap {{ $index + 1 }}
+                                                        </p>
+
+                                                        @if ($index === 0)
+                                                            <button type="button" @click="ppatDateOpen = ! ppatDateOpen"
+                                                                :aria-expanded="ppatDateOpen.toString()"
+                                                                aria-controls="ppat-meeting-date"
+                                                                class="mt-1 rounded text-left font-heading text-sm font-bold text-secondary transition hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-right">
+                                                                {{ $step['title'] }}
+                                                            </button>
+
+                                                            <div id="ppat-meeting-date" x-show="ppatDateOpen" x-cloak
+                                                                x-transition
+                                                                class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-left">
+                                                                <label for="ppat-meeting-date-input"
+                                                                    class="block text-xs font-semibold text-slate-600">
+                                                                    Tanggal pertemuan yang diinginkan
+                                                                </label>
+                                                                <input id="ppat-meeting-date-input"
+                                                                    name="ppat_meeting_date" type="date"
+                                                                    min="{{ now()->toDateString() }}"
+                                                                    class="mt-2 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-secondary shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                                                                <p class="mt-2 text-[11px] leading-5 text-slate-500">
+                                                                    Pilih tanggal untuk mengajukan pertemuan dengan PPAT.
+                                                                </p>
+                                                            </div>
+                                                        @else
+                                                            <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
+                                                                {{ $step['title'] }}
+                                                            </h3>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            </div>
+                        </div>
+                    @elseif ($selectedAppointment === null)
+                        <div
+                            class="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center">
                             <p class="font-heading font-bold text-slate-600">Belum ada pengajuan survei</p>
                             <p class="mt-1 text-sm text-slate-400">
                                 Permintaan survei dari calon pembeli akan muncul di sini.
@@ -282,7 +418,7 @@
                                             <p class="font-heading font-bold text-secondary">
                                                 {{ $selectedAppointment->buyer->name }}
                                             </p>
-                                            @if ($latestAppointment && ! $selectedAppointment->is($latestAppointment))
+                                            @if ($latestAppointment && !$selectedAppointment->is($latestAppointment))
                                                 <span
                                                     class="rounded-full bg-slate-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
                                                     Survei sebelumnya
@@ -293,8 +429,8 @@
                                             {{ $selectedAppointment->buyer->email }}
                                         </p>
                                         @if (filled($selectedAppointment->buyer->phone))
-                                            <a href="https://wa.me/{{ $selectedAppointment->buyer->phone }}" target="_blank"
-                                                rel="noopener"
+                                            <a href="https://wa.me/{{ $selectedAppointment->buyer->phone }}"
+                                                target="_blank" rel="noopener"
                                                 class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
                                                 +{{ $selectedAppointment->buyer->phone }}
                                             </a>
@@ -377,8 +513,7 @@
 
                                     <form method="POST"
                                         action="{{ route('seller.my-properties.surveys.update', ['property' => $property->uuid, 'appointment' => $selectedAppointment->id]) }}"
-                                        class="mt-4 space-y-4"
-                                        x-data="{ surveyStatus: @js(old('status', \App\Models\Appointment::STATUS_COMPLETED)) }">
+                                        class="mt-4 space-y-4" x-data="{ surveyStatus: @js(old('status', \App\Models\Appointment::STATUS_COMPLETED)) }">
                                         @csrf
                                         @method('PATCH')
 
@@ -393,8 +528,8 @@
                                         </x-form-select-dashboard>
 
                                         <div x-show="surveyStatus === 'completed'" x-cloak>
-                                            <x-form-select-dashboard label="Keputusan pembeli" name="buyer_intent" required
-                                                x-bind:required="surveyStatus === 'completed'"
+                                            <x-form-select-dashboard label="Keputusan pembeli" name="buyer_intent"
+                                                required x-bind:required="surveyStatus === 'completed'"
                                                 x-bind:disabled="surveyStatus !== 'completed'">
                                                 <option value="" @selected(old('buyer_intent', $selectedAppointment->buyer_intent) === null || old('buyer_intent', $selectedAppointment->buyer_intent) === '')>
                                                     Pilih keputusan pembeli
@@ -435,7 +570,8 @@
                                     </a>
                                 </div>
                             @elseif ($selectedAppointment->hasPendingReschedule())
-                                <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                <div
+                                    class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                                     Jadwal pengganti sudah dikirim ke pembeli:
                                     <span class="font-bold">
                                         {{ $selectedAppointment->reschedule_suggested_at->locale('id')->translatedFormat('l, d F Y') }}
@@ -496,7 +632,7 @@
 
                                         <div class="shrink-0 sm:pt-0.5">
                                             @if ($appointment->status === \App\Models\Appointment::STATUS_CONFIRMED)
-                                                <a href="{{ route('seller.my-properties.show', ['property' => $property->uuid, 'appointment' => $appointment->id]).'#survey' }}"
+                                                <a href="{{ route('seller.my-properties.show', ['property' => $property->uuid, 'appointment' => $appointment->id]) . '#survey' }}"
                                                     class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50">
                                                     Catat hasil
                                                     <span aria-hidden="true">&rarr;</span>
@@ -543,7 +679,8 @@
                         @foreach ($progressSteps as $index => $step)
                             @php
                                 $isComplete = $index < $progress['completed_steps'];
-                                $isCurrent = ! $isComplete && ! $progress['stopped'] && $index === $progress['completed_steps'];
+                                $isCurrent =
+                                    !$isComplete && !$progress['stopped'] && $index === $progress['completed_steps'];
                             @endphp
 
                             <li class="flex items-start gap-3">
@@ -551,7 +688,7 @@
                                     'flex size-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold',
                                     'border-emerald-200 bg-emerald-50 text-emerald-600' => $isComplete,
                                     'border-primary/30 bg-primary/10 text-primary' => $isCurrent,
-                                    'border-slate-200 bg-white text-slate-400' => ! $isComplete && ! $isCurrent,
+                                    'border-slate-200 bg-white text-slate-400' => !$isComplete && !$isCurrent,
                                 ])>
                                     @if ($isComplete)
                                         <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -567,7 +704,7 @@
                                     <p @class([
                                         'text-sm font-semibold',
                                         'text-secondary' => $isComplete || $isCurrent,
-                                        'text-slate-400' => ! $isComplete && ! $isCurrent,
+                                        'text-slate-400' => !$isComplete && !$isCurrent,
                                     ])>
                                         {{ $step }}
                                     </p>
@@ -596,7 +733,8 @@
                 <x-card-dashboard title="Spesifikasi properti">
                     <dl class="space-y-3">
                         @foreach ($propertyFacts as $label => $value)
-                            <div class="flex items-start justify-between gap-4 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                            <div
+                                class="flex items-start justify-between gap-4 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
                                 <dt class="text-xs font-semibold text-slate-400">{{ $label }}</dt>
                                 <dd class="text-right text-sm font-semibold text-secondary">{{ $value }}</dd>
                             </div>
@@ -616,8 +754,7 @@
                         Buka di peta
                         <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
                             aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M14 5h5v5m0-5-9 9M19 14v5H5V5h5" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5h5v5m0-5-9 9M19 14v5H5V5h5" />
                         </svg>
                     </a>
                 </x-card-dashboard>

@@ -93,10 +93,39 @@ it('shows essential property information and the latest survey progress', functi
         ->assertSeeText('Survei terjadwal')
         ->assertSeeText('Keputusan pembeli')
         ->assertSeeText('Buka lokasi di peta')
+        ->assertDontSeeText('Pilih Jadwal Temu PPAT')
         ->assertViewHas('latestAppointment', fn (Appointment $appointment): bool => $appointment->is($latest))
         ->assertViewHas('selectedAppointment', fn (Appointment $appointment): bool => $appointment->is($latest))
         ->assertViewHas('progress', fn (array $progress): bool => $progress['label'] === 'Survei terjadwal'
             && $progress['percentage'] === 66);
+});
+
+it('shows the purchase timeline and PPAT date picker when the buyer is interested', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create(['name' => 'Pembeli Berminat']);
+    $property = createSellerDetailProperty($seller);
+
+    createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'completed_at' => now(),
+    ]);
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties.show', ['property' => $property->uuid]))
+        ->assertSeeText('Pembeli Berminat')
+        ->assertSeeText('Berminat membeli')
+        ->assertSeeText('Pilih Jadwal Temu PPAT')
+        ->assertSeeText('Pembayaran DP')
+        ->assertSeeText('Pengecekan Legalitas BPN')
+        ->assertSeeText('Validasi Pajak (Pph & BPHTB)')
+        ->assertSeeText('Penjadwalan & TTD Akta Jual Beli (Offline)')
+        ->assertSeeText('Eksekusi Pencairan Escrow (Release Funds)')
+        ->assertSeeText('Balik Nama Sertifikat (Tahap Akhir)')
+        ->assertSeeText('Tanggal pertemuan yang diinginkan')
+        ->assertSee('type="date"', false)
+        ->assertSee('x-show="ppatDateOpen"', false);
 });
 
 it('shows an empty survey progress when the property has no appointments', function () {
