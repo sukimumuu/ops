@@ -17,6 +17,7 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
+        detectTls: 'mihom.test',
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },

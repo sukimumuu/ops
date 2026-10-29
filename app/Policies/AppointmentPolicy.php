@@ -41,6 +41,15 @@ class AppointmentPolicy
     }
 
     /**
+     * Determine whether the seller may record the result of a confirmed survey.
+     */
+    public function recordResult(User $user, Appointment $appointment): bool
+    {
+        return $appointment->seller_id === $user->id
+            || $appointment->property?->seller_id === $user->id;
+    }
+
+    /**
      * Determine whether the user may respond to a proposed reschedule.
      */
     public function respondToReschedule(User $user, Appointment $appointment): bool

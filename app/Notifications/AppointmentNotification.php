@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class AppointmentNotification extends Notification
 {
@@ -17,7 +19,16 @@ class AppointmentNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        if (
+            config('webpush.vapid.public_key')
+            && config('webpush.vapid.private_key')
+        ) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        return $channels;
     }
 
     /**
@@ -30,5 +41,14 @@ class AppointmentNotification extends Notification
             'message' => $this->message,
             'url' => $this->url,
         ];
+    }
+
+    public function toWebPush(object $notifiable, Notification $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title($this->title)
+            ->body($this->message)
+            ->data(['url' => $this->url])
+            ->options(['TTL' => 60, 'urgency' => 'high']);
     }
 }

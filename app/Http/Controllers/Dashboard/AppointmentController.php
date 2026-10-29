@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Property;
 use App\Notifications\AppointmentNotification;
 use App\Models\Property;
 use Illuminate\Http\RedirectResponse;
@@ -145,6 +146,22 @@ class AppointmentController extends Controller
                 'status' => 'Hasil survei hanya dapat dicatat untuk survei yang sudah dikonfirmasi.',
             ]);
         }
+
+        $appointment->refresh()->load('buyer');
+        $isCancelled = $appointment->status === Appointment::STATUS_CANCELLED;
+        $resultMessage = $isCancelled
+            ? 'Survei '.$property->title.' dibatalkan oleh penjual.'
+            : 'Hasil survei '.$property->title.' telah dicatat: '.$appointment->buyerIntentLabel().'.';
+
+        if (filled($appointment->result_notes)) {
+            $resultMessage .= ' Catatan: '.$appointment->result_notes;
+        }
+
+        $appointment->buyer->notify(new AppointmentNotification(
+            $isCancelled ? 'Survei dibatalkan' : 'Hasil survei tersedia',
+            $resultMessage,
+            route('buyer.survey-schedule'),
+        ));
 
         $message = match (true) {
             $validated['status'] === Appointment::STATUS_CANCELLED => 'Survei berhasil dibatalkan.',

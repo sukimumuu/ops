@@ -221,6 +221,10 @@
         <div id="notification-center"
             data-feed-url="{{ route('notifications.unread') }}"
             data-read-url="{{ route('notifications.read', ['notification' => '__notification__']) }}"
+            data-subscription-url="{{ route('notifications.subscriptions.store') }}"
+            data-subscription-delete-url="{{ route('notifications.subscriptions.destroy', ['endpointHash' => str_repeat('0', 64)]) }}"
+            data-vapid-public-key="{{ config('webpush.vapid.public_key') && config('webpush.vapid.private_key') ? config('webpush.vapid.public_key') : '' }}"
+            data-auto-request-permission="{{ request()->routeIs('dashboard') ? 'true' : 'false' }}"
             data-csrf-token="{{ csrf_token() }}"
             x-data="{ notifOpen: false }" class="relative">
             <button @click="notifOpen = !notifOpen"
@@ -247,6 +251,10 @@
                         <span id="notification-count"
                             class="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-primary">0 baru</span>
                     </div>
+                    <button id="browser-notifications-toggle" type="button" hidden
+                        class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary">
+                        Aktifkan notifikasi browser
+                    </button>
                 </div>
 
                 <!-- List Notifikasi -->
