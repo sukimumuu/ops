@@ -46,6 +46,12 @@
             'ring' => 'ring-slate-300 hover:ring-slate-500',
             'badge' => 'border-slate-200 bg-slate-50 text-slate-600',
         ],
+        'ppat_meeting' => [
+            'label' => 'Jadwal temu PPAT',
+            'dot' => 'bg-violet-500',
+            'ring' => 'ring-violet-300 hover:ring-violet-500',
+            'badge' => 'border-violet-200 bg-violet-50 text-violet-700',
+        ],
     ];
     $pendingSurveyCount = $appointments->where('status', 'requested')->count();
 @endphp
@@ -107,11 +113,14 @@
                             </div>
                             <div class="mt-2 flex flex-wrap gap-1.5">
                                 @foreach ($dayAppointments as $appointment)
-                                    @php($statusStyle = $bookingStatusStyles[$appointment->status] ?? $bookingStatusStyles['cancelled'])
+                                    @php($isPpatMeeting = ($appointment->calendar_event_type ?? null) === 'ppat_meeting')
+                                    @php($statusKey = $isPpatMeeting ? 'ppat_meeting' : $appointment->status)
+                                    @php($statusStyle = $bookingStatusStyles[$statusKey] ?? $bookingStatusStyles['cancelled'])
                                     @php($counterpart = $isSeller || $isPpat ? $appointment->buyer : $appointment->seller)
-                                    <button type="button" x-on:click="openBooking({{ $appointment->id }})"
-                                        title="{{ $counterpart->name }} · {{ $appointment->scheduled_at->format('H:i') }} · {{ $appointment->property->title }} · {{ $statusStyle['label'] }}"
-                                        aria-label="Buka survei {{ $counterpart->name }}, {{ $appointment->scheduled_at->format('H:i') }}, {{ $appointment->property->title }}, status {{ $statusStyle['label'] }}"
+                                    <button type="button"
+                                        x-on:click='openBooking(@js($appointment->calendar_event_id ?? $appointment->id))'
+                                        title="{{ $counterpart->name }} · {{ $isPpatMeeting ? 'Seharian' : $appointment->scheduled_at->format('H:i') }} · {{ $appointment->property->title }} · {{ $statusStyle['label'] }}"
+                                        aria-label="Buka {{ $isPpatMeeting ? 'jadwal temu PPAT' : 'survei' }} {{ $counterpart->name }}, {{ $isPpatMeeting ? 'seharian' : $appointment->scheduled_at->format('H:i') }}, {{ $appointment->property->title }}, status {{ $statusStyle['label'] }}"
                                         class="relative size-8 rounded-full border-2 border-white ring-1 transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary {{ $statusStyle['ring'] }}">
                                         <img src="{{ $counterpart->avatar_url }}" alt="{{ $counterpart->name }}"
                                             class="size-full rounded-full object-cover">
@@ -127,9 +136,11 @@
         </div>
 
         <footer class="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-xs text-slate-500 sm:px-5">
-            @foreach ($bookingStatusStyles as $statusStyle)
-                <span class="inline-flex items-center gap-2"><span
-                        class="size-2 rounded-full {{ $statusStyle['dot'] }}"></span>{{ $statusStyle['label'] }}</span>
+            @foreach ($bookingStatusStyles as $statusKey => $statusStyle)
+                @if (!$isPpat || $statusKey !== 'ppat_meeting')
+                    <span class="inline-flex items-center gap-2"><span
+                            class="size-2 rounded-full {{ $statusStyle['dot'] }}"></span>{{ $statusStyle['label'] }}</span>
+                @endif
             @endforeach
             <span class="text-slate-400">{{ $appointments->where('status', 'confirmed')->count() }}
                 {{ $isSeller || $isPpat ? 'terjadwal' : 'disetujui' }} ·
@@ -150,8 +161,8 @@
                 <div class="flex h-full flex-col">
                     <div class="flex items-start justify-between border-b border-slate-200 px-5 py-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase text-primary">
-                                {{ $isSeller ? 'Rincian permintaan survei' : ($isPpat ? 'Rincian jadwal survei' : 'Rincian jadwal') }}
+                            <p class="text-xs font-semibold uppercase text-primary"
+                                x-text="selectedAppointment.event_type === 'ppat_meeting' ? 'Rincian jadwal temu PPAT' : @js($isSeller ? 'Rincian permintaan survei' : ($isPpat ? 'Rincian jadwal survei' : 'Rincian jadwal'))">
                             </p>
                             <h2 id="booking-drawer-title" class="mt-1 text-lg font-bold text-secondary"
                                 x-text="selectedAppointment.counterpart_name"></h2>
@@ -231,10 +242,18 @@
                         </div>
                         <dl class="divide-y divide-slate-100 rounded-md border border-slate-200">
                             <div class="px-4 py-3">
-                                <dt class="text-xs text-slate-500">Tanggal dan waktu</dt>
-                                <dd class="mt-1 text-sm font-medium text-slate-800"><span
-                                        x-text="selectedAppointment.date"></span>, pukul <span
-                                        x-text="selectedAppointment.time"></span> WIB</dd>
+                                <dt class="text-xs text-slate-500"
+                                    x-text="selectedAppointment.event_type === 'ppat_meeting' ? 'Jadwal temu PPAT' : 'Tanggal dan waktu'">
+                                    Tanggal dan waktu</dt>
+                                <dd class="mt-1 text-sm font-medium text-slate-800">
+                                    <span x-text="selectedAppointment.date"></span>
+                                    <template x-if="selectedAppointment.time">
+                                        <span>, pukul <span x-text="selectedAppointment.time"></span> WIB</span>
+                                    </template>
+                                    <template x-if="! selectedAppointment.time">
+                                        <span class="text-slate-500"> · Seharian (waktu belum ditentukan)</span>
+                                    </template>
+                                </dd>
                             </div>
                             <template x-if="selectedAppointment.reschedule_date">
                                 <div class="px-4 py-3">

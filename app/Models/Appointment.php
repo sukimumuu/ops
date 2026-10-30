@@ -91,6 +91,7 @@ class Appointment extends Model
             'scheduled_at' => 'datetime',
             'reschedule_suggested_at' => 'datetime',
             'completed_at' => 'datetime',
+            'ppat_meeting_date' => 'date',
         ];
     }
 

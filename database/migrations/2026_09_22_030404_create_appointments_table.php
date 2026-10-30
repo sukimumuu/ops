@@ -26,6 +26,7 @@ return new class extends Migration
             $table->text('result_notes')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->string('buyer_intent')->nullable();
+            $table->date('ppat_meeting_date')->nullable();
             $table->timestamps();
         });
     }

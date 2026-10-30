@@ -42,8 +42,8 @@
             :appointments="$appointments"
             perspective="ppat"
             reset-route="land-deed.index"
-            title="Kalender jadwal survei"
-            description="Pilih avatar calon pembeli untuk membuka rincian survei pada properti yang ditugaskan kepada Anda."
+            title="Kalender jadwal survei & temu PPAT"
+            description="Pilih avatar calon pembeli untuk membuka rincian survei atau jadwal temu PPAT pada properti yang ditugaskan kepada Anda."
         />
     </div>
 

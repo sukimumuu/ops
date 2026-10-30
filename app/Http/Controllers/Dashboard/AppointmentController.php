@@ -177,6 +177,52 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Save the seller's requested date for a PPAT meeting after a successful survey.
+     */
+    public function schedulePpatMeeting(Request $request, Property $property, Appointment $appointment): RedirectResponse
+    {
+        Gate::authorize('view', $property);
+
+        abort_unless($appointment->property_id === $property->id, 404);
+
+        Gate::authorize('recordResult', $appointment);
+
+        if (
+            $appointment->status !== Appointment::STATUS_COMPLETED
+            || $appointment->buyer_intent !== Appointment::BUYER_INTENT_DEAL
+        ) {
+            return back()->withErrors([
+                'ppat_meeting_date' => 'Jadwal temu PPAT hanya dapat diajukan setelah pembeli berminat melanjutkan transaksi.',
+            ]);
+        }
+
+        if ($property->assigned_ppat_id === null) {
+            return back()->withErrors([
+                'ppat_meeting_date' => 'Properti ini belum memiliki PPAT yang ditugaskan.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'ppat_meeting_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+        ], [
+            'ppat_meeting_date.required' => 'Pilih tanggal temu PPAT.',
+            'ppat_meeting_date.date_format' => 'Format tanggal temu PPAT tidak valid.',
+            'ppat_meeting_date.after_or_equal' => 'Tanggal temu PPAT tidak boleh di masa lalu.',
+        ]);
+
+        $appointment->update([
+            'ppat_meeting_date' => $validated['ppat_meeting_date'],
+        ]);
+
+        return redirect()
+            ->route('seller.my-properties.show', [
+                'property' => $property->uuid,
+                'appointment' => $appointment->id,
+            ])
+            ->with('status', 'Tanggal temu PPAT berhasil diajukan dan ditambahkan ke kalender PPAT.');
+    }
+
+    /**
      * Accept or decline a reschedule suggestion proposed by the property seller.
      */
     public function respondToReschedule(Request $request, Appointment $appointment): RedirectResponse

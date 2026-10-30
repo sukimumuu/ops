@@ -81,6 +81,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereUuid('property')
             ->whereNumber('appointment')
             ->name('my-properties.surveys.update');
+        Route::post('/properti-saya/{property:uuid}/survei/{appointment}/jadwal-ppat', [AppointmentController::class, 'schedulePpatMeeting'])
+            ->whereUuid('property')
+            ->whereNumber('appointment')
+            ->name('my-properties.ppat-meetings.store');
         Route::get('/permintaan-survei', [ListingController::class, 'requestSurvey'])->name('request-survey');
         Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])
             ->middleware('permission:transactions.view_own_tracker')

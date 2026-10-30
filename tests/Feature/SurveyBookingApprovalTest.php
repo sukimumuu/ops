@@ -306,6 +306,45 @@ it('shows the read-only survey calendar to the assigned PPAT', function () {
         });
 });
 
+it('shows a saved PPAT meeting date on the assigned PPAT calendar', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $buyer = User::factory()->create(['name' => 'Pembeli Jadwal PPAT']);
+    $property = createSurveyBookingProperty($seller, $ppat);
+    $appointment = createSurveyBooking($seller, $buyer, $property, Appointment::STATUS_COMPLETED);
+    $appointment->update([
+        'scheduled_at' => '2026-09-20 10:00:00',
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => '2026-10-24',
+    ]);
+
+    $this->actingAs($ppat)
+        ->get(route('land-deed.index', ['month' => '2026-10']))
+        ->assertOk()
+        ->assertSee('Jadwal temu PPAT')
+        ->assertSee('Seharian')
+        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $buyer, $property): bool {
+            $booking = $bookings->firstWhere('id', 'ppat-meeting-'.$appointment->id);
+
+            return $booking !== null
+                && $booking['event_type'] === 'ppat_meeting'
+                && $booking['counterpart_name'] === $buyer->name
+                && $booking['status_key'] === 'ppat_meeting'
+                && $booking['date'] === 'Sabtu, 24 Oktober 2026'
+                && $booking['time'] === null
+                && $booking['property_title'] === $property->title
+                && $booking['can_review'] === false;
+        })
+        ->assertViewHas('appointmentsByDate', function ($appointmentsByDate) use ($appointment): bool {
+            $calendarAppointment = $appointmentsByDate->get('2026-10-24')?->first();
+
+            return $calendarAppointment !== null
+                && $calendarAppointment->calendar_event_type === 'ppat_meeting'
+                && $calendarAppointment->calendar_event_id === 'ppat-meeting-'.$appointment->id;
+        });
+});
+
 it('shows only survey requests belonging to the signed-in seller', function () {
     $seller = User::factory()->create();
     $seller->assignRole('User');
