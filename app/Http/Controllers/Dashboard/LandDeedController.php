@@ -28,29 +28,11 @@ class LandDeedController extends Controller
         $monthStart = $month->copy()->startOfMonth();
         $monthEnd = $month->copy()->endOfMonth();
 
-        $appointments = Appointment::query()
-            ->whereHas('property', fn (Builder $query): Builder => $query->where('assigned_ppat_id', $ppat->id))
-            ->whereBetween('scheduled_at', [$monthStart, $monthEnd])
-            ->with([
-                'buyer:id,name,email,phone,avatar_path',
-                'seller:id,name',
-                'property:id,title,address,city,district,certificate_type,url_maps,assigned_ppat_id',
-            ])
-            ->orderBy('scheduled_at')
-            ->get();
-
-        $calendarAppointments = $appointments->map(function (Appointment $appointment): Appointment {
-            $calendarAppointment = clone $appointment;
-            $calendarAppointment->setAttribute('calendar_event_id', $appointment->id);
-            $calendarAppointment->setAttribute('calendar_event_type', 'survey');
-
-            return $calendarAppointment;
-        });
-
         $ppatMeetings = Appointment::query()
             ->whereHas('property', fn (Builder $query): Builder => $query->where('assigned_ppat_id', $ppat->id))
             ->where('status', Appointment::STATUS_COMPLETED)
             ->where('buyer_intent', Appointment::BUYER_INTENT_DEAL)
+            ->whereNotNull('ppat_meeting_status')
             ->whereBetween('ppat_meeting_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->with([
                 'buyer:id,name,email,phone,avatar_path',
@@ -70,7 +52,7 @@ class LandDeedController extends Controller
                 return $calendarAppointment;
             });
 
-        $calendarAppointments = $calendarAppointments->concat($ppatMeetings)->sortBy('scheduled_at')->values();
+        $calendarAppointments = $ppatMeetings->sortBy('scheduled_at')->values();
 
         $calendarBookings = $calendarAppointments->map(function (Appointment $appointment) use ($ppat): array {
             $isPpatMeeting = $appointment->calendar_event_type === 'ppat_meeting';
@@ -87,8 +69,12 @@ class LandDeedController extends Controller
                 'time' => $isPpatMeeting ? null : $appointment->scheduled_at->format('H:i'),
                 'reschedule_date' => $appointment->reschedule_suggested_at?->locale('id')->translatedFormat('l, d F Y'),
                 'reschedule_time' => $appointment->reschedule_suggested_at?->format('H:i'),
-                'status_key' => $isPpatMeeting ? 'ppat_meeting' : $appointment->status,
-                'status' => $isPpatMeeting ? 'Jadwal temu PPAT' : $appointment->statusLabel(),
+                'status_key' => $isPpatMeeting
+                    ? 'ppat_meeting_'.$appointment->ppat_meeting_status
+                    : $appointment->status,
+                'status' => $isPpatMeeting
+                    ? $appointment->ppatMeetingStatusLabel()
+                    : $appointment->statusLabel(),
                 'buyer_intent_key' => $appointment->buyer_intent,
                 'buyer_intent_label' => $appointment->buyerIntentLabel(),
                 'result_notes' => $appointment->result_notes,
@@ -96,7 +82,14 @@ class LandDeedController extends Controller
                     ? $appointment->completed_at->locale('id')->translatedFormat('l, d F Y, H:i').' WIB'
                     : null,
                 'can_review' => ! $isPpatMeeting && $ppat->can('review', $appointment),
+                'can_manage_meeting' => $isPpatMeeting
+                    && $appointment->ppat_meeting_status === Appointment::PPAT_MEETING_STATUS_REQUESTED
+                    && $ppat->can('managePpatMeeting', $appointment),
                 'status_url' => route('land-deed.appointments.status', $appointment),
+                'ppat_meeting_url' => $isPpatMeeting
+                    ? route('land-deed.ppat-meetings.update', $appointment)
+                    : null,
+                'ppat_meeting_status' => $isPpatMeeting ? $appointment->ppat_meeting_status : null,
                 'notes' => $appointment->notes,
                 'property_title' => $appointment->property->title,
                 'property_certificate' => $appointment->property->certificate_type,
@@ -114,7 +107,7 @@ class LandDeedController extends Controller
         $calendarDays = CarbonPeriod::create($calendarStart, $calendarEnd);
 
         return view('dashboard.land-deed.index', compact(
-            'appointments',
+            'ppatMeetings',
             'appointmentsByDate',
             'calendarBookings',
             'calendarDays',

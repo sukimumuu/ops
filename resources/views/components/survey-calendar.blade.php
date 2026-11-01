@@ -52,8 +52,28 @@
             'ring' => 'ring-violet-300 hover:ring-violet-500',
             'badge' => 'border-violet-200 bg-violet-50 text-violet-700',
         ],
+        'ppat_meeting_requested' => [
+            'label' => 'Menunggu persetujuan PPAT',
+            'dot' => 'bg-amber-500',
+            'ring' => 'ring-amber-300 hover:ring-amber-500',
+            'badge' => 'border-amber-200 bg-amber-50 text-amber-800',
+        ],
+        'ppat_meeting_confirmed' => [
+            'label' => 'Jadwal disetujui PPAT',
+            'dot' => 'bg-emerald-500',
+            'ring' => 'ring-emerald-300 hover:ring-emerald-500',
+            'badge' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        ],
+        'ppat_meeting_rescheduled' => [
+            'label' => 'Jadwal diubah PPAT',
+            'dot' => 'bg-violet-500',
+            'ring' => 'ring-violet-300 hover:ring-violet-500',
+            'badge' => 'border-violet-200 bg-violet-50 text-violet-700',
+        ],
     ];
-    $pendingSurveyCount = $appointments->where('status', 'requested')->count();
+    $pendingSurveyCount = $isPpat
+        ? $appointments->where('ppat_meeting_status', \App\Models\Appointment::PPAT_MEETING_STATUS_REQUESTED)->count()
+        : $appointments->where('status', 'requested')->count();
 @endphp
 
 <div id="survey-calendar" class="space-y-5" x-data="{ bookings: @js($bookings), statusStyles: @js($bookingStatusStyles), selectedAppointment: null, openBooking(id) { this.selectedAppointment = this.bookings.find((booking) => booking.id === id) }, statusStyle(statusKey) { return this.statusStyles[statusKey] ?? this.statusStyles.cancelled } }" x-on:keydown.escape.window="selectedAppointment = null">
@@ -114,11 +134,11 @@
                             <div class="mt-2 flex flex-wrap gap-1.5">
                                 @foreach ($dayAppointments as $appointment)
                                     @php($isPpatMeeting = ($appointment->calendar_event_type ?? null) === 'ppat_meeting')
-                                    @php($statusKey = $isPpatMeeting ? 'ppat_meeting' : $appointment->status)
+                                    @php($statusKey = $isPpatMeeting ? 'ppat_meeting_'.$appointment->ppat_meeting_status : $appointment->status)
                                     @php($statusStyle = $bookingStatusStyles[$statusKey] ?? $bookingStatusStyles['cancelled'])
                                     @php($counterpart = $isSeller || $isPpat ? $appointment->buyer : $appointment->seller)
                                     <button type="button"
-                                        x-on:click='openBooking(@js($appointment->calendar_event_id ?? $appointment->id))'
+                                        x-on:click="openBooking(@js($appointment->calendar_event_id ?? $appointment->id))"
                                         title="{{ $counterpart->name }} · {{ $isPpatMeeting ? 'Seharian' : $appointment->scheduled_at->format('H:i') }} · {{ $appointment->property->title }} · {{ $statusStyle['label'] }}"
                                         aria-label="Buka {{ $isPpatMeeting ? 'jadwal temu PPAT' : 'survei' }} {{ $counterpart->name }}, {{ $isPpatMeeting ? 'seharian' : $appointment->scheduled_at->format('H:i') }}, {{ $appointment->property->title }}, status {{ $statusStyle['label'] }}"
                                         class="relative size-8 rounded-full border-2 border-white ring-1 transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary {{ $statusStyle['ring'] }}">
@@ -137,14 +157,22 @@
 
         <footer class="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-xs text-slate-500 sm:px-5">
             @foreach ($bookingStatusStyles as $statusKey => $statusStyle)
-                @if (!$isPpat || $statusKey !== 'ppat_meeting')
+                @if (($isPpat && str_starts_with($statusKey, 'ppat_meeting_')) || (!$isPpat && !str_starts_with($statusKey, 'ppat_meeting')))
                     <span class="inline-flex items-center gap-2"><span
                             class="size-2 rounded-full {{ $statusStyle['dot'] }}"></span>{{ $statusStyle['label'] }}</span>
                 @endif
             @endforeach
-            <span class="text-slate-400">{{ $appointments->where('status', 'confirmed')->count() }}
-                {{ $isSeller || $isPpat ? 'terjadwal' : 'disetujui' }} ·
-                {{ $pendingSurveyCount }} menunggu persetujuan</span>
+            @if ($isPpat)
+                <span class="text-slate-400">
+                    {{ $pendingSurveyCount }} menunggu persetujuan ·
+                    {{ $appointments->where('ppat_meeting_status', \App\Models\Appointment::PPAT_MEETING_STATUS_CONFIRMED)->count() }} disetujui ·
+                    {{ $appointments->where('ppat_meeting_status', \App\Models\Appointment::PPAT_MEETING_STATUS_RESCHEDULED)->count() }} diubah
+                </span>
+            @else
+                <span class="text-slate-400">{{ $appointments->where('status', 'confirmed')->count() }}
+                    {{ $isSeller ? 'terjadwal' : 'disetujui' }} ·
+                    {{ $pendingSurveyCount }} menunggu persetujuan</span>
+            @endif
         </footer>
     </section>
 
@@ -476,6 +504,59 @@
                                     </div>
                                 </div>
                             </template>
+                        @elseif ($isPpat)
+                            <div
+                                x-cloak
+                                x-show="selectedAppointment.event_type === 'ppat_meeting' && selectedAppointment.can_manage_meeting"
+                                x-data="{ rescheduling: false }"
+                                class="space-y-3">
+                                <p class="text-xs leading-relaxed text-slate-500">
+                                    Setujui tanggal yang diajukan atau pilih tanggal lain untuk menjadwalkan ulang pertemuan.
+                                </p>
+
+                                <form method="POST" x-bind:action="selectedAppointment.ppat_meeting_url"
+                                    class="space-y-3">
+                                    @csrf
+                                    <div x-show="rescheduling" x-cloak>
+                                        <label for="ppat-suggested-date"
+                                            class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                            Tanggal pengganti
+                                        </label>
+                                        <input id="ppat-suggested-date" type="date" name="ppat_suggested_date"
+                                            min="{{ now()->toDateString() }}" x-bind:required="rescheduling"
+                                            x-bind:disabled="!rescheduling"
+                                            class="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                    </div>
+
+                                    <div class="flex flex-col gap-2 sm:flex-row">
+                                        <button type="submit" name="decision" value="confirmed"
+                                            x-show="!rescheduling"
+                                            class="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+                                            <svg class="size-4" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="m5 13 4 4L19 7" />
+                                            </svg>
+                                            Setujui jadwal
+                                        </button>
+                                        <button type="button" x-show="!rescheduling"
+                                            x-on:click="rescheduling = true"
+                                            class="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-amber-200 bg-white px-4 py-2.5 text-sm font-semibold text-amber-800 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
+                                            Atur ulang jadwal
+                                        </button>
+                                        <button type="submit" name="decision" value="rescheduled"
+                                            x-show="rescheduling" x-cloak
+                                            class="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                                            Kirim tanggal baru
+                                        </button>
+                                        <button type="button" x-show="rescheduling" x-cloak
+                                            x-on:click="rescheduling = false"
+                                            class="inline-flex flex-1 items-center justify-center rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                                            Batal
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         @endif
                         <button type="button" x-on:click="selectedAppointment = null"
                             class="w-full rounded-md bg-secondary px-4 py-2.5 text-sm font-semibold text-white hover:bg-secondary/90 mt-3">Tutup

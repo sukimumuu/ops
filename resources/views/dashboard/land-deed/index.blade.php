@@ -7,7 +7,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-primary">Operasional kantor</p>
                 <h1 class="mt-1 text-2xl font-bold text-secondary">Dashboard antrian</h1>
-                <p class="mt-1 text-sm text-slate-500">Pantau jadwal survei pada properti yang ditugaskan kepada Anda.</p>
+                <p class="mt-1 text-sm text-slate-500">Pantau permintaan jadwal temu pada properti yang ditugaskan kepada Anda.</p>
             </div>
         </header>
 
@@ -34,16 +34,25 @@
             </div>
         @endif
 
+        @if ($errors->hasAny(['ppat_meeting', 'decision', 'ppat_suggested_date']))
+            <div role="alert"
+                class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+                @foreach ($errors->all() as $error)
+                    <p>{{ $error }}</p>
+                @endforeach
+            </div>
+        @endif
+
         <x-survey-calendar
             :month="$month"
             :calendar-days="$calendarDays"
             :appointments-by-date="$appointmentsByDate"
             :bookings="$calendarBookings"
-            :appointments="$appointments"
+            :appointments="$ppatMeetings"
             perspective="ppat"
             reset-route="land-deed.index"
-            title="Kalender jadwal survei & temu PPAT"
-            description="Pilih avatar calon pembeli untuk membuka rincian survei atau jadwal temu PPAT pada properti yang ditugaskan kepada Anda."
+            title="Kalender jadwal temu PPAT"
+            description="Kalender ini hanya menampilkan permintaan jadwal temu PPAT. Pilih avatar calon pembeli untuk membuka detail, menyetujui, atau mengatur ulang tanggal."
         />
     </div>
 

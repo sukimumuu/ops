@@ -28,6 +28,12 @@ class AppointmentPolicy
                 || $appointment->property?->seller_id === $user->id);
     }
 
+    public function managePpatMeeting(User $user, Appointment $appointment): bool
+    {
+        return $user->can('appointments.view_all')
+            && $appointment->property?->assigned_ppat_id === $user->id;
+    }
+
     /**
      * Determine whether the user may respond to a proposed reschedule.
      */

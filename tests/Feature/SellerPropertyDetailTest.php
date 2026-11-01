@@ -125,7 +125,7 @@ it('shows the purchase timeline and PPAT date picker when the buyer is intereste
         ->assertSeeText('Eksekusi Pencairan Escrow (Release Funds)')
         ->assertSeeText('Balik Nama Sertifikat (Tahap Akhir)')
         ->assertSeeText('Tanggal pertemuan yang diinginkan')
-        ->assertSeeText('Tanggal ini akan muncul di kalender PPAT yang ditugaskan.')
+        ->assertSeeText('Tanggal akan dikirim kepada PPAT yang ditugaskan untuk disetujui.')
         ->assertSeeText('Ajukan jadwal temu PPAT')
         ->assertSee('type="date"', false)
         ->assertSee('action="'.route('seller.my-properties.ppat-meetings.store', [
@@ -159,10 +159,21 @@ it('saves the requested PPAT meeting date without changing the survey schedule',
             'property' => $property->uuid,
             'appointment' => $appointment->id,
         ]))
-        ->assertSessionHas('status', 'Tanggal temu PPAT berhasil diajukan dan ditambahkan ke kalender PPAT.');
+        ->assertSessionHas('status', 'Permintaan jadwal temu PPAT berhasil dikirim dan ditambahkan ke kalender PPAT.');
 
     expect($appointment->fresh()->ppat_meeting_date->format('Y-m-d'))->toBe('2026-10-15')
+        ->and($appointment->fresh()->ppat_meeting_status)->toBe(Appointment::PPAT_MEETING_STATUS_REQUESTED)
         ->and($appointment->fresh()->scheduled_at->format('Y-m-d H:i:s'))->toBe('2026-10-20 10:00:00');
+
+    expect($ppat->notifications()->first()->data)->toBe([
+        'title' => 'Permintaan jadwal temu PPAT',
+        'message' => $seller->name.' mengajukan pertemuan dengan '.$buyer->name.' pada Kamis, 15 Oktober 2026.',
+        'url' => route('land-deed.index', ['month' => '2026-10']),
+    ])->and($buyer->notifications()->first()->data)->toBe([
+        'title' => 'Permintaan jadwal temu PPAT diajukan',
+        'message' => $seller->name.' mengajukan jadwal temu PPAT pada Kamis, 15 Oktober 2026.',
+        'url' => route('buyer.survey-schedule'),
+    ]);
 });
 
 it('rejects a past PPAT meeting date', function () {

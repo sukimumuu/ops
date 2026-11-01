@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -27,8 +28,13 @@ return new class extends Migration
             $table->timestamp('completed_at')->nullable();
             $table->string('buyer_intent')->nullable();
             $table->date('ppat_meeting_date')->nullable();
+            $table->string('ppat_meeting_status')->nullable();
             $table->timestamps();
         });
+
+        DB::table('appointments')
+            ->whereNotNull('ppat_meeting_date')
+            ->update(['ppat_meeting_status' => 'requested']);
     }
 
     /**

@@ -44,6 +44,22 @@ class Appointment extends Model
 
     public const BUYER_INTENT_NO_DEAL = 'no_deal';
 
+    public const PPAT_MEETING_STATUS_REQUESTED = 'requested';
+
+    public const PPAT_MEETING_STATUS_CONFIRMED = 'confirmed';
+
+    public const PPAT_MEETING_STATUS_RESCHEDULED = 'rescheduled';
+
+    /**
+     * Supported PPAT meeting request statuses.
+     *
+     * @var list<string>
+     */
+    public const PPAT_MEETING_DECISIONS = [
+        self::PPAT_MEETING_STATUS_CONFIRMED,
+        self::PPAT_MEETING_STATUS_RESCHEDULED,
+    ];
+
     /**
      * All supported buyer decisions after a survey.
      *
@@ -117,6 +133,16 @@ class Appointment extends Model
         return match ($this->buyer_intent) {
             self::BUYER_INTENT_DEAL => 'Berminat membeli',
             self::BUYER_INTENT_NO_DEAL => 'Tidak melanjutkan pembelian',
+            default => null,
+        };
+    }
+
+    public function ppatMeetingStatusLabel(): ?string
+    {
+        return match ($this->ppat_meeting_status) {
+            self::PPAT_MEETING_STATUS_REQUESTED => 'Menunggu persetujuan PPAT',
+            self::PPAT_MEETING_STATUS_CONFIRMED => 'Jadwal disetujui PPAT',
+            self::PPAT_MEETING_STATUS_RESCHEDULED => 'Jadwal diubah PPAT',
             default => null,
         };
     }

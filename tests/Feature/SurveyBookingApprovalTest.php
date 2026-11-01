@@ -280,7 +280,7 @@ it('shows the survey calendar on the seller dashboard', function () {
         ->assertViewHas('calendarBookings', fn ($bookings): bool => $bookings->firstWhere('id', $appointment->id) !== null);
 });
 
-it('shows the read-only survey calendar to the assigned PPAT', function () {
+it('does not show survey appointments on the assigned PPAT meeting calendar', function () {
     $ppat = User::factory()->create();
     $ppat->assignRole('PPAT');
     $seller = User::factory()->create();
@@ -292,18 +292,11 @@ it('shows the read-only survey calendar to the assigned PPAT', function () {
     $this->actingAs($ppat)
         ->get(route('land-deed.index', ['month' => '2026-10']))
         ->assertOk()
-        ->assertSee('Kalender jadwal survei')
-        ->assertSee('Pembeli Kalender PPAT')
-        ->assertSee('Pilih avatar calon pembeli')
+        ->assertSee('Kalender jadwal temu PPAT')
+        ->assertDontSee('Pembeli Kalender PPAT')
         ->assertDontSee('Setujui survei')
-        ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $buyer, $property): bool {
-            $booking = $bookings->firstWhere('id', $appointment->id);
-
-            return $booking !== null
-                && $booking['counterpart_name'] === $buyer->name
-                && $booking['seller_name'] === $appointment->seller->name
-                && $booking['property_maps_url'] === $property->url_maps;
-        });
+        ->assertViewHas('calendarBookings', fn ($bookings): bool => $bookings->isEmpty())
+        ->assertViewHas('appointmentsByDate', fn ($appointmentsByDate): bool => $appointmentsByDate->isEmpty());
 });
 
 it('shows a saved PPAT meeting date on the assigned PPAT calendar', function () {
@@ -317,12 +310,18 @@ it('shows a saved PPAT meeting date on the assigned PPAT calendar', function () 
         'scheduled_at' => '2026-09-20 10:00:00',
         'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
         'ppat_meeting_date' => '2026-10-24',
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
     ]);
+    $surveyAppointment = createSurveyBooking($seller, $buyer, $property, Appointment::STATUS_CONFIRMED);
+    $surveyAppointment->update(['scheduled_at' => '2026-10-20 10:00:00']);
 
     $this->actingAs($ppat)
         ->get(route('land-deed.index', ['month' => '2026-10']))
         ->assertOk()
         ->assertSee('Jadwal temu PPAT')
+        ->assertSee('Menunggu persetujuan PPAT')
+        ->assertSee('Atur ulang jadwal')
+        ->assertSee('Setujui jadwal')
         ->assertSee('Seharian')
         ->assertViewHas('calendarBookings', function ($bookings) use ($appointment, $buyer, $property): bool {
             $booking = $bookings->firstWhere('id', 'ppat-meeting-'.$appointment->id);
@@ -330,19 +329,164 @@ it('shows a saved PPAT meeting date on the assigned PPAT calendar', function () 
             return $booking !== null
                 && $booking['event_type'] === 'ppat_meeting'
                 && $booking['counterpart_name'] === $buyer->name
-                && $booking['status_key'] === 'ppat_meeting'
+                && $booking['status_key'] === 'ppat_meeting_requested'
+                && $booking['status'] === 'Menunggu persetujuan PPAT'
                 && $booking['date'] === 'Sabtu, 24 Oktober 2026'
                 && $booking['time'] === null
                 && $booking['property_title'] === $property->title
-                && $booking['can_review'] === false;
+                && $booking['can_review'] === false
+                && $booking['can_manage_meeting'] === true
+                && $booking['ppat_meeting_url'] === route('land-deed.ppat-meetings.update', $appointment);
         })
         ->assertViewHas('appointmentsByDate', function ($appointmentsByDate) use ($appointment): bool {
             $calendarAppointment = $appointmentsByDate->get('2026-10-24')?->first();
 
             return $calendarAppointment !== null
                 && $calendarAppointment->calendar_event_type === 'ppat_meeting'
-                && $calendarAppointment->calendar_event_id === 'ppat-meeting-'.$appointment->id;
+                && $calendarAppointment->calendar_event_id === 'ppat-meeting-'.$appointment->id
+                && $appointmentsByDate->get('2026-10-20') === null;
         });
+});
+
+it('allows the assigned PPAT to approve a requested meeting date', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller, $ppat);
+    $appointment = createSurveyBooking($seller, $buyer, $property, Appointment::STATUS_COMPLETED);
+    $appointment->update([
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => '2026-11-15',
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
+    ]);
+
+    $this->travelTo('2026-11-01 00:00:00');
+
+    $this->actingAs($ppat)
+        ->from(route('land-deed.index', ['month' => '2026-11']))
+        ->post(route('land-deed.ppat-meetings.update', $appointment), [
+            'decision' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+        ])
+        ->assertRedirect(route('land-deed.index', ['month' => '2026-11']))
+        ->assertSessionHas(
+            'status',
+            'Jadwal temu PPAT berhasil disetujui dan pembeli serta penjual telah diberi tahu.',
+        );
+
+    expect($appointment->fresh()->ppat_meeting_status)
+        ->toBe(Appointment::PPAT_MEETING_STATUS_CONFIRMED)
+        ->and($appointment->fresh()->ppat_meeting_date->format('Y-m-d'))->toBe('2026-11-15')
+        ->and($buyer->notifications()->first()->data)->toBe([
+            'title' => 'Jadwal temu PPAT disetujui',
+            'message' => 'PPAT menyetujui jadwal temu Rumah untuk survei pada Minggu, 15 November 2026.',
+            'url' => route('buyer.survey-schedule'),
+        ])
+        ->and($seller->notifications()->first()->data)->toBe([
+            'title' => 'Jadwal temu PPAT disetujui',
+            'message' => 'PPAT menyetujui jadwal temu Rumah untuk survei pada Minggu, 15 November 2026.',
+            'url' => route('seller.my-properties.show', [
+                'property' => $property->uuid,
+                'appointment' => $appointment->id,
+            ]),
+        ]);
+});
+
+it('allows the assigned PPAT to replace a requested meeting date', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller, $ppat);
+    $appointment = createSurveyBooking($seller, $buyer, $property, Appointment::STATUS_COMPLETED);
+    $appointment->update([
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => '2026-11-15',
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
+    ]);
+
+    $this->travelTo('2026-11-01 00:00:00');
+
+    $this->actingAs($ppat)
+        ->from(route('land-deed.index', ['month' => '2026-11']))
+        ->post(route('land-deed.ppat-meetings.update', $appointment), [
+            'decision' => Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+            'ppat_suggested_date' => '2026-11-20',
+        ])
+        ->assertRedirect(route('land-deed.index', ['month' => '2026-11']))
+        ->assertSessionHas(
+            'status',
+            'Jadwal temu PPAT berhasil diubah dan pembeli serta penjual telah diberi tahu.',
+        );
+
+    expect($appointment->fresh()->ppat_meeting_status)
+        ->toBe(Appointment::PPAT_MEETING_STATUS_RESCHEDULED)
+        ->and($appointment->fresh()->ppat_meeting_date->format('Y-m-d'))->toBe('2026-11-20')
+        ->and($buyer->notifications()->first()->data)->toBe([
+            'title' => 'Jadwal temu PPAT diubah',
+            'message' => 'PPAT mengubah jadwal temu Rumah untuk survei menjadi Jumat, 20 November 2026.',
+            'url' => route('buyer.survey-schedule'),
+        ])
+        ->and($seller->notifications()->first()->data['title'])->toBe('Jadwal temu PPAT diubah');
+});
+
+it('rejects a past replacement date for a PPAT meeting', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller, $ppat);
+    $appointment = createSurveyBooking($seller, $buyer, $property, Appointment::STATUS_COMPLETED);
+    $appointment->update([
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => '2026-11-15',
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
+    ]);
+
+    $this->travelTo('2026-11-01 00:00:00');
+
+    $this->actingAs($ppat)
+        ->from(route('land-deed.index'))
+        ->post(route('land-deed.ppat-meetings.update', $appointment), [
+            'decision' => Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+            'ppat_suggested_date' => '2026-10-31',
+        ])
+        ->assertRedirectBackWithErrors([
+            'ppat_suggested_date' => 'Tanggal pengganti tidak boleh di masa lalu.',
+        ]);
+
+    expect($appointment->fresh()->ppat_meeting_date->format('Y-m-d'))->toBe('2026-11-15')
+        ->and($appointment->fresh()->ppat_meeting_status)
+        ->toBe(Appointment::PPAT_MEETING_STATUS_REQUESTED)
+        ->and($buyer->notifications()->count())->toBe(0)
+        ->and($seller->notifications()->count())->toBe(0);
+});
+
+it('forbids an unassigned PPAT from handling a meeting request', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $otherPpat = User::factory()->create();
+    $otherPpat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSurveyBookingProperty($seller, $ppat);
+    $appointment = createSurveyBooking($seller, $buyer, $property, Appointment::STATUS_COMPLETED);
+    $appointment->update([
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => '2026-11-15',
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
+    ]);
+
+    $this->actingAs($otherPpat)
+        ->post(route('land-deed.ppat-meetings.update', $appointment), [
+            'decision' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+        ])
+        ->assertForbidden();
+
+    expect($appointment->fresh()->ppat_meeting_status)
+        ->toBe(Appointment::PPAT_MEETING_STATUS_REQUESTED)
+        ->and($buyer->notifications()->count())->toBe(0)
+        ->and($seller->notifications()->count())->toBe(0);
 });
 
 it('shows only survey requests belonging to the signed-in seller', function () {

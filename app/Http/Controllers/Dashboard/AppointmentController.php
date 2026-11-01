@@ -210,16 +210,148 @@ class AppointmentController extends Controller
             'ppat_meeting_date.after_or_equal' => 'Tanggal temu PPAT tidak boleh di masa lalu.',
         ]);
 
-        $appointment->update([
-            'ppat_meeting_date' => $validated['ppat_meeting_date'],
-        ]);
+        if (in_array($appointment->ppat_meeting_status, [
+            Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+            Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+        ], true)) {
+            return back()->withErrors([
+                'ppat_meeting_date' => 'Jadwal temu PPAT sudah dikonfirmasi dan tidak dapat diajukan ulang.',
+            ]);
+        }
+
+        $updated = Appointment::query()
+            ->whereKey($appointment->getKey())
+            ->where(function ($query): void {
+                $query->whereNull('ppat_meeting_status')
+                    ->orWhere('ppat_meeting_status', Appointment::PPAT_MEETING_STATUS_REQUESTED);
+            })
+            ->update([
+                'ppat_meeting_date' => $validated['ppat_meeting_date'],
+                'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
+            ]);
+
+        if ($updated === 0) {
+            return back()->withErrors([
+                'ppat_meeting_date' => 'Status jadwal temu PPAT sudah berubah. Muat ulang halaman dan coba lagi.',
+            ]);
+        }
+
+        $appointment->refresh()->load(['buyer', 'seller', 'property.assignedPpat']);
+        if ($appointment->property->assignedPpat === null) {
+            return back()->withErrors([
+                'ppat_meeting_date' => 'PPAT properti ini tidak lagi tersedia. Silakan hubungi administrator.',
+            ]);
+        }
+
+        $formattedDate = $appointment->ppat_meeting_date->locale('id')->translatedFormat('l, d F Y');
+        $appointment->property->assignedPpat->notify(new AppointmentNotification(
+            'Permintaan jadwal temu PPAT',
+            $appointment->seller->name.' mengajukan pertemuan dengan '.$appointment->buyer->name.' pada '.$formattedDate.'.',
+            route('land-deed.index', ['month' => $appointment->ppat_meeting_date->format('Y-m')]),
+        ));
+        $appointment->buyer->notify(new AppointmentNotification(
+            'Permintaan jadwal temu PPAT diajukan',
+            $appointment->seller->name.' mengajukan jadwal temu PPAT pada '.$formattedDate.'.',
+            route('buyer.survey-schedule'),
+        ));
 
         return redirect()
             ->route('seller.my-properties.show', [
                 'property' => $property->uuid,
                 'appointment' => $appointment->id,
             ])
-            ->with('status', 'Tanggal temu PPAT berhasil diajukan dan ditambahkan ke kalender PPAT.');
+            ->with('status', 'Permintaan jadwal temu PPAT berhasil dikirim dan ditambahkan ke kalender PPAT.');
+    }
+
+    /**
+     * Approve a PPAT meeting request or reschedule it to another date.
+     */
+    public function respondToPpatMeeting(Request $request, Appointment $appointment): RedirectResponse
+    {
+        Gate::authorize('managePpatMeeting', $appointment);
+
+        if (
+            $appointment->status !== Appointment::STATUS_COMPLETED
+            || $appointment->buyer_intent !== Appointment::BUYER_INTENT_DEAL
+            || $appointment->ppat_meeting_status !== Appointment::PPAT_MEETING_STATUS_REQUESTED
+            || $appointment->ppat_meeting_date === null
+        ) {
+            return back()->withErrors([
+                'ppat_meeting' => 'Permintaan jadwal temu ini sudah ditangani atau tidak lagi tersedia.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'decision' => ['required', Rule::in(Appointment::PPAT_MEETING_DECISIONS)],
+            'ppat_suggested_date' => [
+                'nullable',
+                'required_if:decision,'.Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+                'date_format:Y-m-d',
+                'after_or_equal:today',
+            ],
+        ], [
+            'decision.required' => 'Pilih tindakan untuk permintaan jadwal temu.',
+            'decision.in' => 'Tindakan jadwal temu PPAT tidak valid.',
+            'ppat_suggested_date.required_if' => 'Pilih tanggal pengganti.',
+            'ppat_suggested_date.date_format' => 'Format tanggal pengganti tidak valid.',
+            'ppat_suggested_date.after_or_equal' => 'Tanggal pengganti tidak boleh di masa lalu.',
+        ]);
+
+        if (
+            $validated['decision'] === Appointment::PPAT_MEETING_STATUS_RESCHEDULED
+            && $validated['ppat_suggested_date'] === $appointment->ppat_meeting_date->format('Y-m-d')
+        ) {
+            return back()->withErrors([
+                'ppat_suggested_date' => 'Pilih tanggal yang berbeda dari jadwal yang diajukan.',
+            ]);
+        }
+
+        $updates = [
+            'ppat_meeting_status' => $validated['decision'],
+        ];
+
+        if ($validated['decision'] === Appointment::PPAT_MEETING_STATUS_RESCHEDULED) {
+            $updates['ppat_meeting_date'] = $validated['ppat_suggested_date'];
+        }
+
+        $updated = Appointment::query()
+            ->whereKey($appointment->getKey())
+            ->where('ppat_meeting_status', Appointment::PPAT_MEETING_STATUS_REQUESTED)
+            ->update($updates);
+
+        if ($updated === 0) {
+            return back()->withErrors([
+                'ppat_meeting' => 'Permintaan jadwal temu ini sudah ditangani oleh PPAT lain.',
+            ]);
+        }
+
+        $appointment->refresh()->load(['buyer', 'seller', 'property']);
+        $meetingDate = $appointment->ppat_meeting_date->locale('id')->translatedFormat('l, d F Y');
+        $isRescheduled = $validated['decision'] === Appointment::PPAT_MEETING_STATUS_RESCHEDULED;
+        $message = $isRescheduled
+            ? 'PPAT mengubah jadwal temu '.$appointment->property->title.' menjadi '.$meetingDate.'.'
+            : 'PPAT menyetujui jadwal temu '.$appointment->property->title.' pada '.$meetingDate.'.';
+
+        $appointment->buyer->notify(new AppointmentNotification(
+            $isRescheduled ? 'Jadwal temu PPAT diubah' : 'Jadwal temu PPAT disetujui',
+            $message,
+            route('buyer.survey-schedule'),
+        ));
+        $appointment->seller->notify(new AppointmentNotification(
+            $isRescheduled ? 'Jadwal temu PPAT diubah' : 'Jadwal temu PPAT disetujui',
+            $message,
+            route('seller.my-properties.show', [
+                'property' => $appointment->property->uuid,
+                'appointment' => $appointment->id,
+            ]),
+        ));
+
+        return back()->with(
+            'status',
+            $isRescheduled
+                ? 'Jadwal temu PPAT berhasil diubah dan pembeli serta penjual telah diberi tahu.'
+                : 'Jadwal temu PPAT berhasil disetujui dan pembeli serta penjual telah diberi tahu.',
+        );
     }
 
     /**

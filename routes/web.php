@@ -148,6 +148,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->name('index');
         Route::post('/dashboard-antrian/{appointment}/status', [AppointmentController::class, 'updateStatus'])
             ->name('appointments.status');
+        Route::post('/dashboard-antrian/{appointment}/jadwal-ppat', [AppointmentController::class, 'respondToPpatMeeting'])
+            ->whereNumber('appointment')
+            ->middleware('permission:appointments.view_all')
+            ->name('ppat-meetings.update');
         Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])
             ->middleware('permission:documents.input_bpn_result|transactions.mark_bpn_cleared')
             ->name('bpn-check');
