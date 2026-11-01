@@ -94,6 +94,61 @@ it('filters pending properties by search, type, and category for admins and supe
     }
 });
 
+it('shows all property statuses by default and filters by status for admins and superadmins', function () {
+    Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
+
+    $administrator = User::factory()->create();
+    $administrator->assignRole('Superadmin');
+    $seller = User::factory()->create();
+
+    foreach ([
+        ['Pending Property', 'pending_verification'],
+        ['Published Property', 'published'],
+        ['Reserved Property', 'reserved'],
+    ] as [$title, $status]) {
+        Property::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'seller_id' => $seller->id,
+            'property_type' => 'bangunan',
+            'type' => 'rumah',
+            'category' => 'sale',
+            'status' => $status,
+            'title' => $title,
+            'description' => 'Properti untuk pengujian filter status.',
+            'price' => 1250000000,
+            'negotiable' => false,
+            'province' => 'Jawa Barat',
+            'city' => 'Bandung',
+            'district' => 'Coblong',
+            'address' => 'Jl. Merdeka No. 1',
+            'land_area_sqm' => 120,
+            'building_area_sqm' => 90,
+            'certificate_type' => 'SHM',
+        ]);
+    }
+
+    $this->actingAs($administrator);
+
+    foreach ([route('admin.master-data-property'), route('superadmin.master-data-property')] as $url) {
+        $this->get($url)
+            ->assertSeeText('Pending Property')
+            ->assertSeeText('Published Property')
+            ->assertSeeText('Reserved Property')
+            ->assertSee('name="status"', false)
+            ->assertSee('value="all" selected', false);
+    }
+
+    $this->get(route('superadmin.master-data-property', ['status' => 'reserved']))
+        ->assertSeeText('Reserved Property')
+        ->assertDontSeeText('Pending Property')
+        ->assertDontSeeText('Published Property')
+        ->assertSeeText('Tutup')
+        ->assertDontSee('name="status" value="archived"', false)
+        ->assertDontSeeText('Setujui')
+        ->assertDontSeeText('Tolak');
+});
+
 it('renders PPAT search and assignment controls for each selected property', function () {
     Role::firstOrCreate(['name' => 'Superadmin', 'guard_name' => 'web']);
     Role::firstOrCreate(['name' => 'PPAT', 'guard_name' => 'web']);

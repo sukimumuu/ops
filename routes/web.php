@@ -20,6 +20,7 @@ use App\Http\Controllers\PanelAuthController;
 use App\Http\Controllers\ProfilePasswordController;
 use App\Http\Controllers\RegionDataController;
 use Illuminate\Support\Facades\Route;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 Route::get('/', [HomeController::class, 'home'])->name('home');
 Route::get('/kalkulator-pajak', [HomeController::class, 'taxCalculator'])->name('tax-calculator');
@@ -205,16 +206,31 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     Route::prefix('property-review')->name('property-review.')->group(function () {
         Route::get('/properties/{property}/ppats', [PropertyReviewController::class, 'ppats'])
-            ->middleware('permission:properties.approve_listing|properties.reject_listing')
+            ->middleware(RoleOrPermissionMiddleware::using([
+                'Superadmin',
+                'properties.approve_listing',
+                'properties.reject_listing',
+            ]))
             ->name('ppats');
         Route::post('/properties/{property}/ppat', [PropertyReviewController::class, 'assignPpat'])
-            ->middleware('permission:properties.approve_listing|properties.reject_listing')
+            ->middleware(RoleOrPermissionMiddleware::using([
+                'Superadmin',
+                'properties.approve_listing',
+                'properties.reject_listing',
+            ]))
             ->name('assign-ppat');
         Route::post('/properties/{property}/status', [PropertyReviewController::class, 'updateStatus'])
-            ->middleware('permission:properties.approve_listing|properties.reject_listing')
+            ->middleware(RoleOrPermissionMiddleware::using([
+                'Superadmin',
+                'properties.approve_listing',
+                'properties.reject_listing',
+            ]))
             ->name('status');
         Route::get('/files/{propertyPhoto}', [PropertyReviewController::class, 'showFile'])
-            ->middleware('permission:documents.view_sensitive_pii')
+            ->middleware(RoleOrPermissionMiddleware::using([
+                'Superadmin',
+                'documents.view_sensitive_pii',
+            ]))
             ->name('file');
     });
 });

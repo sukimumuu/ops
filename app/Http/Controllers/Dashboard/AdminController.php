@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
 class AdminController extends Controller
@@ -49,11 +50,22 @@ class AdminController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'property_type' => ['nullable', 'in:bangunan,tanah'],
             'category' => ['nullable', 'in:sale,rent'],
+            'status' => ['nullable', Rule::in([
+                'all',
+                'draft',
+                'pending_verification',
+                'published',
+                'rejected',
+                'reserved',
+                'sold',
+                'archived',
+            ])],
         ]);
         $search = trim($filters['search'] ?? '');
-        $pendingProperties = Property::query()
+        $status = $filters['status'] ?? 'all';
+        $properties = Property::query()
             ->with(['seller:id,name', 'assignedPpat:id,name,email,phone,province,city,district', 'photos', 'certificate'])
-            ->where('status', 'pending_verification')
+            ->when($status !== 'all', fn (Builder $query): Builder => $query->where('status', $status))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('title', 'like', "%{$search}%")
@@ -69,7 +81,7 @@ class AdminController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('dashboard.admin.master-data-property', compact('pendingProperties'));
+        return view('dashboard.admin.master-data-property', compact('properties'));
     }
 
     public function auditLog()
