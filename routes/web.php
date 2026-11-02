@@ -137,6 +137,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/transaksi-escrow', [UserController::class, 'transactionEscrow'])
             ->middleware('permission:transactions.view_own_tracker')
             ->name('transaction-escrow');
+        Route::get('/properti-dibeli', [UserController::class, 'boughtProperties'])->name('bought-properties');
+        Route::get('/properti-dibeli/{property:uuid}', [UserController::class, 'showBoughtProperty'])
+            ->whereUuid('property')
+            ->name('bought-properties.show');
     });
 
     Route::post('/jadwal-survei/{appointment}/status', [AppointmentController::class, 'updateStatus'])
