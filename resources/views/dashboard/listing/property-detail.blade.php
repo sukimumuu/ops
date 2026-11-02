@@ -281,13 +281,13 @@
                                         'M3 7h18v12H3zM7 11h.01M17 15h.01M12 11a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM6 4h12',
                                 ],
                                 [
-                                    'title' => 'Pengecekan Legalitas BPN',
+                                    'title' => 'Pengecekan Legalitas BPN & Validasi Pajak',
                                     'icon' => 'M6 3h8l4 4v5m-4-9v5h5m-13-5v18h6m-2-12h5m-5 4h4m4 5 2 2 4-4',
                                 ],
                                 [
-                                    'title' => 'Validasi Pajak (Pph & BPHTB)',
+                                    'title' => 'Pelunasan Properti (Escrow)',
                                     'icon' =>
-                                        'M5 3 7 4.5 9 3l2 1.5L13 3l2 1.5L17 3l2 1.5V21l-2-1.5L15 21l-2-1.5L11 21l-2-1.5L7 21l-2-1.5V3Zm4 6h6m-6 4h6m-6 4h3',
+                                        'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
                                 ],
                                 [
                                     'title' => 'Penjadwalan & TTD Akta Jual Beli (Offline)',

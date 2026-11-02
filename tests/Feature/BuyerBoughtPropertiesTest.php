@@ -251,11 +251,10 @@ it('shows deed timeline steps when survey buyer intent is deal', function () {
         ->assertSeeText('Proses Pembelian Sedang Berjalan')
         ->assertSeeText('Jadwal Temu PPAT')
         ->assertSeeText('Pembayaran DP (Escrow)')
-        ->assertSeeText('Pengecekan Legalitas BPN')
-        ->assertSeeText('Validasi Pajak (PPh & BPHTB)')
+        ->assertSeeText('Pengecekan Legalitas BPN & Validasi Pajak')
+        ->assertSeeText('Pelunasan Properti (Escrow)')
         ->assertSeeText('Penjadwalan & TTD Akta Jual Beli (Offline)')
         ->assertSeeText('Eksekusi Pencairan Escrow (Release Funds)')
         ->assertSeeText('Balik Nama Sertifikat (Tahap Akhir)')
         ->assertSeeText('Menunggu persetujuan PPAT');
 });
-
