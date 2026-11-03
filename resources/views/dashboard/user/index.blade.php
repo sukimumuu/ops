@@ -171,7 +171,7 @@
                             <x-table.data>
                                 <span class="font-semibold">Rp
                                     {{ number_format((float) $transaction->total_property_amount, 0, ',', '.') }}</span>
-                                <span class="mt-1 block text-xs text-slate-500">Booking fee Rp
+                                <span class="mt-1 block text-xs text-slate-500">DP Rp
                                     {{ number_format((float) $transaction->booking_fee_amount, 0, ',', '.') }}</span>
                             </x-table.data>
                             <x-table.data>
@@ -181,7 +181,7 @@
                                         $transaction->state === 'draft',
                                     'border-amber-200 bg-amber-50 text-amber-700' => in_array(
                                         $transaction->state,
-                                        ['held_in_escrow', 'bpn_checking', 'ajb_scheduled']),
+                                        ['dp_paid', 'held_in_escrow', 'bpn_checking', 'ajb_scheduled']),
                                     'border-sky-200 bg-sky-50 text-sky-700' =>
                                         $transaction->state === 'bpn_cleared',
                                     'border-emerald-200 bg-emerald-50 text-emerald-700' =>
@@ -190,6 +190,10 @@
                                         $transaction->state === 'refunded',
                                 ])>
                                     @switch($transaction->state)
+                                        @case('dp_paid')
+                                            DP dibayar, dana ditahan
+                                        @break
+
                                         @case('held_in_escrow')
                                             Dalam escrow
                                         @break

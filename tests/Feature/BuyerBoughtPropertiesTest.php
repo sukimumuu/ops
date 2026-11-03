@@ -6,6 +6,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
@@ -244,6 +245,19 @@ it('shows deed timeline steps when survey buyer intent is deal', function () {
         'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
         'completed_at' => now()->subDay(),
     ]);
+    $buyer->givePermissionTo(Permission::firstOrCreate([
+        'name' => 'transactions.initiate_dp',
+        'guard_name' => 'web',
+    ]));
+    Transaction::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'property_id' => $property->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $seller->id,
+        'booking_fee_amount' => 120000000,
+        'total_property_amount' => $property->price,
+        'state' => 'draft',
+    ]);
 
     $this->actingAs($buyer)
         ->get(route('buyer.bought-properties.show', ['property' => $property->uuid]))
@@ -256,6 +270,7 @@ it('shows deed timeline steps when survey buyer intent is deal', function () {
         ->assertSeeText('Penjadwalan & TTD Akta Jual Beli (Offline)')
         ->assertSeeText('Eksekusi Pencairan Escrow (Release Funds)')
         ->assertSeeText('Balik Nama Sertifikat (Tahap Akhir)')
-        ->assertSeeText('Menunggu persetujuan PPAT');
+        ->assertSeeText('Menunggu persetujuan PPAT')
+        ->assertSeeText('Pembayaran DP terkunci sampai jadwal temu PPAT disetujui.')
+        ->assertDontSeeText('Bayar DP');
 });
-

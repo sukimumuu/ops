@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Property;
+use App\Services\Payments\DpAmountCalculator;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
@@ -250,8 +251,11 @@ class UserController extends Controller
         ));
     }
 
-    public function showBoughtProperty(Request $request, Property $property): View
-    {
+    public function showBoughtProperty(
+        Request $request,
+        Property $property,
+        DpAmountCalculator $amountCalculator,
+    ): View {
         $user = $request->user();
 
         $hasAccess = $property->appointments()->where('buyer_id', $user->id)->exists()
@@ -271,6 +275,15 @@ class UserController extends Controller
             ->orderByDesc('scheduled_at')
             ->orderByDesc('id')
             ->get();
+
+        $transaction = $property->transactions()
+            ->where('buyer_id', $user->id)
+            ->latest('id')
+            ->first();
+        $dpPaymentAttempt = $transaction?->dpPaymentAttempts()->latest('id')->first();
+        $requiredDpAmount = $transaction?->state === 'draft'
+            ? $amountCalculator->calculate($transaction->total_property_amount)
+            : null;
 
         $latestAppointment = $appointments->first();
         $selectedAppointment = $appointments->firstWhere('id', $request->integer('appointment'))
@@ -318,6 +331,9 @@ class UserController extends Controller
             'appointments',
             'latestAppointment',
             'selectedAppointment',
+            'transaction',
+            'dpPaymentAttempt',
+            'requiredDpAmount',
             'progress',
             'mapUrl',
             'surveyStats',

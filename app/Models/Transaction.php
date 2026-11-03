@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Transaction extends Model
 {
@@ -24,8 +25,18 @@ class Transaction extends Model
         return $this->belongsTo(User::class, 'seller_id');
     }
 
-    public function logs()
+    public function logs(): HasMany
     {
         return $this->hasMany(TransactionLogs::class);
+    }
+
+    public function dpPaymentAttempts(): HasMany
+    {
+        return $this->hasMany(DpPaymentAttempt::class);
+    }
+
+    public function ledgerEntries(): HasMany
+    {
+        return $this->hasMany(TransactionLedgerEntry::class);
     }
 }

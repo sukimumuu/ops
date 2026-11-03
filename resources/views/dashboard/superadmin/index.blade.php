@@ -70,6 +70,7 @@
                 @php
                     $transactionStateLabels = [
                         'draft' => 'Draft',
+                        'dp_paid' => 'DP dibayar, dana ditahan',
                         'held_in_escrow' => 'Dana di escrow',
                         'bpn_checking' => 'Verifikasi BPN',
                         'bpn_cleared' => 'BPN selesai',
@@ -79,6 +80,7 @@
                     ];
                     $transactionStateClasses = [
                         'draft' => 'bg-slate-100 text-slate-700',
+                        'dp_paid' => 'bg-amber-100 text-amber-800',
                         'held_in_escrow' => 'bg-sky-100 text-sky-800',
                         'bpn_checking' => 'bg-amber-100 text-amber-800',
                         'bpn_cleared' => 'bg-emerald-100 text-emerald-800',

@@ -36,7 +36,7 @@ class ListingController extends Controller
                 ->count(),
             'activeTransactions' => Transaction::query()
                 ->where('seller_id', $user->id)
-                ->whereIn('state', ['held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'])
+                ->whereIn('state', ['dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'])
                 ->count(),
         ];
 
