@@ -40,9 +40,6 @@ Route::get('/kontak', [HomeController::class, 'contact'])->name('contact');
 Route::post('/api/chat', [ChatbotController::class, 'ask'])
     ->middleware('throttle:10,1')
     ->name('chatbot.reply');
-Route::post('/webhooks/xendit', [DpPaymentController::class, 'webhook'])
-    ->name('webhooks.xendit');
-
 Route::get('/masuk', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/masuk', [AuthController::class, 'login']);
 Route::post('/keluar', [AuthController::class, 'logout'])->name('logout');

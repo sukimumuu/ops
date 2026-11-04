@@ -38,20 +38,15 @@ class XenditPaymentProvider
     ): array {
         return [
             'reference_id' => $referenceId,
+            'type' => 'PAY',
             'currency' => 'IDR',
-            'amount' => $amount,
             'country' => 'ID',
-            'payment_method' => [
-                'type' => 'VIRTUAL_ACCOUNT',
-                'reusability' => 'ONE_TIME_USE',
-                'reference_id' => $referenceId,
-                'virtual_account' => [
-                    'channel_code' => $channelCode,
-                    'channel_properties' => [
-                        'customer_name' => mb_substr($customerName, 0, 255),
-                        'expires_at' => $expiresAt->toIso8601String(),
-                    ],
-                ],
+            'request_amount' => $amount,
+            'channel_code' => $channelCode,
+            'channel_properties' => [
+                'customer_name' => mb_substr($customerName, 0, 255),
+                'display_name' => mb_substr($customerName, 0, 255),
+                'expires_at' => $expiresAt->toIso8601String(),
             ],
         ];
     }
@@ -65,7 +60,7 @@ class XenditPaymentProvider
         $response = $this->send(
             fn (): Response => $this->client()
                 ->withHeaders(['idempotency-key' => $idempotencyKey])
-                ->post('/payment_requests', $payload),
+                ->post('/v3/payment_requests', $payload),
         );
 
         return $this->decodeResponse($response);
@@ -78,7 +73,7 @@ class XenditPaymentProvider
     {
         $response = $this->send(
             fn (): Response => $this->client()
-                ->get('/payment_requests/'.rawurlencode($paymentRequestId)),
+                ->get('/v3/payment_requests/'.rawurlencode($paymentRequestId)),
         );
 
         return $this->decodeResponse($response);
@@ -99,6 +94,7 @@ class XenditPaymentProvider
             ->acceptJson()
             ->asJson()
             ->withBasicAuth($this->secretKey(), '')
+            ->withHeaders(['api-version' => '2024-11-11'])
             ->connectTimeout(3)
             ->timeout(10);
     }

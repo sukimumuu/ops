@@ -90,7 +90,7 @@ function paymentRequestResponse(DpPaymentAttempt $attempt, string $status = 'PEN
     return [
         'id' => $attempt->xendit_payment_request_id,
         'reference_id' => $attempt->reference_id,
-        'amount' => $amount ?? (int) $attempt->amount,
+        'request_amount' => $amount ?? (int) $attempt->amount,
         'currency' => $attempt->currency,
         'status' => $status,
     ];
@@ -105,7 +105,7 @@ it('creates one IDR Virtual Account request and ignores browser-supplied payment
 
     $expectedReference = null;
     Http::fake([
-        'api.xendit.co/payment_requests' => function (Request $request) use (&$expectedReference) {
+        'api.xendit.co/v3/payment_requests' => function (Request $request) use (&$expectedReference) {
             $expectedReference = $request['reference_id'];
 
             return Http::response([
@@ -114,7 +114,7 @@ it('creates one IDR Virtual Account request and ignores browser-supplied payment
                 'status' => 'PENDING',
                 'payment_method' => [
                     'virtual_account' => [
-                        'channel_properties' => ['account_number' => '8800123456789'],
+                        'account_number' => '8800123456789',
                     ],
                 ],
             ], 201);
@@ -140,12 +140,13 @@ it('creates one IDR Virtual Account request and ignores browser-supplied payment
         ->and($scenario['transaction']->ledgerEntries()->count())->toBe(0);
 
     Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
-        && str_ends_with($request->url(), '/payment_requests')
-        && $request['amount'] === 123457
+        && str_ends_with($request->url(), '/v3/payment_requests')
+        && $request['request_amount'] === 123457
         && $request['currency'] === 'IDR'
-        && $request['payment_method']['type'] === 'VIRTUAL_ACCOUNT'
-        && $request['payment_method']['virtual_account']['channel_code'] === 'BNI'
-        && $request->hasHeader('idempotency-key'));
+        && $request['type'] === 'PAY'
+        && $request['channel_code'] === 'BNI'
+        && $request->hasHeader('idempotency-key')
+        && $request->hasHeader('api-version', '2022-07-31'));
 });
 
 it('reuses an active payment request and shows the VA instructions to its buyer', function () {
@@ -155,14 +156,14 @@ it('reuses an active payment request and shows the VA instructions to its buyer'
     $scenario = createDpPaymentScenario();
     grantDpPaymentPermission($scenario['buyer']);
     Http::fake([
-        'api.xendit.co/payment_requests' => function (Request $request) {
+        'api.xendit.co/v3/payment_requests' => function (Request $request) {
             return Http::response([
                 'id' => 'pr-mihom-002',
                 'reference_id' => $request['reference_id'],
                 'status' => 'PENDING',
                 'payment_method' => [
                     'virtual_account' => [
-                        'channel_properties' => ['account_number' => '8800987654321'],
+                        'account_number' => '8800987654321',
                     ],
                 ],
             ], 201);
@@ -314,7 +315,7 @@ it('verifies a successful webhook with Xendit and reserves the DP exactly once',
     ]);
     $verificationResponse = paymentRequestResponse($attempt, 'SUCCEEDED');
     Http::fake([
-        'api.xendit.co/payment_requests/pr-mihom-confirmed' => Http::response($verificationResponse),
+        'api.xendit.co/v3/payment_requests/pr-mihom-confirmed' => Http::response($verificationResponse),
     ]);
     $webhookPayload = [
         'event' => 'payment_request.succeeded',
@@ -358,7 +359,7 @@ it('verifies a successful webhook with Xendit and reserves the DP exactly once',
 
     Http::assertSentCount(1);
     Http::assertSent(fn (Request $request): bool => $request->method() === 'GET'
-        && str_ends_with($request->url(), '/payment_requests/pr-mihom-confirmed'));
+        && str_ends_with($request->url(), '/v3/payment_requests/pr-mihom-confirmed'));
 });
 
 it('does not reserve funds when the provider amount does not match the stored DP', function () {
@@ -378,7 +379,7 @@ it('does not reserve funds when the provider amount does not match the stored DP
         'expires_at' => now()->addDay(),
     ]);
     Http::fake([
-        'api.xendit.co/payment_requests/pr-mihom-mismatch' => Http::response(
+        'api.xendit.co/v3/payment_requests/pr-mihom-mismatch' => Http::response(
             paymentRequestResponse($attempt, 'SUCCEEDED', 123456),
         ),
     ]);
@@ -415,14 +416,14 @@ it('creates a new uniquely referenced attempt after the previous VA expires', fu
         'expires_at' => now()->subMinute(),
     ]);
     Http::fake([
-        'api.xendit.co/payment_requests' => function (Request $request) {
+        'api.xendit.co/v3/payment_requests' => function (Request $request) {
             return Http::response([
                 'id' => 'pr-mihom-retry',
                 'reference_id' => $request['reference_id'],
                 'status' => 'PENDING',
                 'payment_method' => [
                     'virtual_account' => [
-                        'channel_properties' => ['account_number' => '8800000012345'],
+                        'account_number' => '8800000012345',
                     ],
                 ],
             ], 201);
@@ -457,7 +458,7 @@ it('maps non-successful Xendit statuses without advancing the transaction', func
         'expires_at' => now()->addDay(),
     ]);
     Http::fake([
-        'api.xendit.co/payment_requests/*' => Http::response(paymentRequestResponse($attempt, $providerStatus)),
+        'api.xendit.co/v3/payment_requests/*' => Http::response(paymentRequestResponse($attempt, $providerStatus)),
     ]);
 
     $this->postJson(route('webhooks.xendit'), [

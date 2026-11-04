@@ -23,7 +23,7 @@ class DpPaymentService
     public function createOrResume(Transaction $transaction, User $buyer): DpPaymentAttempt
     {
         $this->provider->assertConfigured();
-
+        
         $attempt = DB::transaction(function () use ($transaction, $buyer): DpPaymentAttempt {
             $lockedTransaction = Transaction::query()
                 ->whereKey($transaction->getKey())
@@ -110,19 +110,12 @@ class DpPaymentService
 
             throw $exception;
         }
-
+        
         $paymentRequestId = $providerResponse['id'] ?? $providerResponse['payment_request_id'] ?? null;
         $referenceId = $providerResponse['reference_id'] ?? null;
-        $virtualAccountNumber = data_get(
-            $providerResponse,
-            'payment_method.virtual_account.channel_properties.account_number',
-        ) ?? data_get(
-            $providerResponse,
-            'payment_method.virtual_account.channel_properties.virtual_account_number',
-        ) ?? data_get(
-            $providerResponse,
-            'payment_method.virtual_account.account_number',
-        ) ?? ($providerResponse['virtual_account_number'] ?? null);
+        $virtualAccountNumber = data_get($providerResponse, 'actions.0.value')
+            ?? data_get($providerResponse, 'payment_method.virtual_account.channel_properties.virtual_account_number')
+            ?? data_get($providerResponse, 'payment_method.virtual_account.account_number');
 
         if (! is_string($paymentRequestId)
             || $paymentRequestId === ''
