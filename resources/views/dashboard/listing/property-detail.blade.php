@@ -446,6 +446,22 @@
                                                                     </p>
                                                                 @endif
                                                             </div>
+                                                        @elseif ($index === 1)
+                                                            <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
+                                                                {{ $step['title'] }}
+                                                            </h3>
+                                                            @if (in_array($selectedAppointment->ppat_meeting_status, [
+                                                                    \App\Models\Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+                                                                    \App\Models\Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+                                                                ], true))
+                                                                <p class="mt-2 text-xs leading-5 text-emerald-700">
+                                                                    Jadwal temu PPAT disetujui. Tahap ini dapat dilanjutkan oleh pembeli.
+                                                                </p>
+                                                            @else
+                                                                <p class="mt-2 text-xs leading-5 text-slate-500">
+                                                                    Tahap ini terkunci sampai jadwal temu PPAT disetujui.
+                                                                </p>
+                                                            @endif
                                                         @else
                                                             <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
                                                                 {{ $step['title'] }}

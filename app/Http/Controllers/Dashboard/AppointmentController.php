@@ -5,13 +5,18 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Property;
+use App\Models\Transaction;
+use App\Models\TransactionLogs;
 use App\Notifications\AppointmentNotification;
+use App\Services\Payments\DpAmountCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
@@ -87,8 +92,12 @@ class AppointmentController extends Controller
     /**
      * Record the result of a confirmed survey from the seller property page.
      */
-    public function recordSurveyResult(Request $request, Property $property, Appointment $appointment): RedirectResponse
-    {
+    public function recordSurveyResult(
+        Request $request,
+        Property $property,
+        Appointment $appointment,
+        DpAmountCalculator $amountCalculator,
+    ): RedirectResponse {
         Gate::authorize('view', $property);
 
         abort_unless($appointment->property_id === $property->id, 404);
@@ -116,7 +125,9 @@ class AppointmentController extends Controller
             ? $validated['buyer_intent']
             : null;
 
-        $updated = DB::transaction(function () use ($appointment, $validated, $buyerIntent, $property): int {
+        $updated = DB::transaction(function () use ($appointment, $validated, $buyerIntent, $property, $request, $amountCalculator): int {
+            $lockedProperty = Property::query()->lockForUpdate()->findOrFail($property->getKey());
+
             $updated = Appointment::query()
                 ->whereKey($appointment->getKey())
                 ->where('status', Appointment::STATUS_CONFIRMED)
@@ -132,9 +143,48 @@ class AppointmentController extends Controller
             }
 
             if ($buyerIntent === Appointment::BUYER_INTENT_DEAL) {
-                Property::query()
-                    ->whereKey($property->getKey())
-                    ->update(['status' => 'reserved']);
+                if ($lockedProperty->category === 'sale') {
+                    $existingTransaction = Transaction::query()
+                        ->where('property_id', $lockedProperty->getKey())
+                        ->where('state', '!=', 'refunded')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($existingTransaction !== null && $existingTransaction->buyer_id !== $appointment->buyer_id) {
+                        throw ValidationException::withMessages([
+                            'status' => 'Properti ini sudah memiliki transaksi aktif dengan pembeli lain.',
+                        ]);
+                    }
+
+                    if ($existingTransaction === null && $lockedProperty->status !== 'published') {
+                        throw ValidationException::withMessages([
+                            'status' => 'Properti tidak lagi tersedia untuk transaksi baru.',
+                        ]);
+                    }
+
+                    if ($existingTransaction === null) {
+                        $dpAmount = $amountCalculator->calculate($lockedProperty->price);
+                        $transaction = Transaction::query()->create([
+                            'uuid' => (string) Str::uuid(),
+                            'property_id' => $lockedProperty->getKey(),
+                            'buyer_id' => $appointment->buyer_id,
+                            'seller_id' => $lockedProperty->seller_id,
+                            'booking_fee_amount' => $dpAmount,
+                            'total_property_amount' => $lockedProperty->price,
+                            'state' => 'draft',
+                        ]);
+
+                        TransactionLogs::query()->create([
+                            'transaction_id' => $transaction->getKey(),
+                            'actor_id' => $request->user()->getKey(),
+                            'from_state' => 'none',
+                            'to_state' => 'draft',
+                            'notes' => 'Transaksi dibuat setelah survei selesai dan pembeli menyatakan minat. DP dihitung sesuai konfigurasi transaksi.',
+                        ]);
+                    }
+                }
+
+                $lockedProperty->update(['status' => 'reserved']);
             }
 
             return $updated;

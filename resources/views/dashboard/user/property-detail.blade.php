@@ -292,6 +292,10 @@
                                     'icon' => 'M7 3h10v13H7zM10 7h4m-4 3h4m-2 5v6l2-1.5L16 21v-6',
                                 ],
                             ];
+                            $ppatMeetingCompleted = in_array($selectedAppointment->ppat_meeting_status, [
+                                \App\Models\Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+                                \App\Models\Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+                            ], true);
                         @endphp
 
                         <div class="space-y-5">
@@ -384,9 +388,72 @@
                                                                 @endif
                                                             </div>
                                                         @elseif ($index === 1)
-                                                            <p class="mt-2 text-xs leading-5 text-slate-500">
-                                                                Pembayaran uang muka aman melalui rekening penampung (escrow).
-                                                            </p>
+                                                            <div class="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white p-3 text-left">
+                                                                @if ($transaction?->state === 'dp_paid')
+                                                                    <p class="text-xs font-semibold text-emerald-700">
+                                                                        DP terkonfirmasi. Dana dicatat sebagai dana cadangan Mihom dan belum dapat dicairkan kepada penjual.
+                                                                    </p>
+                                                                @elseif ($dpPaymentAttempt?->status === \App\Models\DpPaymentAttempt::STATUS_PENDING)
+                                                                    <div class="space-y-2">
+                                                                        <p class="text-xs font-semibold text-slate-700">
+                                                                            Transfer tepat
+                                                                            <span class="text-secondary">Rp {{ number_format((float) $dpPaymentAttempt->amount, 0, ',', '.') }}</span>
+                                                                            ke Virtual Account {{ $dpPaymentAttempt->channel_code }} berikut:
+                                                                        </p>
+                                                                        <p class="rounded-md bg-slate-50 px-3 py-2 font-mono text-sm font-bold tracking-wider text-secondary">
+                                                                            {{ $dpPaymentAttempt->virtual_account_number }}
+                                                                        </p>
+                                                                        <p class="text-xs leading-5 text-slate-500">
+                                                                            Selesaikan sebelum
+                                                                            {{ $dpPaymentAttempt->expires_at->locale('id')->translatedFormat('d F Y, H:i') }} WIB.
+                                                                            Status diperbarui setelah pembayaran dikonfirmasi oleh Xendit.
+                                                                        </p>
+                                                                    </div>
+                                                                @elseif ($transaction?->state === 'draft' && $selectedAppointment->buyer_intent === \App\Models\Appointment::BUYER_INTENT_DEAL)
+                                                                    @if ($ppatMeetingCompleted)
+                                                                        @if (in_array($dpPaymentAttempt?->status, [
+                                                                        \App\Models\DpPaymentAttempt::STATUS_EXPIRED,
+                                                                        \App\Models\DpPaymentAttempt::STATUS_FAILED,
+                                                                        \App\Models\DpPaymentAttempt::STATUS_CANCELED,
+                                                                    ], true))
+                                                                            <p class="text-xs text-amber-700">
+                                                                                VA sebelumnya tidak berlaku lagi. Buat VA baru untuk melanjutkan pembayaran DP.
+                                                                            </p>
+                                                                        @endif
+                                                                        @if ($dpPaymentAttempt?->status === \App\Models\DpPaymentAttempt::STATUS_CREATING)
+                                                                            <p class="text-xs text-slate-500">
+                                                                                Pembuatan VA belum terkonfirmasi. Coba lagi untuk melanjutkan permintaan yang sama.
+                                                                            </p>
+                                                                        @endif
+                                                                        <p class="text-xs leading-5 text-slate-500">
+                                                                            DP sebesar Rp {{ number_format((float) ($dpPaymentAttempt?->amount ?? $requiredDpAmount), 0, ',', '.') }}.
+                                                                            Dana akan dicatat sebagai dana cadangan dan tidak dicairkan kepada penjual pada tahap ini.
+                                                                        </p>
+                                                                        @can('transactions.initiate_dp')
+                                                                            <form method="POST"
+                                                                                action="{{ route('buyer.dp-payments.store', ['transaction' => $transaction->uuid]) }}">
+                                                                                @csrf
+                                                                                <button type="submit"
+                                                                                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                                                                                    {{ $dpPaymentAttempt?->status === \App\Models\DpPaymentAttempt::STATUS_CREATING ? 'Coba lagi membuat VA' : 'Bayar DP' }}
+                                                                                </button>
+                                                                            </form>
+                                                                        @endcan
+                                                                    @else
+                                                                        <p class="text-xs leading-5 text-amber-700">
+                                                                            Pembayaran DP terkunci sampai jadwal temu PPAT disetujui.
+                                                                        </p>
+                                                                    @endif
+                                                                @else
+                                                                    <p class="text-xs leading-5 text-slate-500">
+                                                                        Pembayaran DP aman melalui Virtual Account setelah transaksi jual beli memenuhi syarat.
+                                                                    </p>
+                                                                @endif
+
+                                                                @error('dp_payment')
+                                                                    <p role="alert" class="text-xs font-medium text-rose-700">{{ $message }}</p>
+                                                                @enderror
+                                                            </div>
                                                         @elseif ($index === 2)
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
                                                                 Verifikasi keabsahan sertifikat di BPN dan validasi kewajiban pajak (PPh & BPHTB).
@@ -705,4 +772,3 @@
         </div>
     </div>
 @endsection
-

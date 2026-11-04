@@ -41,4 +41,18 @@ return [
         'chat_model' => env('GROQ_CHAT_MODEL', 'qwen/qwen3.8-27b'),
     ],
 
+    'mihom' => [
+        'dp_percentage' => env('MIHOM_DP_PERCENTAGE', 10),
+    ],
+
+    'xendit' => [
+        'environment' => env('XENDIT_ENVIRONMENT', 'sandbox'),
+        'sandbox_secret_key' => env('XENDIT_SANDBOX_SECRET_KEY'),
+        'production_secret_key' => env('XENDIT_PRODUCTION_SECRET_KEY'),
+        'sandbox_webhook_token' => env('XENDIT_SANDBOX_WEBHOOK_TOKEN'),
+        'production_webhook_token' => env('XENDIT_PRODUCTION_WEBHOOK_TOKEN'),
+        'virtual_account_channel_code' => env('XENDIT_DP_VA_CHANNEL_CODE', 'BNI'),
+        'virtual_account_expiry_hours' => env('XENDIT_DP_VA_EXPIRY_HOURS', 24),
+    ],
+
 ];

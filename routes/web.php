@@ -5,6 +5,7 @@ use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\Dashboard\AdminController;
 use App\Http\Controllers\Dashboard\AppointmentController;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Dashboard\DpPaymentController;
 use App\Http\Controllers\Dashboard\LandDeedController;
 use App\Http\Controllers\Dashboard\ListingController;
 use App\Http\Controllers\Dashboard\NotificationController;
@@ -39,7 +40,6 @@ Route::get('/kontak', [HomeController::class, 'contact'])->name('contact');
 Route::post('/api/chat', [ChatbotController::class, 'ask'])
     ->middleware('throttle:10,1')
     ->name('chatbot.reply');
-
 Route::get('/masuk', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/masuk', [AuthController::class, 'login']);
 Route::post('/keluar', [AuthController::class, 'logout'])->name('logout');
@@ -141,6 +141,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/properti-dibeli/{property:uuid}', [UserController::class, 'showBoughtProperty'])
             ->whereUuid('property')
             ->name('bought-properties.show');
+        Route::post('/transaksi/{transaction:uuid}/dp', [DpPaymentController::class, 'store'])
+            ->whereUuid('transaction')
+            ->middleware(['throttle:10,1', 'permission:transactions.initiate_dp'])
+            ->name('dp-payments.store');
     });
 
     Route::post('/jadwal-survei/{appointment}/status', [AppointmentController::class, 'updateStatus'])

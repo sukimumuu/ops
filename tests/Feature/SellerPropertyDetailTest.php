@@ -118,6 +118,7 @@ it('shows the purchase timeline and PPAT date picker when the buyer is intereste
         ->assertSeeText('Pembeli Berminat')
         ->assertSeeText('Berminat membeli')
         ->assertSeeText('Pilih Jadwal Temu PPAT')
+        ->assertSeeText('Tahap ini terkunci sampai jadwal temu PPAT disetujui.')
         ->assertSeeText('Pembayaran DP')
         ->assertSeeText('Pengecekan Legalitas BPN & Validasi Pajak')
         ->assertSeeText('Pelunasan Properti (Escrow)')
