@@ -9,7 +9,7 @@
     <link rel="icon" href="{{ asset('assets/png/favicongray.ico') }}" media="(prefers-color-scheme: light)">
     <link rel="icon" href="{{ asset('assets/png/faviconwhite.ico') }}" media="(prefers-color-scheme: dark)">
     <title>{{ $user->name }} - Profil & Katalog Penjualan | Mihom</title>
-    @vite(['resources/css/app.css', 'resources/css/welcome.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="font-manrope bg-[#F8FAFC] text-secondary antialiased min-h-screen flex flex-col justify-between">
@@ -31,16 +31,23 @@
         </div>
 
         <!-- Banner Header (Pinhome Style) -->
-        <div class="relative w-full h-44 sm:h-56 md:h-64 bg-gradient-to-r from-secondary via-[#1e293b] to-secondary overflow-hidden">
+        <div
+            class="relative w-full h-44 sm:h-56 md:h-64 bg-gradient-to-r from-secondary via-[#1e293b] to-secondary overflow-hidden">
             <!-- Decorative wave & subtle background patterns -->
             <div class="absolute inset-0 opacity-20 pointer-events-none">
-                <svg class="w-full h-full object-cover" viewBox="0 0 1440 320" fill="none" preserveAspectRatio="none">
-                    <path fill="#FC4907" fill-opacity="0.3" d="M0,192L48,197.3C96,203,192,213,288,197.3C384,181,480,139,576,144C672,149,768,203,864,224C960,245,1056,235,1152,208C1248,181,1344,139,1392,117.3L1440,96L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"></path>
-                    <path fill="#ffffff" fill-opacity="0.1" d="M0,64L48,96C96,128,192,192,288,192C384,192,480,128,576,122.7C672,117,768,171,864,192C960,213,1056,203,1152,176C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                <svg class="w-full h-full object-cover" viewBox="0 0 1440 320" fill="none"
+                    preserveAspectRatio="none">
+                    <path fill="#FC4907" fill-opacity="0.3"
+                        d="M0,192L48,197.3C96,203,192,213,288,197.3C384,181,480,139,576,144C672,149,768,203,864,224C960,245,1056,235,1152,208C1248,181,1344,139,1392,117.3L1440,96L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z">
+                    </path>
+                    <path fill="#ffffff" fill-opacity="0.1"
+                        d="M0,64L48,96C96,128,192,192,288,192C384,192,480,128,576,122.7C672,117,768,171,864,192C960,213,1056,203,1152,176C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z">
+                    </path>
                 </svg>
             </div>
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between relative z-10">
-                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white/90 text-xs font-semibold">
+                <span
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white/90 text-xs font-semibold">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     Profil Penjual Resmi Mihom
                 </span>
@@ -67,43 +74,50 @@
                             <div class="absolute bottom-1 right-1 bg-emerald-500 text-white p-1 rounded-full ring-2 ring-white shadow-sm"
                                 title="Penjual Terverifikasi">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
                                 </svg>
                             </div>
                         </div>
 
                         <div class="space-y-1.5 min-w-0">
                             <div class="flex flex-wrap items-center gap-2.5">
-                                <h1 class="font-outfit text-2xl sm:text-3xl font-extrabold text-secondary tracking-tight">
+                                <h1
+                                    class="font-outfit text-2xl sm:text-3xl font-extrabold text-secondary tracking-tight">
                                     {{ $user->name }}
                                 </h1>
-                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                                <span
+                                    class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                     </svg>
                                     Pemilik Properti
                                 </span>
                             </div>
 
                             <p class="text-sm text-gray-500 flex items-center gap-1.5 flex-wrap">
-                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 <span>
-                                    {{ collect([$user->district, $user->city, $user->province])->filter()->implode(', ') ?: ($cities->first() ? 'Wilayah ' . $cities->join(', ') : 'Indonesia') }}
+                                    {{ collect([$user->district, $user->city, $user->province])->filter()->implode(', ') ?:($cities->first()? 'Wilayah ' . $cities->join(', '): 'Indonesia') }}
                                 </span>
                             </p>
 
                             <div class="flex items-center gap-4 pt-1 text-xs text-gray-400">
                                 <span class="flex items-center gap-1">
-                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    Bergabung {{ $user->created_at ? $user->created_at->locale('id')->translatedFormat('F Y') : 'Baru' }}
+                                    Bergabung
+                                    {{ $user->created_at ? $user->created_at->locale('id')->translatedFormat('F Y') : 'Baru' }}
                                 </span>
                                 <span>&bull;</span>
                                 <span class="font-semibold text-secondary">
@@ -135,7 +149,8 @@
                                 <span>Telepon</span>
                             </a>
                         @endif
-                        <button onclick="navigator.clipboard.writeText(window.location.href); alert('Tautan profil berhasil disalin!');"
+                        <button
+                            onclick="navigator.clipboard.writeText(window.location.href); alert('Tautan profil berhasil disalin!');"
                             class="inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold text-sm transition-colors"
                             title="Bagikan Halaman">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,7 +163,8 @@
                 </div>
 
                 <!-- Stats Badges Bar -->
-                <div class="mt-8 pt-6 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center sm:text-left">
+                <div
+                    class="mt-8 pt-6 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center sm:text-left">
                     <div class="bg-gray-50/70 rounded-2xl p-4 border border-gray-100">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Properti</p>
                         <p class="font-outfit text-2xl font-extrabold text-secondary">{{ $totalProperties }}</p>
@@ -162,8 +178,10 @@
                         <p class="font-outfit text-2xl font-extrabold text-blue-600">{{ $totalRent }}</p>
                     </div>
                     <div class="bg-gray-50/70 rounded-2xl p-4 border border-gray-100">
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Cakupan Wilayah</p>
-                        <p class="font-outfit text-2xl font-extrabold text-secondary">{{ $cities->count() ?: 1 }} Kota</p>
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Cakupan Wilayah
+                        </p>
+                        <p class="font-outfit text-2xl font-extrabold text-secondary">{{ $cities->count() ?: 1 }} Kota
+                        </p>
                     </div>
                 </div>
             </div>
@@ -179,7 +197,9 @@
                 </h2>
                 <div class="text-sm text-gray-600 leading-relaxed space-y-3">
                     <p>
-                        {{ $user->name }} adalah pemilik properti terverifikasi di platform Mihom. Semua listing yang dipublikasikan oleh akun ini telah melalui verifikasi keaslian awal, didukung dengan data sertifikat yang jelas, dan terbuka untuk negosiasi langsung serta penjadwalan survei ke lokasi.
+                        {{ $user->name }} adalah pemilik properti terverifikasi di platform Mihom. Semua listing yang
+                        dipublikasikan oleh akun ini telah melalui verifikasi keaslian awal, didukung dengan data
+                        sertifikat yang jelas, dan terbuka untuk negosiasi langsung serta penjadwalan survei ke lokasi.
                     </p>
                     @if ($user->address)
                         <p class="text-gray-500">
@@ -191,36 +211,46 @@
                 <!-- Trust Points -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-100">
                     <div class="flex items-start gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <div
+                            class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
                         <div>
                             <h4 class="text-sm font-bold text-secondary">Terverifikasi Resmi</h4>
-                            <p class="text-xs text-gray-500 mt-0.5">Identitas pemilik telah terdaftar di sistem Mihom</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Identitas pemilik telah terdaftar di sistem Mihom
+                            </p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                        <div
+                            class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
                         <div>
                             <h4 class="text-sm font-bold text-secondary">Respon Langsung</h4>
-                            <p class="text-xs text-gray-500 mt-0.5">Dapat dihubungi secara langsung melalui WhatsApp atau telepon</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Dapat dihubungi secara langsung melalui WhatsApp
+                                atau telepon</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                        <div
+                            class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                </path>
                             </svg>
                         </div>
                         <div>
                             <h4 class="text-sm font-bold text-secondary">Survei Terjadwal</h4>
-                            <p class="text-xs text-gray-500 mt-0.5">Fasilitas pengajuan jadwal survei langsung dari halaman properti</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Fasilitas pengajuan jadwal survei langsung dari
+                                halaman properti</p>
                         </div>
                     </div>
                 </div>
@@ -230,7 +260,8 @@
             <div id="katalog" class="scroll-mt-24">
                 <div class="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
                     <div>
-                        <span class="text-xs font-bold text-primary tracking-wider uppercase mb-1 block">Katalog Penjualan</span>
+                        <span class="text-xs font-bold text-primary tracking-wider uppercase mb-1 block">Katalog
+                            Penjualan</span>
                         <h2 class="font-outfit text-2xl sm:text-3xl font-extrabold text-secondary">
                             Daftar Properti ({{ $properties->total() }})
                         </h2>
@@ -241,23 +272,31 @@
 
                     <!-- Sort Dropdown (Pinhome Style: "Terbaru") -->
                     <div class="flex items-center gap-3">
-                        <label for="sortSelector" class="text-xs font-semibold text-gray-500 whitespace-nowrap">Urutkan:</label>
-                        <form method="GET" action="{{ route('user-details', ['uuid' => $user->uuid]) }}" id="sortForm">
-                            @if(request('category'))
+                        <label for="sortSelector"
+                            class="text-xs font-semibold text-gray-500 whitespace-nowrap">Urutkan:</label>
+                        <form method="GET" action="{{ route('user-details', ['uuid' => $user->uuid]) }}"
+                            id="sortForm">
+                            @if (request('category'))
                                 <input type="hidden" name="category" value="{{ request('category') }}">
                             @endif
-                            @if(request('type'))
+                            @if (request('type'))
                                 <input type="hidden" name="type" value="{{ request('type') }}">
                             @endif
                             <div class="relative">
-                                <select name="sort" id="sortSelector" onchange="document.getElementById('sortForm').submit()"
+                                <select name="sort" id="sortSelector"
+                                    onchange="document.getElementById('sortForm').submit()"
                                     class="appearance-none bg-white border border-gray-200 text-secondary font-bold text-xs sm:text-sm rounded-xl px-4 py-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-sm">
-                                    <option value="terbaru" {{ $sort === 'terbaru' ? 'selected' : '' }}>Terbaru</option>
-                                    <option value="termurah" {{ $sort === 'termurah' ? 'selected' : '' }}>Harga Terendah</option>
-                                    <option value="termahal" {{ $sort === 'termahal' ? 'selected' : '' }}>Harga Tertinggi</option>
+                                    <option value="terbaru" {{ $sort === 'terbaru' ? 'selected' : '' }}>Terbaru
+                                    </option>
+                                    <option value="termurah" {{ $sort === 'termurah' ? 'selected' : '' }}>Harga
+                                        Terendah</option>
+                                    <option value="termahal" {{ $sort === 'termahal' ? 'selected' : '' }}>Harga
+                                        Tertinggi</option>
                                 </select>
-                                <svg class="w-4 h-4 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                <svg class="w-4 h-4 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 9l-7 7-7-7" />
                                 </svg>
                             </div>
                         </form>
@@ -296,16 +335,20 @@
                     @forelse ($properties as $property)
                         <x-property-card :property="$property" />
                     @empty
-                        <div class="col-span-full bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-sm">
-                            <div class="w-16 h-16 rounded-full bg-orange-50 text-primary flex items-center justify-center mx-auto mb-4">
+                        <div
+                            class="col-span-full bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-sm">
+                            <div
+                                class="w-16 h-16 rounded-full bg-orange-50 text-primary flex items-center justify-center mx-auto mb-4">
                                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                 </svg>
                             </div>
-                            <h3 class="font-outfit text-lg font-bold text-secondary mb-1">Tidak ada properti ditemukan</h3>
+                            <h3 class="font-outfit text-lg font-bold text-secondary mb-1">Tidak ada properti ditemukan
+                            </h3>
                             <p class="text-sm text-gray-500 max-w-md mx-auto mb-6">
-                                Belum ada properti terverifikasi dari penjual ini yang sesuai dengan filter yang Anda pilih.
+                                Belum ada properti terverifikasi dari penjual ini yang sesuai dengan filter yang Anda
+                                pilih.
                             </p>
                             @if (request()->hasAny(['category', 'type', 'sort']))
                                 <a href="{{ route('user-details', ['uuid' => $user->uuid]) }}"
@@ -322,18 +365,27 @@
                     @php
                         $currentPage = $properties->currentPage();
                         $lastPage = $properties->lastPage();
-                        $pageNumbers = $lastPage <= 7
-                            ? range(1, $lastPage)
-                            : array_unique(array_merge([1], range(max(2, $currentPage - 1), min($lastPage - 1, $currentPage + 1)), [$lastPage]));
+                        $pageNumbers =
+                            $lastPage <= 7
+                                ? range(1, $lastPage)
+                                : array_unique(
+                                    array_merge(
+                                        [1],
+                                        range(max(2, $currentPage - 1), min($lastPage - 1, $currentPage + 1)),
+                                        [$lastPage],
+                                    ),
+                                );
                         $previousPageNumber = null;
                     @endphp
                     <nav class="flex justify-center items-center gap-2 mt-12" aria-label="Navigasi halaman properti">
                         @if ($properties->onFirstPage())
-                            <span aria-disabled="true" class="w-10 h-10 flex justify-center items-center rounded-xl border border-gray-200 text-gray-400 opacity-50 cursor-not-allowed">
+                            <span aria-disabled="true"
+                                class="w-10 h-10 flex justify-center items-center rounded-xl border border-gray-200 text-gray-400 opacity-50 cursor-not-allowed">
                                 &larr;
                             </span>
                         @else
-                            <a href="{{ $properties->previousPageUrl() }}" rel="prev" aria-label="Halaman sebelumnya"
+                            <a href="{{ $properties->previousPageUrl() }}" rel="prev"
+                                aria-label="Halaman sebelumnya"
                                 class="w-10 h-10 flex justify-center items-center rounded-xl border border-gray-200 text-secondary hover:bg-gray-50 font-bold transition">
                                 &larr;
                             </a>
@@ -345,7 +397,8 @@
                             @endif
 
                             @if ($pageNumber === $currentPage)
-                                <span aria-current="page" class="w-10 h-10 flex justify-center items-center rounded-xl bg-primary text-white font-extrabold shadow-sm">
+                                <span aria-current="page"
+                                    class="w-10 h-10 flex justify-center items-center rounded-xl bg-primary text-white font-extrabold shadow-sm">
                                     {{ $pageNumber }}
                                 </span>
                             @else
@@ -359,12 +412,14 @@
                         @endforeach
 
                         @if ($properties->hasMorePages())
-                            <a href="{{ $properties->nextPageUrl() }}" rel="next" aria-label="Halaman berikutnya"
+                            <a href="{{ $properties->nextPageUrl() }}" rel="next"
+                                aria-label="Halaman berikutnya"
                                 class="w-10 h-10 flex justify-center items-center rounded-xl border border-gray-200 text-secondary hover:bg-gray-50 font-bold transition">
                                 &rarr;
                             </a>
                         @else
-                            <span aria-disabled="true" class="w-10 h-10 flex justify-center items-center rounded-xl border border-gray-200 text-gray-400 opacity-50 cursor-not-allowed">
+                            <span aria-disabled="true"
+                                class="w-10 h-10 flex justify-center items-center rounded-xl border border-gray-200 text-gray-400 opacity-50 cursor-not-allowed">
                                 &rarr;
                             </span>
                         @endif
@@ -373,14 +428,17 @@
             </div>
 
             <!-- Inquire Card -->
-            <div class="mt-16 bg-[#FFF7ED] rounded-3xl p-8 sm:p-10 border border-orange-100 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div
+                class="mt-16 bg-[#FFF7ED] rounded-3xl p-8 sm:p-10 border border-orange-100 flex flex-col md:flex-row items-center justify-between gap-6">
                 <div class="space-y-2 text-center md:text-left">
-                    <span class="text-xs font-bold text-primary tracking-wider uppercase">Tertarik dengan Properti Ini?</span>
+                    <span class="text-xs font-bold text-primary tracking-wider uppercase">Tertarik dengan Properti
+                        Ini?</span>
                     <h3 class="font-outfit text-2xl font-extrabold text-secondary">
                         Jadwalkan Survei Langsung dengan {{ $user->name }}
                     </h3>
                     <p class="text-sm text-gray-600 max-w-xl">
-                        Pilih properti yang Anda minati di atas untuk melihat detail lengkap, foto galeri, spesifikasi, dan mengajukan janji temu survei langsung ke lokasi.
+                        Pilih properti yang Anda minati di atas untuk melihat detail lengkap, foto galeri, spesifikasi,
+                        dan mengajukan janji temu survei langsung ke lokasi.
                     </p>
                 </div>
                 @if ($user->phone)

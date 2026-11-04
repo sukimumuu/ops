@@ -9,7 +9,7 @@
     <link rel="icon" href="{{ asset('assets/png/favicongray.ico') }}" media="(prefers-color-scheme: light)">
     <link rel="icon" href="{{ asset('assets/png/faviconwhite.ico') }}" media="(prefers-color-scheme: dark)">
     <title>{{ $property->title }} - Mihom</title>
-    @vite(['resources/css/app.css', 'resources/css/welcome.css', 'resources/css/detail-properti.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="font-manrope bg-white text-secondary antialiased">
@@ -126,7 +126,8 @@
                         @else
                             <div class="h-full w-full bg-gray-200"></div>
                         @endif
-                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300">
+                        <div
+                            class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300">
                         </div>
                     </div>
                     <!-- Thumbnail 2 (bottom-right) -->
@@ -188,11 +189,10 @@
                             @if ($isSaved)
                                 @method('DELETE')
                             @endif
-                            <button type="submit" id="btnSave"
-                                aria-pressed="{{ $isSaved ? 'true' : 'false' }}"
+                            <button type="submit" id="btnSave" aria-pressed="{{ $isSaved ? 'true' : 'false' }}"
                                 class="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition {{ $isSaved ? 'bg-primary text-white hover:bg-primary/90' : 'bg-white/10 hover:bg-white/20 text-white' }}">
-                                <svg class="w-4 h-4" fill="{{ $isSaved ? 'currentColor' : 'none' }}" stroke="currentColor"
-                                    viewBox="0 0 24 24" aria-hidden="true">
+                                <svg class="w-4 h-4" fill="{{ $isSaved ? 'currentColor' : 'none' }}"
+                                    stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                 </svg>
@@ -535,7 +535,8 @@
                                 class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-[#df3f05] transition">
                                 <span>Lihat Profil &amp; Katalog</span>
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7" />
                                 </svg>
                             </a>
                         </div>
@@ -543,7 +544,8 @@
                             class="group flex items-center gap-4 p-2 -mx-2 rounded-xl hover:bg-gray-50 transition">
                             <div class="relative flex-shrink-0">
                                 @if ($property->seller->avatar_path)
-                                    <img src="{{ $property->seller->avatar_url }}" alt="{{ $property->seller->name }}"
+                                    <img src="{{ $property->seller->avatar_url }}"
+                                        alt="{{ $property->seller->name }}"
                                         class="w-16 h-16 rounded-full object-cover ring-2 ring-primary/20 ring-offset-2">
                                 @else
                                     <div
@@ -551,10 +553,13 @@
                                         {{ strtoupper(substr($property->seller->name, 0, 1)) }}
                                     </div>
                                 @endif
-                                <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+                                <span
+                                    class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h4 class="text-base font-extrabold text-secondary group-hover:text-primary transition truncate">{{ $property->seller->name }}</h4>
+                                <h4
+                                    class="text-base font-extrabold text-secondary group-hover:text-primary transition truncate">
+                                    {{ $property->seller->name }}</h4>
                                 <p class="text-xs text-gray-400">Pemilik properti</p>
                                 <div class="flex items-center gap-3 mt-2">
                                     <span class="text-[11px] text-primary font-semibold flex items-center gap-1">
@@ -575,7 +580,8 @@
                                 class="group flex items-center gap-3 mb-4 p-1.5 -mx-1.5 rounded-xl hover:bg-gray-50 transition">
                                 <div class="relative flex-shrink-0">
                                     @if ($property->seller->avatar_path)
-                                        <img src="{{ $property->seller->avatar_url }}" alt="{{ $property->seller->name }}"
+                                        <img src="{{ $property->seller->avatar_url }}"
+                                            alt="{{ $property->seller->name }}"
                                             class="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20">
                                     @else
                                         <div
@@ -583,21 +589,25 @@
                                             {{ strtoupper(substr($property->seller->name, 0, 1)) }}
                                         </div>
                                     @endif
-                                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+                                    <span
+                                        class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h4 class="text-sm font-extrabold text-secondary group-hover:text-primary transition truncate">
+                                    <h4
+                                        class="text-sm font-extrabold text-secondary group-hover:text-primary transition truncate">
                                         {{ $property->seller->name }}
                                     </h4>
                                     <p class="text-xs text-gray-400">Pemilik properti</p>
                                 </div>
-                                <svg class="w-4 h-4 text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                <svg class="w-4 h-4 text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition flex-shrink-0"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7" />
                                 </svg>
                             </a>
 
-                            <a href="https://wa.me/{{ $property->seller->phone }}"
-                                target="_blank" rel="noopener noreferrer"
+                            <a href="https://wa.me/{{ $property->seller->phone }}" target="_blank"
+                                rel="noopener noreferrer"
                                 class="flex items-center justify-center gap-2 w-full bg-primary hover:bg-[#df3f05] text-white font-bold py-3 rounded-xl text-sm transition mb-2.5">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                     <path
@@ -618,14 +628,17 @@
                             <a href="{{ route('user-details', ['uuid' => $property->seller->uuid]) }}"
                                 class="flex items-center justify-center gap-2 w-full bg-gray-50 hover:bg-gray-100 text-secondary hover:text-primary font-bold py-2.5 rounded-xl text-xs transition border border-gray-100">
                                 <span>Lihat Profil &amp; Katalog Penjualan</span>
-                                <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                 </svg>
                             </a>
                         </div>
 
                         <!-- Schedule Visit Card -->
-                        <div id="visit" class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm scroll-mt-24">
+                        <div id="visit"
+                            class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm scroll-mt-24">
                             <h4 class="text-sm font-extrabold text-secondary mb-3 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor"
                                     viewBox="0 0 24 24">
@@ -634,41 +647,68 @@
                                 </svg>
                                 Jadwalkan Kunjungan
                             </h4>
-                            <p class="text-xs text-gray-400 mb-4">Pilih tanggal dan waktu untuk melihat properti ini secara langsung</p>
+                            <p class="text-xs text-gray-400 mb-4">Pilih tanggal dan waktu untuk melihat properti ini
+                                secara langsung</p>
 
                             @if (session('success'))
-                                <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-semibold text-green-700">
-                                    <svg class="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <div
+                                    class="mb-4 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 p-3 text-xs font-semibold text-green-700">
+                                    <svg class="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5 13l4 4L19 7" />
+                                    </svg>
                                     <span>{{ session('success') }}</span>
                                 </div>
                             @endif
 
                             @if (session('error'))
-                                <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
-                                    <svg class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <div
+                                    class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                                    <svg class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
                                     <span>{{ session('error') }}</span>
                                 </div>
                             @endif
 
                             @if ($errors->has('scheduled_at'))
-                                <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
-                                    <svg class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <div
+                                    class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                                    <svg class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
                                     <span>{{ $errors->first('scheduled_at') }}</span>
                                 </div>
                             @endif
 
                             @if ($activeAppointment)
                                 @php($isConfirmed = $activeAppointment->status === \App\Models\Appointment::STATUS_CONFIRMED)
-                                <div class="rounded-xl border {{ $isConfirmed ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50' }} p-3">
-                                    <div class="flex items-center gap-2 text-xs font-extrabold {{ $isConfirmed ? 'text-green-700' : 'text-amber-700' }}">
+                                <div
+                                    class="rounded-xl border {{ $isConfirmed ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50' }} p-3">
+                                    <div
+                                        class="flex items-center gap-2 text-xs font-extrabold {{ $isConfirmed ? 'text-green-700' : 'text-amber-700' }}">
                                         @if ($isConfirmed)
-                                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M5 13l4 4L19 7" />
+                                            </svg>
                                         @else
-                                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
                                         @endif
                                         {{ $isConfirmed ? 'Jadwal Dikonfirmasi' : 'Menunggu Konfirmasi' }}
                                     </div>
-                                    <p class="mt-1.5 text-xs font-semibold {{ $isConfirmed ? 'text-green-700' : 'text-amber-700' }}">
+                                    <p
+                                        class="mt-1.5 text-xs font-semibold {{ $isConfirmed ? 'text-green-700' : 'text-amber-700' }}">
                                         {{ $activeAppointment->scheduled_at->locale('id')->translatedFormat('l, d F Y') }}
                                         &middot; {{ $activeAppointment->scheduled_at->format('H:i') }} WIB
                                     </p>
@@ -682,69 +722,81 @@
                                 <a href="{{ route('buyer.survey-schedule') }}"
                                     class="mt-2.5 flex items-center justify-center gap-1.5 text-xs font-bold text-primary transition hover:underline">
                                     Lihat detail jadwal kunjungan
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7" />
                                     </svg>
                                 </a>
                             @else
-                            <form action="{{ route('property.schedule-visit', ['uuid' => $property->uuid]) }}" method="POST" id="scheduleVisitForm" class="space-y-3">
-                                @csrf
-                                <div>
-                                    <label for="visitDateInput" class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Pilih Tanggal Kunjungan</label>
-                                    <div class="relative">
-                                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary pointer-events-none">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        </span>
-                                        <input
-                                            type="date"
-                                            id="visitDateInput"
-                                            name="scheduled_at"
-                                            min="{{ now()->format('Y-m-d') }}"
-                                            value="{{ old('scheduled_at', now()->format('Y-m-d')) }}"
-                                            class="visit-calendar-input w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-11 pr-4 text-sm font-semibold text-secondary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition cursor-pointer"
-                                            required
-                                        >
+                                <form action="{{ route('property.schedule-visit', ['uuid' => $property->uuid]) }}"
+                                    method="POST" id="scheduleVisitForm" class="space-y-3">
+                                    @csrf
+                                    <div>
+                                        <label for="visitDateInput"
+                                            class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Pilih
+                                            Tanggal Kunjungan</label>
+                                        <div class="relative">
+                                            <span
+                                                class="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary pointer-events-none">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                            </span>
+                                            <input type="date" id="visitDateInput" name="scheduled_at"
+                                                min="{{ now()->format('Y-m-d') }}"
+                                                value="{{ old('scheduled_at', now()->format('Y-m-d')) }}"
+                                                class="visit-calendar-input w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-11 pr-4 text-sm font-semibold text-secondary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition cursor-pointer"
+                                                required>
+                                        </div>
+                                        <div
+                                            class="mt-2 flex items-center justify-between text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">
+                                            <span class="flex items-center gap-1.5 font-medium">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+                                                <span
+                                                    id="visitDateFormatted">{{ now()->locale('id')->translatedFormat('l, d F Y') }}</span>
+                                            </span>
+                                            <span id="visitTimeFormatted"
+                                                class="text-[10px] text-primary bg-primary/10 font-bold px-2 py-0.5 rounded-full border border-primary/20">
+                                                {{ str_replace(':', '.', old('scheduled_time', $timeSlots[0])) }} WIB
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div class="mt-2 flex items-center justify-between text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">
-                                        <span class="flex items-center gap-1.5 font-medium">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
-                                            <span id="visitDateFormatted">{{ now()->locale('id')->translatedFormat('l, d F Y') }}</span>
-                                        </span>
-                                        <span id="visitTimeFormatted" class="text-[10px] text-primary bg-primary/10 font-bold px-2 py-0.5 rounded-full border border-primary/20">
-                                            {{ str_replace(':', '.', old('scheduled_time', $timeSlots[0])) }} WIB
-                                        </span>
-                                    </div>
-                                </div>
 
-                                <div>
-                                    <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Pilih Waktu Kunjungan</label>
-                                    <div class="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Pilih waktu kunjungan">
-                                        @foreach ($timeSlots as $slot)
-                                            <label class="cursor-pointer">
-                                                <input
-                                                    type="radio"
-                                                    name="scheduled_time"
-                                                    value="{{ $slot }}"
-                                                    class="peer sr-only"
-                                                    @checked(old('scheduled_time', $timeSlots[0]) === $slot)
-                                                    required
-                                                >
-                                                <span class="flex flex-col items-center gap-0.5 rounded-xl border border-gray-200 bg-gray-50 px-2 py-2.5 text-center text-sm font-extrabold text-secondary transition hover:border-primary/40 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30">
-                                                    {{ str_replace(':', '.', $slot) }}
-                                                    <span class="text-[10px] font-semibold uppercase tracking-wider opacity-60">WIB</span>
-                                                </span>
-                                            </label>
-                                        @endforeach
+                                    <div>
+                                        <label
+                                            class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Pilih
+                                            Waktu Kunjungan</label>
+                                        <div class="grid grid-cols-3 gap-2" role="radiogroup"
+                                            aria-label="Pilih waktu kunjungan">
+                                            @foreach ($timeSlots as $slot)
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="scheduled_time"
+                                                        value="{{ $slot }}" class="peer sr-only"
+                                                        @checked(old('scheduled_time', $timeSlots[0]) === $slot) required>
+                                                    <span
+                                                        class="flex flex-col items-center gap-0.5 rounded-xl border border-gray-200 bg-gray-50 px-2 py-2.5 text-center text-sm font-extrabold text-secondary transition hover:border-primary/40 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30">
+                                                        {{ str_replace(':', '.', $slot) }}
+                                                        <span
+                                                            class="text-[10px] font-semibold uppercase tracking-wider opacity-60">WIB</span>
+                                                    </span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                        @if ($errors->has('scheduled_time'))
+                                            <p class="mt-2 text-xs font-semibold text-red-600">
+                                                {{ $errors->first('scheduled_time') }}</p>
+                                        @endif
                                     </div>
-                                    @if ($errors->has('scheduled_time'))
-                                        <p class="mt-2 text-xs font-semibold text-red-600">{{ $errors->first('scheduled_time') }}</p>
-                                    @endif
-                                </div>
 
-                                <button type="submit" class="w-full bg-secondary hover:bg-secondary/90 text-white font-bold py-3 rounded-xl text-sm transition shadow-sm hover:shadow active:scale-[0.99]">
-                                    Atur Jadwal Kunjungan
-                                </button>
-                            </form>
+                                    <button type="submit"
+                                        class="w-full bg-secondary hover:bg-secondary/90 text-white font-bold py-3 rounded-xl text-sm transition shadow-sm hover:shadow active:scale-[0.99]">
+                                        Atur Jadwal Kunjungan
+                                    </button>
+                                </form>
                             @endif
                         </div>
 
@@ -815,8 +867,8 @@
                             class="similar-card block overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
                             <div class="relative">
                                 @if ($relatedProperty->image_url)
-                                    <img src="{{ $relatedProperty->image_url }}" alt="{{ $relatedProperty->title }}"
-                                        class="h-48 w-full object-cover">
+                                    <img src="{{ $relatedProperty->image_url }}"
+                                        alt="{{ $relatedProperty->title }}" class="h-48 w-full object-cover">
                                 @else
                                     <div class="h-48 w-full bg-gray-200"></div>
                                 @endif
@@ -1061,20 +1113,25 @@
         // === Visit date calendar handling ===
         const visitDateInput = document.getElementById('visitDateInput');
         const visitDateFormatted = document.getElementById('visitDateFormatted');
-        const todayStr = '{{ now()->format("Y-m-d") }}';
+        const todayStr = '{{ now()->format('Y-m-d') }}';
 
         function formatDisplayDate(dateStr) {
             if (!dateStr || !visitDateFormatted) return;
             const parts = dateStr.split('-');
             if (parts.length === 3) {
                 const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-                const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                const options = {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                };
                 visitDateFormatted.textContent = dateObj.toLocaleDateString('id-ID', options);
             }
         }
 
         if (visitDateInput) {
-            visitDateInput.addEventListener('click', function () {
+            visitDateInput.addEventListener('click', function() {
                 if (typeof this.showPicker === 'function') {
                     try {
                         this.showPicker();
@@ -1082,14 +1139,14 @@
                 }
             });
 
-            visitDateInput.addEventListener('change', function () {
+            visitDateInput.addEventListener('change', function() {
                 if (this.value && this.value < todayStr) {
                     this.value = todayStr;
                 }
                 formatDisplayDate(this.value);
             });
 
-            visitDateInput.addEventListener('input', function () {
+            visitDateInput.addEventListener('input', function() {
                 if (this.value && this.value < todayStr) {
                     this.value = todayStr;
                 }
@@ -1102,7 +1159,7 @@
         const visitTimeFormatted = document.getElementById('visitTimeFormatted');
 
         visitTimeInputs.forEach((input) => {
-            input.addEventListener('change', function () {
+            input.addEventListener('change', function() {
                 if (!this.checked || !visitTimeFormatted) return;
                 visitTimeFormatted.textContent = `${this.value.replace(':', '.')} WIB`;
             });

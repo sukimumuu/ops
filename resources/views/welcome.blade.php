@@ -10,7 +10,7 @@
     <link rel="icon" href="{{ asset('assets/png/favicongray.ico') }}" media="(prefers-color-scheme: light)">
     <link rel="icon" href="{{ asset('assets/png/faviconwhite.ico') }}" media="(prefers-color-scheme: dark)">
     <title>Mihom - Temukan Properti Impian Anda</title>
-    @vite(['resources/css/app.css', 'resources/css/welcome.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="m-0 bg-white font-sans text-secondary antialiased">

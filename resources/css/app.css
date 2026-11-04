@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+@import './detail-properti.css';
+@import './login.css';
+@import './welcome.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';

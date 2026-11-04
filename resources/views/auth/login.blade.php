@@ -9,7 +9,7 @@
     <link rel="icon" href="{{ asset('assets/png/faviconblack.ico') }}" media="(prefers-color-scheme: light)">
     <link rel="icon" href="{{ asset('assets/png/faviconwhite.ico') }}" media="(prefers-color-scheme: dark)">
     <title>Masuk - Mihom</title>
-    @vite(['resources/css/app.css', 'resources/css/login.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="m-0 flex min-h-screen overflow-x-hidden bg-secondary font-sans text-white">
@@ -342,7 +342,7 @@
         }
         document.querySelectorAll('input[type="tel"]').forEach((input) => input.addEventListener('input', function() {
             let value = this.value.replace(/\D/g, '');
-            value = value.replace(/^(0|62)/, ''); 
+            value = value.replace(/^(0|62)/, '');
             this.value = value;
         }));
         (() => {
