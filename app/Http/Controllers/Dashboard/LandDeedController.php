@@ -28,53 +28,86 @@ class LandDeedController extends Controller
         $monthStart = $month->copy()->startOfMonth();
         $monthEnd = $month->copy()->endOfMonth();
 
-        $appointments = Appointment::query()
+        $ppatMeetings = Appointment::query()
             ->whereHas('property', fn (Builder $query): Builder => $query->where('assigned_ppat_id', $ppat->id))
-            ->whereBetween('scheduled_at', [$monthStart, $monthEnd])
+            ->where('status', Appointment::STATUS_COMPLETED)
+            ->where('buyer_intent', Appointment::BUYER_INTENT_DEAL)
+            ->whereNotNull('ppat_meeting_status')
+            ->whereBetween('ppat_meeting_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->with([
                 'buyer:id,name,email,phone,avatar_path',
                 'seller:id,name',
                 'property:id,title,address,city,district,certificate_type,url_maps,assigned_ppat_id',
             ])
-            ->orderBy('scheduled_at')
-            ->get();
+            ->get()
+            ->map(function (Appointment $appointment): Appointment {
+                $calendarAppointment = clone $appointment;
+                $calendarAppointment->setAttribute(
+                    'scheduled_at',
+                    $appointment->ppat_meeting_date->copy()->startOfDay(),
+                );
+                $calendarAppointment->setAttribute('calendar_event_id', 'ppat-meeting-'.$appointment->id);
+                $calendarAppointment->setAttribute('calendar_event_type', 'ppat_meeting');
 
-        $calendarBookings = $appointments->map(fn (Appointment $appointment): array => [
-            'id' => $appointment->id,
-            'counterpart_name' => $appointment->buyer->name,
-            'counterpart_email' => $appointment->buyer->email,
-            'counterpart_phone' => $appointment->buyer->phone,
-            'avatar_url' => $appointment->buyer->avatar_url,
-            'seller_name' => $appointment->seller->name,
-            'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
-            'time' => $appointment->scheduled_at->format('H:i'),
-            'reschedule_date' => $appointment->reschedule_suggested_at?->locale('id')->translatedFormat('l, d F Y'),
-            'reschedule_time' => $appointment->reschedule_suggested_at?->format('H:i'),
-            'status_key' => $appointment->status,
-            'status' => $appointment->statusLabel(),
-            'buyer_intent_key' => $appointment->buyer_intent,
-            'buyer_intent_label' => $appointment->buyerIntentLabel(),
-            'result_notes' => $appointment->result_notes,
-            'result_recorded_at' => $appointment->completed_at
-                ? $appointment->completed_at->locale('id')->translatedFormat('l, d F Y, H:i').' WIB'
-                : null,
-            'can_review' => $ppat->can('review', $appointment),
-            'status_url' => route('land-deed.appointments.status', $appointment),
-            'notes' => $appointment->notes,
-            'property_title' => $appointment->property->title,
-            'property_certificate' => $appointment->property->certificate_type,
-            'property_address' => $appointment->property->address,
-            'property_location' => $appointment->property->district.', '.$appointment->property->city,
-            'property_maps_url' => $appointment->property->url_maps,
-        ])->values();
+                return $calendarAppointment;
+            });
 
-        $appointmentsByDate = $appointments->groupBy(fn (Appointment $appointment): string => $appointment->scheduled_at->toDateString());
+        $calendarAppointments = $ppatMeetings->sortBy('scheduled_at')->values();
+
+        $calendarBookings = $calendarAppointments->map(function (Appointment $appointment) use ($ppat): array {
+            $isPpatMeeting = $appointment->calendar_event_type === 'ppat_meeting';
+
+            return [
+                'id' => $appointment->calendar_event_id,
+                'event_type' => $appointment->calendar_event_type,
+                'counterpart_name' => $appointment->buyer->name,
+                'counterpart_email' => $appointment->buyer->email,
+                'counterpart_phone' => $appointment->buyer->phone,
+                'avatar_url' => $appointment->buyer->avatar_url,
+                'seller_name' => $appointment->seller->name,
+                'date' => $appointment->scheduled_at->locale('id')->translatedFormat('l, d F Y'),
+                'time' => $isPpatMeeting ? null : $appointment->scheduled_at->format('H:i'),
+                'reschedule_date' => $appointment->reschedule_suggested_at?->locale('id')->translatedFormat('l, d F Y'),
+                'reschedule_time' => $appointment->reschedule_suggested_at?->format('H:i'),
+                'status_key' => $isPpatMeeting
+                    ? 'ppat_meeting_'.$appointment->ppat_meeting_status
+                    : $appointment->status,
+                'status' => $isPpatMeeting
+                    ? $appointment->ppatMeetingStatusLabel()
+                    : $appointment->statusLabel(),
+                'buyer_intent_key' => $appointment->buyer_intent,
+                'buyer_intent_label' => $appointment->buyerIntentLabel(),
+                'result_notes' => $appointment->result_notes,
+                'result_recorded_at' => $appointment->completed_at
+                    ? $appointment->completed_at->locale('id')->translatedFormat('l, d F Y, H:i').' WIB'
+                    : null,
+                'can_review' => ! $isPpatMeeting && $ppat->can('review', $appointment),
+                'can_manage_meeting' => $isPpatMeeting
+                    && $appointment->ppat_meeting_status === Appointment::PPAT_MEETING_STATUS_REQUESTED
+                    && $ppat->can('managePpatMeeting', $appointment),
+                'status_url' => route('land-deed.appointments.status', $appointment),
+                'ppat_meeting_url' => $isPpatMeeting
+                    ? route('land-deed.ppat-meetings.update', $appointment)
+                    : null,
+                'ppat_meeting_status' => $isPpatMeeting ? $appointment->ppat_meeting_status : null,
+                'notes' => $appointment->notes,
+                'property_title' => $appointment->property->title,
+                'property_certificate' => $appointment->property->certificate_type,
+                'property_address' => $appointment->property->address,
+                'property_location' => $appointment->property->district.', '.$appointment->property->city,
+                'property_maps_url' => $appointment->property->url_maps,
+            ];
+        })->values();
+
+        $appointmentsByDate = $calendarAppointments->groupBy(
+            fn (Appointment $appointment): string => $appointment->scheduled_at->toDateString(),
+        );
         $calendarStart = $monthStart->copy()->startOfWeek(Carbon::SUNDAY);
         $calendarEnd = $monthEnd->copy()->endOfWeek(Carbon::SATURDAY);
         $calendarDays = CarbonPeriod::create($calendarStart, $calendarEnd);
 
         return view('dashboard.land-deed.index', compact(
-            'appointments',
+            'ppatMeetings',
             'appointmentsByDate',
             'calendarBookings',
             'calendarDays',

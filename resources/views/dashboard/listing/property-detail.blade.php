@@ -152,7 +152,7 @@
 
         @if ($errors->any())
             <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                <p class="font-bold">Hasil survei belum dapat disimpan.</p>
+                <p class="font-bold">Perubahan belum dapat disimpan.</p>
                 <ul class="mt-1.5 list-inside list-disc space-y-1">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
@@ -281,13 +281,13 @@
                                         'M3 7h18v12H3zM7 11h.01M17 15h.01M12 11a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM6 4h12',
                                 ],
                                 [
-                                    'title' => 'Pengecekan Legalitas BPN',
+                                    'title' => 'Pengecekan Legalitas BPN & Validasi Pajak',
                                     'icon' => 'M6 3h8l4 4v5m-4-9v5h5m-13-5v18h6m-2-12h5m-5 4h4m4 5 2 2 4-4',
                                 ],
                                 [
-                                    'title' => 'Validasi Pajak (Pph & BPHTB)',
+                                    'title' => 'Pelunasan Properti (Escrow)',
                                     'icon' =>
-                                        'M5 3 7 4.5 9 3l2 1.5L13 3l2 1.5L17 3l2 1.5V21l-2-1.5L15 21l-2-1.5L11 21l-2-1.5L7 21l-2-1.5V3Zm4 6h6m-6 4h6m-6 4h3',
+                                        'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
                                 ],
                                 [
                                     'title' => 'Penjadwalan & TTD Akta Jual Beli (Offline)',
@@ -304,7 +304,9 @@
                             ];
                         @endphp
 
-                        <div x-data="{ ppatDateOpen: false }" class="space-y-5">
+                        <div
+                            x-data="{ ppatDateOpen: @js($errors->has('ppat_meeting_date') || old('ppat_meeting_date') !== null) }"
+                            class="space-y-5">
                             <div
                                 class="flex flex-col gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
@@ -373,17 +375,76 @@
                                                             <div id="ppat-meeting-date" x-show="ppatDateOpen" x-cloak
                                                                 x-transition
                                                                 class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-left">
-                                                                <label for="ppat-meeting-date-input"
-                                                                    class="block text-xs font-semibold text-slate-600">
-                                                                    Tanggal pertemuan yang diinginkan
-                                                                </label>
-                                                                <input id="ppat-meeting-date-input"
-                                                                    name="ppat_meeting_date" type="date"
-                                                                    min="{{ now()->toDateString() }}"
-                                                                    class="mt-2 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-secondary shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-                                                                <p class="mt-2 text-[11px] leading-5 text-slate-500">
-                                                                    Pilih tanggal untuk mengajukan pertemuan dengan PPAT.
-                                                                </p>
+                                                                @if ($property->assignedPpat)
+                                                                    @if ($selectedAppointment->ppat_meeting_date)
+                                                                        <div class="mb-3 space-y-2">
+                                                                            <p class="text-xs leading-5 text-slate-600">
+                                                                                Jadwal temu PPAT:
+                                                                                <span class="font-bold text-secondary">
+                                                                                {{ $selectedAppointment->ppat_meeting_date->locale('id')->translatedFormat('l, d F Y') }}
+                                                                                </span>
+                                                                            </p>
+                                                                            @if ($selectedAppointment->ppatMeetingStatusLabel())
+                                                                                <span @class([
+                                                                                    'inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold',
+                                                                                    'border-amber-200 bg-amber-50 text-amber-800' => $selectedAppointment->ppat_meeting_status === \App\Models\Appointment::PPAT_MEETING_STATUS_REQUESTED,
+                                                                                    'border-emerald-200 bg-emerald-50 text-emerald-700' => $selectedAppointment->ppat_meeting_status === \App\Models\Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+                                                                                    'border-violet-200 bg-violet-50 text-violet-700' => $selectedAppointment->ppat_meeting_status === \App\Models\Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+                                                                                ])>
+                                                                                    {{ $selectedAppointment->ppatMeetingStatusLabel() }}
+                                                                                </span>
+                                                                            @endif
+                                                                        </div>
+                                                                    @endif
+
+                                                                    @if (!in_array($selectedAppointment->ppat_meeting_status, [
+                                                                            \App\Models\Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+                                                                            \App\Models\Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+                                                                        ], true))
+                                                                        <form method="POST"
+                                                                            action="{{ route('seller.my-properties.ppat-meetings.store', ['property' => $property->uuid, 'appointment' => $selectedAppointment->id]) }}"
+                                                                            class="space-y-3">
+                                                                            @csrf
+                                                                            <div>
+                                                                                <label for="ppat-meeting-date-input"
+                                                                                    class="block text-xs font-semibold text-slate-600">
+                                                                                    {{ $selectedAppointment->ppat_meeting_date ? 'Ubah tanggal yang diajukan' : 'Tanggal pertemuan yang diinginkan' }}
+                                                                                </label>
+                                                                                <input id="ppat-meeting-date-input"
+                                                                                    name="ppat_meeting_date" type="date"
+                                                                                    value="{{ old('ppat_meeting_date', $selectedAppointment->ppat_meeting_date?->format('Y-m-d')) }}"
+                                                                                    min="{{ now()->toDateString() }}" required
+                                                                                    aria-describedby="ppat-meeting-date-help"
+                                                                                    @class([
+                                                                                        'mt-2 block w-full rounded-lg border bg-white px-3 py-2 text-sm text-secondary shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20',
+                                                                                        'border-rose-300' => $errors->has('ppat_meeting_date'),
+                                                                                        'border-slate-200 focus:border-primary' => !$errors->has('ppat_meeting_date'),
+                                                                                    ])>
+                                                                                <p id="ppat-meeting-date-help"
+                                                                                    class="mt-2 text-[11px] leading-5 text-slate-500">
+                                                                                    Tanggal akan dikirim kepada PPAT yang ditugaskan untuk disetujui.
+                                                                                </p>
+                                                                                @if ($errors->has('ppat_meeting_date'))
+                                                                                    <p class="mt-1 text-xs font-medium text-rose-700">
+                                                                                        {{ $errors->first('ppat_meeting_date') }}
+                                                                                    </p>
+                                                                                @endif
+                                                                            </div>
+                                                                            <button type="submit"
+                                                                                class="inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                                                                                {{ $selectedAppointment->ppat_meeting_date ? 'Perbarui permintaan jadwal' : 'Ajukan jadwal temu PPAT' }}
+                                                                            </button>
+                                                                        </form>
+                                                                    @else
+                                                                        <p class="text-[11px] leading-5 text-slate-500">
+                                                                            Untuk mengubah jadwal yang sudah diproses, hubungi PPAT yang ditugaskan.
+                                                                        </p>
+                                                                    @endif
+                                                                @else
+                                                                    <p class="text-xs leading-5 text-amber-700">
+                                                                        PPAT belum ditugaskan untuk properti ini. Jadwal temu belum dapat diajukan.
+                                                                    </p>
+                                                                @endif
                                                             </div>
                                                         @else
                                                             <h3 class="mt-1 font-heading text-sm font-bold text-secondary">

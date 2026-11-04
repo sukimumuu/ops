@@ -20,6 +20,7 @@ use App\Http\Controllers\PanelAuthController;
 use App\Http\Controllers\ProfilePasswordController;
 use App\Http\Controllers\RegionDataController;
 use Illuminate\Support\Facades\Route;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 Route::get('/', [HomeController::class, 'home'])->name('home');
 Route::get('/kalkulator-pajak', [HomeController::class, 'taxCalculator'])->name('tax-calculator');
@@ -81,6 +82,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereUuid('property')
             ->whereNumber('appointment')
             ->name('my-properties.surveys.update');
+        Route::post('/properti-saya/{property:uuid}/survei/{appointment}/jadwal-ppat', [AppointmentController::class, 'schedulePpatMeeting'])
+            ->whereUuid('property')
+            ->whereNumber('appointment')
+            ->name('my-properties.ppat-meetings.store');
         Route::get('/permintaan-survei', [ListingController::class, 'requestSurvey'])->name('request-survey');
         Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])
             ->middleware('permission:transactions.view_own_tracker')
@@ -132,6 +137,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/transaksi-escrow', [UserController::class, 'transactionEscrow'])
             ->middleware('permission:transactions.view_own_tracker')
             ->name('transaction-escrow');
+        Route::get('/properti-dibeli', [UserController::class, 'boughtProperties'])->name('bought-properties');
+        Route::get('/properti-dibeli/{property:uuid}', [UserController::class, 'showBoughtProperty'])
+            ->whereUuid('property')
+            ->name('bought-properties.show');
     });
 
     Route::post('/jadwal-survei/{appointment}/status', [AppointmentController::class, 'updateStatus'])
@@ -143,6 +152,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->name('index');
         Route::post('/dashboard-antrian/{appointment}/status', [AppointmentController::class, 'updateStatus'])
             ->name('appointments.status');
+        Route::post('/dashboard-antrian/{appointment}/jadwal-ppat', [AppointmentController::class, 'respondToPpatMeeting'])
+            ->whereNumber('appointment')
+            ->middleware('permission:appointments.view_all')
+            ->name('ppat-meetings.update');
         Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])
             ->middleware('permission:documents.input_bpn_result|transactions.mark_bpn_cleared')
             ->name('bpn-check');
@@ -201,16 +214,31 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     Route::prefix('property-review')->name('property-review.')->group(function () {
         Route::get('/properties/{property}/ppats', [PropertyReviewController::class, 'ppats'])
-            ->middleware('permission:properties.approve_listing|properties.reject_listing')
+            ->middleware(RoleOrPermissionMiddleware::using([
+                'Superadmin',
+                'properties.approve_listing',
+                'properties.reject_listing',
+            ]))
             ->name('ppats');
         Route::post('/properties/{property}/ppat', [PropertyReviewController::class, 'assignPpat'])
-            ->middleware('permission:properties.approve_listing|properties.reject_listing')
+            ->middleware(RoleOrPermissionMiddleware::using([
+                'Superadmin',
+                'properties.approve_listing',
+                'properties.reject_listing',
+            ]))
             ->name('assign-ppat');
         Route::post('/properties/{property}/status', [PropertyReviewController::class, 'updateStatus'])
-            ->middleware('permission:properties.approve_listing|properties.reject_listing')
+            ->middleware(RoleOrPermissionMiddleware::using([
+                'Superadmin',
+                'properties.approve_listing',
+                'properties.reject_listing',
+            ]))
             ->name('status');
         Route::get('/files/{propertyPhoto}', [PropertyReviewController::class, 'showFile'])
-            ->middleware('permission:documents.view_sensitive_pii')
+            ->middleware(RoleOrPermissionMiddleware::using([
+                'Superadmin',
+                'documents.view_sensitive_pii',
+            ]))
             ->name('file');
     });
 });

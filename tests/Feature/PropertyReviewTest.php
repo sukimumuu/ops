@@ -132,6 +132,43 @@ it('allows a superadmin to reject a pending property', function () {
     ]);
 });
 
+it('allows superadmins to review properties without synced permissions', function () {
+    Role::findByName('Superadmin')->syncPermissions([]);
+    Storage::fake('local');
+
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
+    $property = createReviewProperty();
+    $photo = PropertyPhoto::query()->create([
+        'property_id' => $property->id,
+        'file_path' => 'properties/'.$property->id.'/photos/review.jpg',
+        'type' => 'photo',
+        'sort_order' => 0,
+    ]);
+    Storage::disk('local')->put($photo->file_path, 'property photo');
+
+    $this->actingAs($superadmin)
+        ->get(route('superadmin.master-data-property'))
+        ->assertOk()
+        ->assertSee(route('property-review.file', $photo), false)
+        ->assertSee('name="status" value="published"', false)
+        ->assertSee('name="status" value="rejected"', false);
+
+    $this->getJson(route('property-review.ppats', $property))
+        ->assertOk();
+
+    $this->post(route('property-review.status', $property), ['status' => 'published'])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('properties', [
+        'id' => $property->id,
+        'status' => 'published',
+    ]);
+
+    $this->get(route('property-review.file', $photo))
+        ->assertOk();
+});
+
 it('does not change a property that has already left pending review', function () {
     $admin = User::factory()->create();
     $admin->assignRole('Admin');

@@ -39,6 +39,14 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
+        Gate::before(function (User $user, string $ability): ?bool {
+            if ($ability === 'use-chatbot') {
+                return null;
+            }
+
+            return $user->hasRole('Superadmin') ? true : null;
+        });
+
         Gate::define('use-chatbot', function (?User $user): bool {
             if ($user === null) {
                 return true;

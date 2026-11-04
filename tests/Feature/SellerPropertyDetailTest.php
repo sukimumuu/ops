@@ -103,8 +103,9 @@ it('shows essential property information and the latest survey progress', functi
 it('shows the purchase timeline and PPAT date picker when the buyer is interested', function () {
     $seller = User::factory()->create();
     $seller->assignRole('User');
+    $ppat = User::factory()->create();
     $buyer = User::factory()->create(['name' => 'Pembeli Berminat']);
-    $property = createSellerDetailProperty($seller);
+    $property = createSellerDetailProperty($seller, ['assigned_ppat_id' => $ppat->id]);
 
     createSellerDetailAppointment($seller, $buyer, $property, [
         'status' => Appointment::STATUS_COMPLETED,
@@ -118,14 +119,170 @@ it('shows the purchase timeline and PPAT date picker when the buyer is intereste
         ->assertSeeText('Berminat membeli')
         ->assertSeeText('Pilih Jadwal Temu PPAT')
         ->assertSeeText('Pembayaran DP')
-        ->assertSeeText('Pengecekan Legalitas BPN')
-        ->assertSeeText('Validasi Pajak (Pph & BPHTB)')
+        ->assertSeeText('Pengecekan Legalitas BPN & Validasi Pajak')
+        ->assertSeeText('Pelunasan Properti (Escrow)')
         ->assertSeeText('Penjadwalan & TTD Akta Jual Beli (Offline)')
         ->assertSeeText('Eksekusi Pencairan Escrow (Release Funds)')
         ->assertSeeText('Balik Nama Sertifikat (Tahap Akhir)')
         ->assertSeeText('Tanggal pertemuan yang diinginkan')
+        ->assertSeeText('Tanggal akan dikirim kepada PPAT yang ditugaskan untuk disetujui.')
+        ->assertSeeText('Ajukan jadwal temu PPAT')
         ->assertSee('type="date"', false)
-        ->assertSee('x-show="ppatDateOpen"', false);
+        ->assertSee('action="'.route('seller.my-properties.ppat-meetings.store', [
+            'property' => $property->uuid,
+            'appointment' => $property->appointments()->first()->id,
+        ]).'"', false);
+});
+
+it('saves the requested PPAT meeting date without changing the survey schedule', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $ppat = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+    $appointment = createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'scheduled_at' => '2026-10-20 10:00:00',
+    ]);
+
+    $this->travelTo(now()->setDate(2026, 10, 1)->startOfDay());
+
+    $this->actingAs($seller)
+        ->post(route('seller.my-properties.ppat-meetings.store', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]), [
+            'ppat_meeting_date' => '2026-10-15',
+        ])
+        ->assertRedirect(route('seller.my-properties.show', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]))
+        ->assertSessionHas('status', 'Permintaan jadwal temu PPAT berhasil dikirim dan ditambahkan ke kalender PPAT.');
+
+    expect($appointment->fresh()->ppat_meeting_date->format('Y-m-d'))->toBe('2026-10-15')
+        ->and($appointment->fresh()->ppat_meeting_status)->toBe(Appointment::PPAT_MEETING_STATUS_REQUESTED)
+        ->and($appointment->fresh()->scheduled_at->format('Y-m-d H:i:s'))->toBe('2026-10-20 10:00:00');
+
+    expect($ppat->notifications()->first()->data)->toBe([
+        'title' => 'Permintaan jadwal temu PPAT',
+        'message' => $seller->name.' mengajukan pertemuan dengan '.$buyer->name.' pada Kamis, 15 Oktober 2026.',
+        'url' => route('land-deed.index', ['month' => '2026-10']),
+    ])->and($buyer->notifications()->first()->data)->toBe([
+        'title' => 'Permintaan jadwal temu PPAT diajukan',
+        'message' => $seller->name.' mengajukan jadwal temu PPAT pada Kamis, 15 Oktober 2026.',
+        'url' => route('buyer.survey-schedule'),
+    ]);
+});
+
+it('rejects a past PPAT meeting date', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $ppat = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+    $appointment = createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+    ]);
+
+    $this->travelTo(now()->setDate(2026, 10, 29)->startOfDay());
+
+    $this->actingAs($seller)
+        ->post(route('seller.my-properties.ppat-meetings.store', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]), [
+            'ppat_meeting_date' => '2026-10-28',
+        ])
+        ->assertRedirectBackWithErrors([
+            'ppat_meeting_date' => 'Tanggal temu PPAT tidak boleh di masa lalu.',
+        ]);
+
+    expect($appointment->fresh()->ppat_meeting_date)->toBeNull();
+});
+
+it('does not schedule a PPAT meeting when the buyer is not proceeding with the deal', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $ppat = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+    $appointment = createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_NO_DEAL,
+    ]);
+
+    $this->actingAs($seller)
+        ->from(route('seller.my-properties.show', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]))
+        ->post(route('seller.my-properties.ppat-meetings.store', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]), [
+            'ppat_meeting_date' => '2026-11-15',
+        ])
+        ->assertRedirectBackWithErrors([
+            'ppat_meeting_date' => 'Jadwal temu PPAT hanya dapat diajukan setelah pembeli berminat melanjutkan transaksi.',
+        ]);
+
+    expect($appointment->fresh()->ppat_meeting_date)->toBeNull();
+});
+
+it('does not schedule a PPAT meeting before a PPAT is assigned to the property', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller);
+    $appointment = createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+    ]);
+
+    $this->actingAs($seller)
+        ->from(route('seller.my-properties.show', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]))
+        ->post(route('seller.my-properties.ppat-meetings.store', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]), [
+            'ppat_meeting_date' => '2026-11-15',
+        ])
+        ->assertRedirectBackWithErrors([
+            'ppat_meeting_date' => 'Properti ini belum memiliki PPAT yang ditugaskan.',
+        ]);
+
+    expect($appointment->fresh()->ppat_meeting_date)->toBeNull();
+});
+
+it('forbids another seller from scheduling a PPAT meeting', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $otherSeller = User::factory()->create();
+    $otherSeller->assignRole('User');
+    $ppat = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+    $appointment = createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+    ]);
+
+    $this->actingAs($otherSeller)
+        ->post(route('seller.my-properties.ppat-meetings.store', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]), [
+            'ppat_meeting_date' => '2026-11-15',
+        ])
+        ->assertForbidden();
+
+    expect($appointment->fresh()->ppat_meeting_date)->toBeNull();
 });
 
 it('shows an empty survey progress when the property has no appointments', function () {

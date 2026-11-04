@@ -25,6 +25,22 @@
                         <option value="rent" @selected(request('category') === 'rent')>Disewakan</option>
                     </select>
                 </div>
+                <div>
+                    <label for="property-status-filter" class="mb-1 block text-xs font-semibold text-slate-600">Status</label>
+                    <select id="property-status-filter" name="status"
+                        class="min-w-36 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <option value="all" @selected(request('status', 'all') === 'all')>Semua status</option>
+                        <option value="draft" @selected(request('status') === 'draft')>Draft</option>
+                        <option value="pending_verification" @selected(request('status') === 'pending_verification')>
+                            Menunggu verifikasi
+                        </option>
+                        <option value="published" @selected(request('status') === 'published')>Terbit</option>
+                        <option value="rejected" @selected(request('status') === 'rejected')>Ditolak</option>
+                        <option value="reserved" @selected(request('status') === 'reserved')>Dipesan</option>
+                        <option value="sold" @selected(request('status') === 'sold')>Terjual</option>
+                        <option value="archived" @selected(request('status') === 'archived')>Diarsipkan</option>
+                    </select>
+                </div>
             </x-search-filter>
         </div>
         <x-table>
@@ -36,7 +52,7 @@
                 <x-table.cell>Diajukan</x-table.cell>
                 <x-table.cell>Aksi</x-table.cell>
             </x-slot>
-            @forelse ($pendingProperties as $property)
+            @forelse ($properties as $property)
                 <x-table.row striped>
                     <x-table.data>
                         <p class="max-w-56 truncate font-semibold text-secondary">{{ $property->title }}</p>
@@ -46,19 +62,7 @@
                         <a class="text-blue-800" href="{{ $property->url_maps }}" target="_blank">{{ $property->city }}</a>
                     </x-table.data>
                     <x-table.data>
-                        @if ($property->status == 'pending_verification')
-                            <span
-                                class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Menunggu
-                            </span>
-                        @elseif($property->status == 'published')
-                            <span
-                                class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Terbit
-                            </span>
-                        @elseif($property->status == 'reserved')
-                            <span
-                                class="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Dipesan
-                            </span>
-                        @endif
+                        <x-property-status-badge :status="$property->status" />
                     </x-table.data>
                     <x-table.data>{{ $property->created_at->format('d M Y') }}</x-table.data>
                     <x-table.data>
@@ -68,10 +72,10 @@
             @empty
                 <tr>
                     <td colspan="6" class="px-6 py-10 text-center text-sm text-slate-500">Tidak ada properti yang
-                        menunggu verifikasi.</td>
+                        sesuai dengan filter.</td>
                 </tr>
             @endforelse
         </x-table>
-        <x-table.pagination :paginator="$pendingProperties" class="mt-4" />
+        <x-table.pagination :paginator="$properties" class="mt-4" />
     </x-card-dashboard>
 @endsection

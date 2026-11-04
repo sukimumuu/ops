@@ -15,8 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('property_id')->constrained()->onDelete('cascade');
             $table->string('file_path');
-            $table->enum('type', ['photo', 'certificate'])->default('photo');
+            $table->enum('type', ['photo', 'certificate', 'imb', 'pbb'])->default('photo');
             $table->unsignedSmallInteger('sort_order')->default(0);
+            $table->string('certificate_type', 16)->nullable();
             $table->timestamps();
         });
     }
