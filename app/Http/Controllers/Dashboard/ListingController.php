@@ -227,7 +227,9 @@ class ListingController extends Controller
             'pending' => $appointments->where('status', Appointment::STATUS_REQUESTED)->count(),
         ];
 
+        $transaction = $property->transactions()->latest('id')->first();
         $bpnProgress = $property->bpnVerificationProgress();
+        $isStageThreeUnlocked = $transaction?->hasCompletedDownPayment() ?? false;
 
         return view('dashboard.listing.property-detail', compact(
             'property',
@@ -238,6 +240,7 @@ class ListingController extends Controller
             'mapUrl',
             'surveyStats',
             'bpnProgress',
+            'isStageThreeUnlocked',
         ));
     }
 

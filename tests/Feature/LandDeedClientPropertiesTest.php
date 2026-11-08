@@ -208,6 +208,71 @@ it('shows assigned client property detail with the stage three legal check link'
         ->assertSee(route('land-deed.bpn-legal-check', ['property' => $property->uuid]), false);
 });
 
+it('allows the assigned PPAT to approve a seller meeting request from the stage one card', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $buyer = User::factory()->create();
+    $buyer->assignRole('User');
+    $property = createLandDeedProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+    $appointment = Appointment::query()->create([
+        'property_id' => $property->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $seller->id,
+        'scheduled_at' => now()->subWeek(),
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => now()->addWeek()->toDateString(),
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
+        'completed_at' => now()->subDay(),
+    ]);
+    $propertyDetailUrl = route('land-deed.client-properties.show', ['property' => $property->uuid]);
+
+    $this->actingAs($ppat)
+        ->get($propertyDetailUrl)
+        ->assertSeeText('Permintaan jadwal dari penjual')
+        ->assertSeeText('Setujui jadwal (Accept)')
+        ->assertSee(route('land-deed.ppat-meetings.update', $appointment), false);
+
+    $this->actingAs($ppat)
+        ->from($propertyDetailUrl)
+        ->post(route('land-deed.ppat-meetings.update', $appointment), [
+            'decision' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+        ])
+        ->assertRedirect($propertyDetailUrl)
+        ->assertSessionHas(
+            'status',
+            'Jadwal temu PPAT berhasil disetujui dan pembeli serta penjual telah diberi tahu.',
+        );
+
+    $this->assertDatabaseHas('appointments', [
+        'id' => $appointment->id,
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+    ]);
+
+    $this->actingAs($ppat)
+        ->get($propertyDetailUrl)
+        ->assertSeeText('Jadwal disetujui PPAT')
+        ->assertDontSeeText('Setujui jadwal (Accept)');
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties.show', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]))
+        ->assertSeeText('Jadwal disetujui PPAT')
+        ->assertDontSeeText('Setujui jadwal (Accept)');
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.bought-properties.show', [
+            'property' => $property->uuid,
+            'appointment' => $appointment->id,
+        ]))
+        ->assertSeeText('Jadwal disetujui PPAT')
+        ->assertDontSeeText('Setujui jadwal (Accept)');
+});
+
 it('shows every legal document on the BPN legal check page with its validation status', function () {
     $ppat = User::factory()->create();
     $ppat->assignRole('PPAT');
@@ -241,8 +306,11 @@ it('shows every legal document on the BPN legal check page with its validation s
 it('makes approved documents read-only on the BPN legal check page', function () {
     $ppat = User::factory()->create();
     $ppat->assignRole('PPAT');
+    $buyer = User::factory()->create();
     $seller = User::factory()->create();
     $property = createLandDeedProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+
+    createLandDeedTransaction($buyer, $seller, $property);
 
     $approved = createLandDeedDocument($property, PropertyPhoto::TYPE_CERTIFICATE, [
         'validation_status' => PropertyPhoto::VALIDATION_APPROVED,
@@ -276,6 +344,71 @@ it('makes approved documents read-only on the BPN legal check page', function ()
         'id' => $approved->id,
         'validation_status' => PropertyPhoto::VALIDATION_APPROVED,
     ]);
+});
+
+it('locks stage three and the BPN review endpoints until the down payment is confirmed', function () {
+    $ppat = User::factory()->create();
+    $ppat->assignRole('PPAT');
+    $buyer = User::factory()->create();
+    $seller = User::factory()->create();
+    $property = createLandDeedProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+    $document = createLandDeedDocument($property, PropertyPhoto::TYPE_CERTIFICATE);
+    $transaction = createLandDeedTransaction($buyer, $seller, $property, 'draft');
+
+    Appointment::query()->create([
+        'property_id' => $property->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $seller->id,
+        'scheduled_at' => now()->subWeek(),
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => now()->addWeek()->format('Y-m-d'),
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+        'completed_at' => now()->subDay(),
+    ]);
+
+    $bpnUrl = route('land-deed.bpn-legal-check', ['property' => $property->uuid]);
+    $reviewUrl = route('land-deed.documents.review', [
+        'property' => $property->uuid,
+        'document' => $document->id,
+    ]);
+
+    $this->actingAs($ppat)
+        ->get(route('land-deed.client-properties.show', ['property' => $property->uuid]))
+        ->assertOk()
+        ->assertSeeText('Tahap terkunci')
+        ->assertSeeText('Tahap ini akan tersedia setelah pembayaran DP (uang muka) berhasil dikonfirmasi.')
+        ->assertDontSee($bpnUrl, false);
+
+    $this->actingAs($ppat)
+        ->get($bpnUrl)
+        ->assertForbidden();
+
+    $this->actingAs($ppat)
+        ->post($reviewUrl, ['validation_status' => PropertyPhoto::VALIDATION_APPROVED])
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('property_photos', [
+        'id' => $document->id,
+        'validation_status' => PropertyPhoto::VALIDATION_PENDING,
+    ]);
+
+    $transaction->update(['state' => 'dp_paid']);
+
+    $this->actingAs($ppat)
+        ->get(route('land-deed.client-properties.show', ['property' => $property->uuid]))
+        ->assertOk()
+        ->assertDontSeeText('Tahap ini akan tersedia setelah pembayaran DP (uang muka) berhasil dikonfirmasi.')
+        ->assertSee($bpnUrl, false);
+
+    $this->actingAs($ppat)
+        ->get($bpnUrl)
+        ->assertOk();
+
+    $this->actingAs($ppat)
+        ->post($reviewUrl, ['validation_status' => PropertyPhoto::VALIDATION_APPROVED])
+        ->assertRedirect()
+        ->assertSessionHas('status', 'Dokumen berhasil disetujui.');
 });
 
 it('moves a transaction through BPN checking and clears it when all documents are approved', function () {

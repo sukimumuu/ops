@@ -985,8 +985,17 @@ class LandDeedController extends Controller
             : null;
 
         $latestAppointment = $appointments->first();
+        $pendingPpatMeetingRequests = $appointments
+            ->filter(fn (Appointment $appointment): bool => $appointment->status === Appointment::STATUS_COMPLETED
+                && $appointment->buyer_intent === Appointment::BUYER_INTENT_DEAL
+                && $appointment->ppat_meeting_status === Appointment::PPAT_MEETING_STATUS_REQUESTED
+                && $appointment->ppat_meeting_date !== null)
+            ->values();
         $selectedAppointment = $appointments->firstWhere('id', $request->integer('appointment'))
+            ?? $pendingPpatMeetingRequests->first()
             ?? $latestAppointment;
+        $canManagePpatMeeting = $pendingPpatMeetingRequests->isNotEmpty()
+            && $ppat->can('managePpatMeeting', $pendingPpatMeetingRequests->first());
 
         $progress = $latestAppointment?->progressState() ?? [
             'label' => 'Belum ada pengajuan survei',
@@ -1027,12 +1036,15 @@ class LandDeedController extends Controller
 
         $clientBuyer = $transaction?->buyer ?? $latestAppointment?->buyer;
         $bpnProgress = $property->bpnVerificationProgress();
+        $isStageThreeUnlocked = $transaction?->hasCompletedDownPayment() ?? false;
 
         return view('dashboard.land-deed.client-detail-properties', compact(
             'property',
             'appointments',
             'latestAppointment',
             'selectedAppointment',
+            'pendingPpatMeetingRequests',
+            'canManagePpatMeeting',
             'transaction',
             'dpPaymentAttempt',
             'requiredDpAmount',
@@ -1041,6 +1053,7 @@ class LandDeedController extends Controller
             'surveyStats',
             'clientBuyer',
             'bpnProgress',
+            'isStageThreeUnlocked',
         ));
     }
 
@@ -1070,6 +1083,12 @@ class LandDeedController extends Controller
             ->with(['buyer:id,name,email'])
             ->latest('id')
             ->first();
+
+        abort_unless(
+            $transaction?->hasCompletedDownPayment(),
+            403,
+            'Pengecekan BPN belum tersedia sebelum pembayaran DP berhasil dikonfirmasi.',
+        );
 
         $metrics = [
             'total' => [
@@ -1126,6 +1145,12 @@ class LandDeedController extends Controller
             $ppat instanceof User && $property->assigned_ppat_id === $ppat->id,
             403,
             'Anda tidak memiliki akses ke dokumen properti ini.',
+        );
+
+        abort_unless(
+            $property->transactions()->latest('id')->first()?->hasCompletedDownPayment(),
+            403,
+            'Validasi dokumen belum tersedia sebelum pembayaran DP berhasil dikonfirmasi.',
         );
 
         if ($document->isApproved()) {

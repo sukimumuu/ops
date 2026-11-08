@@ -328,6 +328,7 @@ class UserController extends Controller
         ];
 
         $bpnProgress = $property->bpnVerificationProgress();
+        $isStageThreeUnlocked = $transaction?->hasCompletedDownPayment() ?? false;
 
         return view('dashboard.user.property-detail', compact(
             'property',
@@ -341,6 +342,7 @@ class UserController extends Controller
             'mapUrl',
             'surveyStats',
             'bpnProgress',
+            'isStageThreeUnlocked',
         ));
     }
 }

@@ -469,7 +469,11 @@
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
                                                                 Verifikasi keabsahan sertifikat di BPN dan validasi kewajiban pajak (PPh & BPHTB).
                                                             </p>
-                                                            @include('dashboard.partials.bpn-verification-progress')
+                                                            @if ($isStageThreeUnlocked)
+                                                                @include('dashboard.partials.bpn-verification-progress')
+                                                            @else
+                                                                @include('dashboard.partials.stage-three-locked')
+                                                            @endif
                                                         @else
                                                             <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
                                                                 {{ $step['title'] }}

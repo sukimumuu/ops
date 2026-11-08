@@ -276,6 +276,47 @@ it('shows deed timeline steps when survey buyer intent is deal', function () {
         ->assertDontSeeText('Bayar DP');
 });
 
+it('locks stage three until the down payment is confirmed', function () {
+    $buyer = User::factory()->create();
+    $buyer->assignRole('User');
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $property = createBuyerPropertyForTest($seller);
+
+    createBuyerAppointmentForTest($buyer, $seller, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => now()->addWeek()->format('Y-m-d'),
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+        'completed_at' => now()->subDay(),
+    ]);
+
+    $transaction = Transaction::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'property_id' => $property->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $seller->id,
+        'booking_fee_amount' => 120000000,
+        'total_property_amount' => $property->price,
+        'state' => 'draft',
+    ]);
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.bought-properties.show', ['property' => $property->uuid]))
+        ->assertOk()
+        ->assertSeeText('Tahap terkunci')
+        ->assertSeeText('Tahap ini akan tersedia setelah pembayaran DP (uang muka) berhasil dikonfirmasi.')
+        ->assertDontSeeText('Progres pengecekan PPAT');
+
+    $transaction->update(['state' => 'dp_paid']);
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.bought-properties.show', ['property' => $property->uuid]))
+        ->assertOk()
+        ->assertDontSeeText('Tahap ini akan tersedia setelah pembayaran DP (uang muka) berhasil dikonfirmasi.')
+        ->assertSeeText('Progres pengecekan PPAT');
+});
+
 it('shows live PPAT document verification progress on the buyer detail page', function () {
     $buyer = User::factory()->create();
     $buyer->assignRole('User');
@@ -290,6 +331,16 @@ it('shows live PPAT document verification progress on the buyer detail page', fu
         'ppat_meeting_date' => now()->addWeek()->format('Y-m-d'),
         'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
         'completed_at' => now()->subDay(),
+    ]);
+
+    Transaction::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'property_id' => $property->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $seller->id,
+        'booking_fee_amount' => 120000000,
+        'total_property_amount' => $property->price,
+        'state' => 'dp_paid',
     ]);
 
     PropertyPhoto::query()->create([
