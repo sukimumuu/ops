@@ -4,12 +4,19 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Property;
+use App\Models\PropertyPhoto;
+use App\Models\Transaction;
 use App\Models\User;
+use App\Services\Payments\DpAmountCalculator;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class LandDeedController extends Controller
 {
@@ -828,5 +835,386 @@ class LandDeedController extends Controller
         ];
 
         return view('dashboard.land-deed.transfer-for-ownership', compact('metrics', 'items'));
+    }
+
+    /**
+     * Page: Daftar properti yang ditugaskan ke PPAT.
+     */
+    public function clientProperties(Request $request): View
+    {
+        $ppat = $request->user();
+        abort_unless($ppat instanceof User && $ppat->can('appointments.view_all'), 403);
+
+        $statusOptions = [
+            'draft' => 'Draft',
+            'pending_verification' => 'Menunggu Verifikasi',
+            'published' => 'Terbit',
+            'reserved' => 'Dipesan',
+            'sold' => 'Terjual',
+            'archived' => 'Diarsipkan',
+            'rejected' => 'Ditolak',
+        ];
+        $categoryOptions = [
+            'sale' => 'Dijual',
+            'rent' => 'Disewakan',
+        ];
+        $propertyTypeOptions = [
+            'bangunan' => 'Bangunan',
+            'tanah' => 'Tanah',
+        ];
+        $sortOptions = [
+            'newest' => 'Terbaru',
+            'oldest' => 'Terlama',
+            'price_asc' => 'Harga Terendah',
+            'price_desc' => 'Harga Tertinggi',
+        ];
+
+        $search = trim((string) $request->query('search', ''));
+        $status = (string) $request->query('status', '');
+        $category = (string) $request->query('category', '');
+        $propertyType = (string) $request->query('property_type', '');
+        $sort = (string) $request->query('sort', 'newest');
+
+        $status = array_key_exists($status, $statusOptions) ? $status : '';
+        $category = array_key_exists($category, $categoryOptions) ? $category : '';
+        $propertyType = array_key_exists($propertyType, $propertyTypeOptions) ? $propertyType : '';
+        $sort = array_key_exists($sort, $sortOptions) ? $sort : 'newest';
+
+        $properties = Property::query()
+            ->where('assigned_ppat_id', $ppat->id)
+            ->with(['photos' => fn ($query) => $query->limit(1)])
+            ->withExists([
+                'appointments as has_requested_survey' => fn (Builder $query): Builder => $query->where('status', Appointment::STATUS_REQUESTED),
+                'appointments as has_confirmed_survey' => fn (Builder $query): Builder => $query->where('status', Appointment::STATUS_CONFIRMED),
+            ])
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $term = '%'.$search.'%';
+
+                $query->where(function (Builder $query) use ($term): void {
+                    $query->where('title', 'like', $term)
+                        ->orWhere('address', 'like', $term)
+                        ->orWhere('city', 'like', $term)
+                        ->orWhere('district', 'like', $term)
+                        ->orWhere('province', 'like', $term);
+                });
+            })
+            ->when($status !== '', fn (Builder $query): Builder => $query->where('status', $status))
+            ->when($category !== '', fn (Builder $query): Builder => $query->where('category', $category))
+            ->when($propertyType !== '', fn (Builder $query): Builder => $query->where('property_type', $propertyType));
+
+        $totalProperties = (clone $properties)->count();
+
+        match ($sort) {
+            'oldest' => $properties->orderBy('created_at')->orderBy('id'),
+            'price_asc' => $properties->orderBy('price')->orderByDesc('id'),
+            'price_desc' => $properties->orderByDesc('price')->orderByDesc('id'),
+            default => $properties->orderByDesc('created_at')->orderByDesc('id'),
+        };
+
+        $properties = $properties->paginate(12)->withQueryString();
+
+        $properties->getCollection()->transform(function (Property $property): Property {
+            $property->setAttribute('image_url', $property->primaryPhotoUrl());
+            $property->setAttribute('survey_status', match (true) {
+                (bool) $property->has_requested_survey => Appointment::STATUS_REQUESTED,
+                (bool) $property->has_confirmed_survey => Appointment::STATUS_CONFIRMED,
+                default => null,
+            });
+
+            return $property;
+        });
+
+        $hasFilters = $search !== '' || $status !== '' || $category !== '' || $propertyType !== '';
+
+        return view('dashboard.land-deed.client-properties', compact(
+            'properties',
+            'totalProperties',
+            'hasFilters',
+            'search',
+            'status',
+            'category',
+            'propertyType',
+            'sort',
+            'statusOptions',
+            'categoryOptions',
+            'propertyTypeOptions',
+            'sortOptions',
+        ));
+    }
+
+    /**
+     * Page: Detail properti klien untuk PPAT.
+     */
+    public function clientDetailProperty(
+        Request $request,
+        Property $property,
+        DpAmountCalculator $amountCalculator,
+    ): View {
+        $ppat = $request->user();
+
+        abort_unless(
+            $ppat instanceof User && $property->assigned_ppat_id === $ppat->id,
+            403,
+            'Anda tidak memiliki akses ke properti klien ini.',
+        );
+
+        $property->load([
+            'photos',
+            'documents.validatedBy:id,name',
+            'assignedPpat:id,name,email,phone,avatar_path',
+            'seller:id,name,email,phone,avatar_path',
+        ]);
+
+        $appointments = $property->appointments()
+            ->with([
+                'buyer:id,name,email,phone,avatar_path',
+                'seller:id,name,email,phone,avatar_path',
+            ])
+            ->orderByDesc('scheduled_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $transaction = $property->transactions()
+            ->with(['buyer:id,name,email,phone,avatar_path'])
+            ->latest('id')
+            ->first();
+
+        $dpPaymentAttempt = $transaction?->dpPaymentAttempts()->latest('id')->first();
+        $requiredDpAmount = $transaction?->state === 'draft'
+            ? $amountCalculator->calculate($transaction->total_property_amount)
+            : null;
+
+        $latestAppointment = $appointments->first();
+        $selectedAppointment = $appointments->firstWhere('id', $request->integer('appointment'))
+            ?? $latestAppointment;
+
+        $progress = $latestAppointment?->progressState() ?? [
+            'label' => 'Belum ada pengajuan survei',
+            'description' => 'Progres survei akan muncul setelah calon pembeli mengajukan jadwal kunjungan.',
+            'percentage' => 0,
+            'tone' => 'slate',
+            'completed_steps' => 0,
+            'stopped' => true,
+        ];
+
+        if ($latestAppointment) {
+            if ($latestAppointment->hasPendingReschedule()) {
+                $progress['description'] = 'Penjual menyarankan jadwal pengganti. Menunggu tanggapan calon pembeli.';
+            } elseif ($latestAppointment->status === Appointment::STATUS_REQUESTED) {
+                $progress['description'] = 'Permintaan jadwal survei klien menunggu persetujuan penjual.';
+            } elseif ($latestAppointment->status === Appointment::STATUS_CONFIRMED) {
+                $progress['description'] = 'Jadwal survei klien telah disetujui penjual.';
+            } elseif ($latestAppointment->status === Appointment::STATUS_COMPLETED) {
+                $progress['description'] = 'Survei klien telah selesai dilaksanakan dan hasil telah dicatat.';
+            }
+        }
+
+        $property->setAttribute('image_url', $property->primaryPhotoUrl());
+
+        $mapLocation = filled($property->latitude) && filled($property->longitude)
+            ? "{$property->latitude},{$property->longitude}"
+            : trim("{$property->address}, {$property->district}, {$property->city}, {$property->province}");
+        $mapUrl = filled($property->url_maps)
+            ? $property->url_maps
+            : 'https://www.google.com/maps/search/?api=1&query='.urlencode($mapLocation);
+
+        $surveyStats = [
+            'total' => $appointments->count(),
+            'completed' => $appointments->where('status', Appointment::STATUS_COMPLETED)->count(),
+            'confirmed' => $appointments->where('status', Appointment::STATUS_CONFIRMED)->count(),
+            'pending' => $appointments->where('status', Appointment::STATUS_REQUESTED)->count(),
+        ];
+
+        $clientBuyer = $transaction?->buyer ?? $latestAppointment?->buyer;
+        $bpnProgress = $property->bpnVerificationProgress();
+
+        return view('dashboard.land-deed.client-detail-properties', compact(
+            'property',
+            'appointments',
+            'latestAppointment',
+            'selectedAppointment',
+            'transaction',
+            'dpPaymentAttempt',
+            'requiredDpAmount',
+            'progress',
+            'mapUrl',
+            'surveyStats',
+            'clientBuyer',
+            'bpnProgress',
+        ));
+    }
+
+    /**
+     * Page: Pengecekan Legalitas BPN & Validasi Pajak.
+     */
+    public function bpnLegalCheck(Request $request, Property $property): View
+    {
+        $ppat = $request->user();
+
+        abort_unless(
+            $ppat instanceof User && $property->assigned_ppat_id === $ppat->id,
+            403,
+            'Anda tidak memiliki akses ke properti klien ini.',
+        );
+
+        $property->load([
+            'assignedPpat:id,name,email,phone,avatar_path',
+            'seller:id,name,email,phone,avatar_path',
+        ]);
+
+        $documents = $property->documents()
+            ->with('validatedBy:id,name')
+            ->get();
+
+        $transaction = $property->transactions()
+            ->with(['buyer:id,name,email'])
+            ->latest('id')
+            ->first();
+
+        $metrics = [
+            'total' => [
+                'title' => 'Total Dokumen',
+                'count' => $documents->count(),
+                'unit' => 'dokumen',
+                'description' => 'Dokumen legal yang diunggah penjual',
+                'descriptionClass' => 'text-slate-500',
+            ],
+            'pending' => [
+                'title' => 'Menunggu Validasi',
+                'count' => $documents->where('validation_status', PropertyPhoto::VALIDATION_PENDING)->count(),
+                'unit' => 'dokumen',
+                'description' => 'Belum ditinjau PPAT',
+                'descriptionClass' => 'text-slate-500',
+            ],
+            'approved' => [
+                'title' => 'Disetujui',
+                'count' => $documents->where('validation_status', PropertyPhoto::VALIDATION_APPROVED)->count(),
+                'unit' => 'dokumen',
+                'description' => 'Lolos pengecekan legalitas',
+                'descriptionClass' => 'text-emerald-600 font-medium',
+            ],
+            'rejected' => [
+                'title' => 'Ditolak',
+                'count' => $documents->where('validation_status', PropertyPhoto::VALIDATION_REJECTED)->count(),
+                'unit' => 'dokumen',
+                'description' => 'Perlu perbaikan dari penjual',
+                'descriptionClass' => 'text-rose-600 font-medium',
+            ],
+        ];
+
+        $canReview = $ppat->can('documents.verify_status');
+
+        return view('dashboard.land-deed.bpn-legal-check', compact(
+            'property',
+            'documents',
+            'transaction',
+            'metrics',
+            'canReview',
+        ));
+    }
+
+    /**
+     * Review a legal document and advance the transaction's BPN state.
+     */
+    public function reviewDocument(Request $request, Property $property, PropertyPhoto $document): RedirectResponse
+    {
+        abort_unless($document->property_id === $property->id, 404);
+
+        $ppat = $request->user();
+
+        abort_unless(
+            $ppat instanceof User && $property->assigned_ppat_id === $ppat->id,
+            403,
+            'Anda tidak memiliki akses ke dokumen properti ini.',
+        );
+
+        if ($document->isApproved()) {
+            return back()->withErrors([
+                'validation_status' => 'Dokumen yang telah disetujui bersifat final dan tidak dapat diubah.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'validation_status' => [
+                'required',
+                Rule::in([PropertyPhoto::VALIDATION_APPROVED, PropertyPhoto::VALIDATION_REJECTED]),
+            ],
+            'validation_notes' => ['nullable', 'string', 'max:2000', 'required_if:validation_status,rejected'],
+        ]);
+
+        DB::transaction(function () use ($property, $document, $ppat, $validated): void {
+            $document->forceFill([
+                'validation_status' => $validated['validation_status'],
+                'validation_notes' => $validated['validation_notes'] ?? null,
+                'validated_by_id' => $ppat->id,
+                'validated_at' => now(),
+            ])->save();
+
+            $transaction = $property->transactions()->latest('id')->first();
+
+            if (! $transaction instanceof Transaction) {
+                return;
+            }
+
+            $currentState = (string) $transaction->state;
+
+            if (in_array($currentState, ['dp_paid', 'held_in_escrow'], true)) {
+                $this->moveTransactionTo(
+                    $transaction,
+                    'bpn_checking',
+                    $ppat,
+                    'Pengecekan legalitas BPN dimulai oleh PPAT.',
+                );
+                $currentState = 'bpn_checking';
+            }
+
+            $allDocumentsApproved = $property->documents()
+                ->get()
+                ->every(fn (PropertyPhoto $document): bool => $document->isApproved());
+
+            if ($allDocumentsApproved && in_array($currentState, ['dp_paid', 'held_in_escrow', 'bpn_checking'], true)) {
+                $this->moveTransactionTo(
+                    $transaction,
+                    'bpn_cleared',
+                    $ppat,
+                    'Seluruh dokumen legal disetujui. Pengecekan BPN selesai.',
+                );
+            } elseif (! $allDocumentsApproved && $currentState === 'bpn_cleared') {
+                $this->moveTransactionTo(
+                    $transaction,
+                    'bpn_checking',
+                    $ppat,
+                    'Terdapat dokumen yang ditolak setelah BPN selesai. Pengecekan dibuka kembali.',
+                );
+            }
+        });
+
+        $message = $validated['validation_status'] === PropertyPhoto::VALIDATION_APPROVED
+            ? 'Dokumen berhasil disetujui.'
+            : 'Dokumen ditolak dan menunggu perbaikan.';
+
+        return back()->with('status', $message);
+    }
+
+    private function moveTransactionTo(
+        Transaction $transaction,
+        string $toState,
+        User $actor,
+        string $notes,
+    ): void {
+        $fromState = (string) $transaction->state;
+
+        if ($fromState === $toState) {
+            return;
+        }
+
+        $transaction->forceFill(['state' => $toState])->save();
+
+        $transaction->logs()->create([
+            'actor_id' => $actor->id,
+            'from_state' => $fromState,
+            'to_state' => $toState,
+            'notes' => $notes,
+        ]);
     }
 }

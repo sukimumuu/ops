@@ -186,7 +186,11 @@ class ListingController extends Controller
     {
         Gate::authorize('view', $property);
 
-        $property->load(['photos', 'assignedPpat:id,name,email']);
+        $property->load([
+            'photos',
+            'documents.validatedBy:id,name',
+            'assignedPpat:id,name,email',
+        ]);
 
         $appointments = $property->appointments()
             ->with(['buyer:id,name,email,phone,avatar_path'])
@@ -223,6 +227,8 @@ class ListingController extends Controller
             'pending' => $appointments->where('status', Appointment::STATUS_REQUESTED)->count(),
         ];
 
+        $bpnProgress = $property->bpnVerificationProgress();
+
         return view('dashboard.listing.property-detail', compact(
             'property',
             'appointments',
@@ -231,6 +237,7 @@ class ListingController extends Controller
             'progress',
             'mapUrl',
             'surveyStats',
+            'bpnProgress',
         ));
     }
 

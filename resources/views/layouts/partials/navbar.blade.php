@@ -108,6 +108,12 @@
                             : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                         <a href="{{ route('land-deed.index') }}">Dashboard Antrian</a>
                     </li>
+                    <li
+                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.client-properties*')
+                            ? 'border-b-6 border-b-primary text-primary'
+                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
+                        <a href="{{ route('land-deed.client-properties') }}">Properti Klien</a>
+                    </li>
                 @endcan
                 @canany(['documents.input_bpn_result', 'transactions.mark_bpn_cleared'])
                     <li

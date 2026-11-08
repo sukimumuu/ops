@@ -491,23 +491,29 @@ it('shows only survey appointments for properties assigned to the signed-in PPAT
         'buyer_id' => $buyer->id,
         'seller_id' => $assignedProperty->seller_id,
         'scheduled_at' => '2026-10-19 10:00:00',
-        'status' => 'confirmed',
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => '2026-10-19',
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
     ]);
     Appointment::query()->create([
         'property_id' => $privateProperty->id,
         'buyer_id' => $otherBuyer->id,
         'seller_id' => $privateProperty->seller_id,
         'scheduled_at' => '2026-10-19 11:00:00',
-        'status' => 'confirmed',
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => '2026-10-19',
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
     ]);
 
     $this->actingAs($ppat)
         ->get(route('land-deed.index', ['month' => '2026-10']))
         ->assertOk()
-        ->assertSee('Kalender jadwal survei')
+        ->assertSee('Kalender jadwal temu PPAT')
         ->assertSee('Assigned Survey Client')
         ->assertDontSee('Private Survey Client')
-        ->assertViewHas('appointments', fn ($appointments): bool => $appointments->modelKeys() === [$assignedAppointment->id]);
+        ->assertViewHas('ppatMeetings', fn ($ppatMeetings): bool => $ppatMeetings->modelKeys() === [$assignedAppointment->id]);
 });
 
 it('denies non-PPAT users access to the survey calendar', function () {
