@@ -228,6 +228,11 @@ class ListingController extends Controller
         ];
 
         $transaction = $property->transactions()->latest('id')->first();
+        $dpPaymentAttempt = $transaction?->latestDpPaymentAttempt();
+        $escrowPaymentAttempt = $transaction?->latestEscrowPaymentAttempt();
+        $remainingEscrowAmount = $transaction?->remainingEscrowAmount();
+        $isStageFourUnlocked = $transaction?->isStageFourUnlocked() ?? false;
+        $isEscrowPaid = $transaction?->hasCompletedEscrowPayment() ?? false;
         $bpnProgress = $property->bpnVerificationProgress();
         $isStageThreeUnlocked = $transaction?->hasCompletedDownPayment() ?? false;
 
@@ -239,8 +244,14 @@ class ListingController extends Controller
             'progress',
             'mapUrl',
             'surveyStats',
+            'transaction',
+            'dpPaymentAttempt',
+            'escrowPaymentAttempt',
+            'remainingEscrowAmount',
             'bpnProgress',
             'isStageThreeUnlocked',
+            'isStageFourUnlocked',
+            'isEscrowPaid',
         ));
     }
 

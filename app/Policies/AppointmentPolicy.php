@@ -30,8 +30,26 @@ class AppointmentPolicy
 
     public function managePpatMeeting(User $user, Appointment $appointment): bool
     {
-        return $user->can('appointments.view_all')
-            && $appointment->property?->assigned_ppat_id === $user->id;
+        return ($user->can('appointments.view_all') || $user->can('transactions.schedule_ajb'))
+            && ($appointment->property?->assigned_ppat_id === $user->id || $user->can('appointments.view_all'));
+    }
+
+    public function scheduleAjbMeeting(User $user, Appointment $appointment): bool
+    {
+        return $appointment->seller_id === $user->id
+            || $appointment->property?->seller_id === $user->id;
+    }
+
+    public function manageAjbMeeting(User $user, Appointment $appointment): bool
+    {
+        return ($user->can('appointments.view_all') || $user->can('transactions.schedule_ajb'))
+            && ($appointment->property?->assigned_ppat_id === $user->id || $user->can('appointments.view_all'));
+    }
+
+    public function respondToAjbReschedule(User $user, Appointment $appointment): bool
+    {
+        return $appointment->seller_id === $user->id
+            || $appointment->property?->seller_id === $user->id;
     }
 
     /**

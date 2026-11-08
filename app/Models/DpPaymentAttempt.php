@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DpPaymentAttempt extends Model
 {
+    public const TYPE_DP = 'dp';
+
+    public const TYPE_FINAL = 'final';
+
     public const STATUS_CREATING = 'creating';
 
     public const STATUS_PENDING = 'pending';
@@ -30,6 +34,16 @@ class DpPaymentAttempt extends Model
             'expires_at' => 'datetime',
             'paid_at' => 'datetime',
         ];
+    }
+
+    public function isFinalPayment(): bool
+    {
+        return $this->payment_type === self::TYPE_FINAL;
+    }
+
+    public function isDpPayment(): bool
+    {
+        return $this->payment_type === self::TYPE_DP || $this->payment_type === null;
     }
 
     public function transaction(): BelongsTo

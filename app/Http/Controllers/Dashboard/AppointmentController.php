@@ -451,4 +451,247 @@ class AppointmentController extends Controller
 
         return back()->with('status', 'Jadwal pengganti ditolak. Silakan ajukan jadwal survei baru.');
     }
+
+    /**
+     * Save the seller's requested date and time for an offline AJB signing with the PPAT.
+     */
+    public function scheduleAjbMeeting(Request $request, Property $property, Appointment $appointment): RedirectResponse
+    {
+        Gate::authorize('view', $property);
+
+        abort_unless($appointment->property_id === $property->id, 404);
+
+        Gate::authorize('scheduleAjbMeeting', $appointment);
+
+        $transaction = $property->transactions()->latest('id')->first();
+        if (! $transaction || ! $transaction->hasCompletedEscrowPayment()) {
+            return back()->withErrors([
+                'ajb_meeting_date' => 'Tahap 5 terkunci sampai pembayaran pelunasan escrow selesai diverifikasi.',
+            ]);
+        }
+
+        if ($property->assigned_ppat_id === null) {
+            return back()->withErrors([
+                'ajb_meeting_date' => 'Properti ini belum memiliki PPAT yang ditugaskan.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'ajb_meeting_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'ajb_meeting_time' => ['required', 'string', 'in:'.implode(',', Appointment::TIME_SLOTS)],
+            'ajb_notes' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'ajb_meeting_date.required' => 'Pilih tanggal pertemuan AJB.',
+            'ajb_meeting_date.date_format' => 'Format tanggal pertemuan AJB tidak valid.',
+            'ajb_meeting_date.after_or_equal' => 'Tanggal pertemuan AJB tidak boleh di masa lalu.',
+            'ajb_meeting_time.required' => 'Pilih waktu pertemuan AJB.',
+            'ajb_meeting_time.in' => 'Waktu pertemuan yang dipilih tidak valid.',
+        ]);
+
+        if ($appointment->ajb_meeting_status === Appointment::AJB_MEETING_STATUS_CONFIRMED) {
+            return back()->withErrors([
+                'ajb_meeting_date' => 'Jadwal penandatanganan AJB sudah disetujui dan tidak dapat diajukan ulang.',
+            ]);
+        }
+
+        $appointment->update([
+            'ajb_meeting_date' => $validated['ajb_meeting_date'],
+            'ajb_meeting_time' => $validated['ajb_meeting_time'],
+            'ajb_meeting_status' => Appointment::AJB_MEETING_STATUS_REQUESTED,
+            'ajb_suggested_date' => null,
+            'ajb_suggested_time' => null,
+            'ajb_notes' => $validated['ajb_notes'] ?? $appointment->ajb_notes,
+        ]);
+
+        $appointment->refresh()->load(['buyer', 'seller', 'property.assignedPpat']);
+
+        if ($appointment->property->assignedPpat) {
+            $formattedDate = $appointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y');
+            $appointment->property->assignedPpat->notify(new AppointmentNotification(
+                'Permintaan jadwal penandatanganan AJB',
+                $appointment->seller->name.' mengajukan jadwal penandatanganan AJB dengan '.$appointment->buyer->name.' pada '.$formattedDate.' pukul '.$appointment->ajb_meeting_time.' WIB.',
+                route('land-deed.index', ['month' => $appointment->ajb_meeting_date->format('Y-m')]),
+            ));
+        }
+
+        if ($appointment->buyer) {
+            $formattedDate = $appointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y');
+            $appointment->buyer->notify(new AppointmentNotification(
+                'Permintaan jadwal AJB diajukan',
+                $appointment->seller->name.' mengajukan jadwal penandatanganan AJB pada '.$formattedDate.' pukul '.$appointment->ajb_meeting_time.' WIB.',
+                route('buyer.bought-properties.show', ['property' => $property->uuid]),
+            ));
+        }
+
+        return redirect()
+            ->route('seller.my-properties.show', [
+                'property' => $property->uuid,
+                'appointment' => $appointment->id,
+            ])
+            ->with('status', 'Permintaan jadwal penandatanganan AJB berhasil diajukan dan ditambahkan ke antrian PPAT.');
+    }
+
+    /**
+     * Approve, reject, or reschedule an AJB meeting request by PPAT.
+     */
+    public function respondToAjbMeeting(Request $request, Appointment $appointment): RedirectResponse
+    {
+        Gate::authorize('manageAjbMeeting', $appointment);
+
+        $transaction = $appointment->property->transactions()->latest('id')->first();
+        if (! $transaction || ! $transaction->hasCompletedEscrowPayment()) {
+            return back()->withErrors([
+                'ajb_meeting' => 'Pelunasan escrow belum selesai diverifikasi.',
+            ]);
+        }
+
+        if (
+            $appointment->ajb_meeting_status !== Appointment::AJB_MEETING_STATUS_REQUESTED
+            || $appointment->ajb_meeting_date === null
+        ) {
+            return back()->withErrors([
+                'ajb_meeting' => 'Permintaan jadwal AJB ini sudah ditangani atau tidak lagi tersedia.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'decision' => ['required', Rule::in(Appointment::AJB_MEETING_DECISIONS)],
+            'ajb_suggested_date' => [
+                'nullable',
+                'required_if:decision,'.Appointment::AJB_MEETING_STATUS_RESCHEDULED,
+                'date_format:Y-m-d',
+                'after_or_equal:today',
+            ],
+            'ajb_suggested_time' => [
+                'nullable',
+                'required_if:decision,'.Appointment::AJB_MEETING_STATUS_RESCHEDULED,
+                'string',
+                'in:'.implode(',', Appointment::TIME_SLOTS),
+            ],
+            'ajb_notes' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'decision.required' => 'Pilih tindakan untuk jadwal temu AJB.',
+            'decision.in' => 'Tindakan jadwal temu AJB tidak valid.',
+            'ajb_suggested_date.required_if' => 'Pilih tanggal pengganti untuk penjadwalan ulang.',
+            'ajb_suggested_date.date_format' => 'Format tanggal pengganti tidak valid.',
+            'ajb_suggested_date.after_or_equal' => 'Tanggal pengganti tidak boleh di masa lalu.',
+            'ajb_suggested_time.required_if' => 'Pilih waktu pengganti untuk penjadwalan ulang.',
+            'ajb_suggested_time.in' => 'Waktu pengganti tidak valid.',
+        ]);
+
+        $updates = [
+            'ajb_meeting_status' => $validated['decision'],
+        ];
+
+        if (filled($validated['ajb_notes'] ?? null)) {
+            $updates['ajb_notes'] = $validated['ajb_notes'];
+        }
+
+        if ($validated['decision'] === Appointment::AJB_MEETING_STATUS_RESCHEDULED) {
+            $updates['ajb_suggested_date'] = $validated['ajb_suggested_date'];
+            $updates['ajb_suggested_time'] = $validated['ajb_suggested_time'];
+        }
+
+        $appointment->update($updates);
+        $appointment->refresh()->load(['buyer', 'seller', 'property']);
+
+        $meetingDate = $appointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y');
+        $isRescheduled = $validated['decision'] === Appointment::AJB_MEETING_STATUS_RESCHEDULED;
+        $isRejected = $validated['decision'] === Appointment::AJB_MEETING_STATUS_REJECTED;
+
+        $sellerMessage = match (true) {
+            $isRescheduled => 'PPAT mengusulkan jadwal pengganti penandatanganan AJB pada '.$appointment->ajb_suggested_date->locale('id')->translatedFormat('l, d F Y').' pukul '.$appointment->ajb_suggested_time.' WIB.',
+            $isRejected => 'PPAT menolak usulan jadwal penandatanganan AJB untuk '.$appointment->property->title.'.',
+            default => 'PPAT menyetujui jadwal penandatanganan AJB '.$appointment->property->title.' pada '.$meetingDate.' pukul '.$appointment->ajb_meeting_time.' WIB.',
+        };
+
+        $notificationTitle = match (true) {
+            $isRescheduled => 'Jadwal AJB diubah oleh PPAT',
+            $isRejected => 'Jadwal AJB ditolak oleh PPAT',
+            default => 'Jadwal AJB disetujui PPAT',
+        };
+
+        $appointment->seller->notify(new AppointmentNotification(
+            $notificationTitle,
+            $sellerMessage,
+            route('seller.my-properties.show', [
+                'property' => $appointment->property->uuid,
+                'appointment' => $appointment->id,
+            ]),
+        ));
+
+        if ($appointment->buyer) {
+            $appointment->buyer->notify(new AppointmentNotification(
+                $notificationTitle,
+                $sellerMessage,
+                route('buyer.bought-properties.show', ['property' => $appointment->property->uuid]),
+            ));
+        }
+
+        $statusFeedback = match (true) {
+            $isRescheduled => 'Jadwal penandatanganan AJB berhasil dijadwalkan ulang dan menunggu konfirmasi penjual.',
+            $isRejected => 'Jadwal penandatanganan AJB telah ditolak.',
+            default => 'Jadwal penandatanganan AJB berhasil disetujui.',
+        };
+
+        return back()->with('status', $statusFeedback);
+    }
+
+    /**
+     * Seller responds to PPAT's reschedule proposal for AJB signing.
+     */
+    public function respondToAjbReschedule(Request $request, Property $property, Appointment $appointment): RedirectResponse
+    {
+        Gate::authorize('view', $property);
+        abort_unless($appointment->property_id === $property->id, 404);
+        Gate::authorize('respondToAjbReschedule', $appointment);
+
+        $validated = $request->validate([
+            'decision' => ['required', Rule::in(['accepted', 'declined'])],
+        ]);
+
+        if ($appointment->ajb_meeting_status !== Appointment::AJB_MEETING_STATUS_RESCHEDULED || $appointment->ajb_suggested_date === null) {
+            return back()->withErrors([
+                'ajb_meeting' => 'Tidak ada usulan jadwal pengganti AJB yang menunggu tanggapan.',
+            ]);
+        }
+
+        if ($validated['decision'] === 'accepted') {
+            $appointment->update([
+                'ajb_meeting_date' => $appointment->ajb_suggested_date,
+                'ajb_meeting_time' => $appointment->ajb_suggested_time,
+                'ajb_suggested_date' => null,
+                'ajb_suggested_time' => null,
+                'ajb_meeting_status' => Appointment::AJB_MEETING_STATUS_CONFIRMED,
+            ]);
+
+            $appointment->load(['buyer', 'property.assignedPpat']);
+            if ($appointment->property->assignedPpat) {
+                $appointment->property->assignedPpat->notify(new AppointmentNotification(
+                    'Jadwal pengganti AJB disetujui',
+                    $appointment->seller->name.' menyetujui jadwal pengganti AJB pada '.$appointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y').' pukul '.$appointment->ajb_meeting_time.' WIB.',
+                    route('land-deed.index', ['month' => $appointment->ajb_meeting_date->format('Y-m')]),
+                ));
+            }
+
+            return back()->with('status', 'Jadwal pengganti AJB disetujui. Jadwal penandatanganan telah dikonfirmasi.');
+        }
+
+        $appointment->update([
+            'ajb_meeting_status' => Appointment::AJB_MEETING_STATUS_REJECTED,
+            'ajb_suggested_date' => null,
+            'ajb_suggested_time' => null,
+        ]);
+
+        $appointment->load(['buyer', 'property.assignedPpat']);
+        if ($appointment->property->assignedPpat) {
+            $appointment->property->assignedPpat->notify(new AppointmentNotification(
+                'Jadwal pengganti AJB ditolak',
+                $appointment->seller->name.' menolak jadwal pengganti AJB. Menunggu pengajuan jadwal baru.',
+                route('land-deed.index'),
+            ));
+        }
+
+        return back()->with('status', 'Jadwal pengganti AJB ditolak. Silakan ajukan jadwal baru.');
+    }
 }

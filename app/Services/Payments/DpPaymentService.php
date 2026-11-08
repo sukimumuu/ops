@@ -23,7 +23,7 @@ class DpPaymentService
     public function createOrResume(Transaction $transaction, User $buyer): DpPaymentAttempt
     {
         $this->provider->assertConfigured();
-        
+
         $attempt = DB::transaction(function () use ($transaction, $buyer): DpPaymentAttempt {
             $lockedTransaction = Transaction::query()
                 ->whereKey($transaction->getKey())
@@ -58,6 +58,10 @@ class DpPaymentService
             }
 
             $activeAttempt = $lockedTransaction->dpPaymentAttempts()
+                ->where(function ($query): void {
+                    $query->where('payment_type', DpPaymentAttempt::TYPE_DP)
+                        ->orWhereNull('payment_type');
+                })
                 ->whereIn('status', [
                     DpPaymentAttempt::STATUS_CREATING,
                     DpPaymentAttempt::STATUS_PENDING,
@@ -84,6 +88,7 @@ class DpPaymentService
 
             return $lockedTransaction->dpPaymentAttempts()->create([
                 'uuid' => $uuid,
+                'payment_type' => DpPaymentAttempt::TYPE_DP,
                 'reference_id' => $referenceId,
                 'channel_code' => $channelCode,
                 'amount' => $amount,
@@ -110,7 +115,7 @@ class DpPaymentService
 
             throw $exception;
         }
-        
+
         $paymentRequestId = $providerResponse['id'] ?? $providerResponse['payment_request_id'] ?? null;
         $referenceId = $providerResponse['reference_id'] ?? null;
         $virtualAccountNumber = data_get($providerResponse, 'actions.0.value')
@@ -227,31 +232,62 @@ class DpPaymentService
                     'paid_at' => $lockedAttempt->paid_at ?? now(),
                 ]);
 
-                $transaction->ledgerEntries()->firstOrCreate(
-                    ['dp_payment_attempt_id' => $lockedAttempt->getKey()],
-                    [
-                        'amount' => $lockedAttempt->amount,
-                        'currency' => $lockedAttempt->currency,
-                        'status' => TransactionLedgerEntry::STATUS_RESERVED,
-                        'reserved_at' => now(),
-                    ],
-                );
+                if ($lockedAttempt->isFinalPayment()) {
+                    $transaction->ledgerEntries()->firstOrCreate(
+                        ['dp_payment_attempt_id' => $lockedAttempt->getKey()],
+                        [
+                            'type' => TransactionLedgerEntry::TYPE_FINAL,
+                            'amount' => $lockedAttempt->amount,
+                            'currency' => $lockedAttempt->currency,
+                            'status' => TransactionLedgerEntry::STATUS_RESERVED,
+                            'reserved_at' => now(),
+                        ],
+                    );
 
-                if ($transaction->state === 'draft') {
-                    $transaction->update([
-                        'state' => 'dp_paid',
-                        'payment_gateway_ref' => $lockedAttempt->xendit_payment_request_id,
-                        'payment_method' => 'xendit_virtual_account',
-                        'paid_at' => $lockedAttempt->paid_at ?? now(),
-                    ]);
+                    if ($transaction->state === 'bpn_cleared') {
+                        $transaction->update([
+                            'state' => 'held_in_escrow',
+                            'payment_gateway_ref' => $lockedAttempt->xendit_payment_request_id,
+                            'payment_method' => 'xendit_virtual_account',
+                            'settled_at' => $lockedAttempt->paid_at ?? now(),
+                        ]);
 
-                    TransactionLogs::query()->create([
-                        'transaction_id' => $transaction->getKey(),
-                        'actor_id' => null,
-                        'from_state' => 'draft',
-                        'to_state' => 'dp_paid',
-                        'notes' => 'DP dikonfirmasi oleh Xendit dan dicatat sebagai dana cadangan. Ref: '.$lockedAttempt->reference_id,
-                    ]);
+                        TransactionLogs::query()->create([
+                            'transaction_id' => $transaction->getKey(),
+                            'actor_id' => null,
+                            'from_state' => 'bpn_cleared',
+                            'to_state' => 'held_in_escrow',
+                            'notes' => 'Pelunasan properti (escrow) dikonfirmasi oleh Xendit dan seluruh dana disimpan di escrow. Ref: '.$lockedAttempt->reference_id,
+                        ]);
+                    }
+                } else {
+                    $transaction->ledgerEntries()->firstOrCreate(
+                        ['dp_payment_attempt_id' => $lockedAttempt->getKey()],
+                        [
+                            'type' => TransactionLedgerEntry::TYPE_DP,
+                            'amount' => $lockedAttempt->amount,
+                            'currency' => $lockedAttempt->currency,
+                            'status' => TransactionLedgerEntry::STATUS_RESERVED,
+                            'reserved_at' => now(),
+                        ],
+                    );
+
+                    if ($transaction->state === 'draft') {
+                        $transaction->update([
+                            'state' => 'dp_paid',
+                            'payment_gateway_ref' => $lockedAttempt->xendit_payment_request_id,
+                            'payment_method' => 'xendit_virtual_account',
+                            'paid_at' => $lockedAttempt->paid_at ?? now(),
+                        ]);
+
+                        TransactionLogs::query()->create([
+                            'transaction_id' => $transaction->getKey(),
+                            'actor_id' => null,
+                            'from_state' => 'draft',
+                            'to_state' => 'dp_paid',
+                            'notes' => 'DP dikonfirmasi oleh Xendit dan dicatat sebagai dana cadangan. Ref: '.$lockedAttempt->reference_id,
+                        ]);
+                    }
                 }
             } elseif ($lockedAttempt->status !== DpPaymentAttempt::STATUS_PAID) {
                 $lockedAttempt->update(['status' => $status]);

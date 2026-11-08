@@ -5,10 +5,15 @@
         $historyTitle = $historyTitle ?? 'Riwayat survei saya';
         $historySubtitle = $historySubtitle ?? 'Seluruh riwayat kunjungan yang Anda jadwalkan untuk properti ini';
         $showDpPaymentAction = $showDpPaymentAction ?? true;
+        $showEscrowPaymentAction = $showEscrowPaymentAction ?? ($showDpPaymentAction ?? true);
         $showBuyerInHistory = $showBuyerInHistory ?? false;
         $stageThreeUrl = $stageThreeUrl ?? null;
         $clientBuyer = $clientBuyer ?? null;
         $isStageThreeUnlocked = $isStageThreeUnlocked ?? (($transaction ?? null)?->hasCompletedDownPayment() ?? false);
+        $isStageFourUnlocked = $isStageFourUnlocked ?? (($transaction ?? null)?->isStageFourUnlocked() ?? false);
+        $isEscrowPaid = $isEscrowPaid ?? (($transaction ?? null)?->hasCompletedEscrowPayment() ?? false);
+        $remainingEscrowAmount = $remainingEscrowAmount ?? (($transaction ?? null)?->remainingEscrowAmount() ?? 0);
+        $escrowPaymentAttempt = $escrowPaymentAttempt ?? (($transaction ?? null)?->latestEscrowPaymentAttempt());
         $breadcrumbs = $breadcrumbs ?? [
             ['label' => 'Beranda', 'url' => route('home')],
             ['label' => 'Properti Dibeli', 'url' => route('buyer.bought-properties')],
@@ -332,16 +337,30 @@
 
                                 <ol class="space-y-4 sm:space-y-5">
                                     @foreach ($deedTimelineSteps as $index => $step)
+                                        @php
+                                            $isStepCompleted = match ($index) {
+                                                0 => $ppatMeetingCompleted,
+                                                1 => (bool) $transaction?->hasCompletedDownPayment(),
+                                                2 => in_array((string) $transaction?->state, ['bpn_cleared', 'held_in_escrow', 'ajb_scheduled', 'completed'], true),
+                                                3 => (bool) $isEscrowPaid,
+                                                4 => in_array((string) $transaction?->state, ['ajb_scheduled', 'completed'], true) || filled($selectedAppointment->ajb_document_path) || filled($transaction?->ajb_document_path),
+                                                5 => (string) $transaction?->state === 'completed',
+                                                default => false,
+                                            };
+                                        @endphp
                                         <li
                                             class="relative grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] sm:gap-x-4">
 
                                             <div @class([
                                                 'col-start-2 row-start-1 rounded-xl border p-3 sm:p-4',
-                                                'border-primary/20 bg-primary/5 sm:col-start-1' => $index === 0,
+                                                'border-emerald-200 bg-emerald-50/20' => $isStepCompleted,
+                                                'border-primary/20 bg-primary/5 sm:col-start-1' => ! $isStepCompleted && $index === 0,
                                                 'border-slate-200 bg-white sm:col-start-3' =>
-                                                    $index !== 0 && $index % 2 === 1,
+                                                    ! $isStepCompleted && $index !== 0 && $index % 2 === 1,
                                                 'border-slate-200 bg-white sm:col-start-1' =>
-                                                    $index !== 0 && $index % 2 === 0,
+                                                    ! $isStepCompleted && $index !== 0 && $index % 2 === 0,
+                                                'sm:col-start-1' => $isStepCompleted && ($index === 0 || $index % 2 === 0),
+                                                'sm:col-start-3' => $isStepCompleted && $index % 2 === 1,
                                             ])>
                                                 <div @class([
                                                     'flex items-start gap-3',
@@ -350,8 +369,9 @@
                                                 ])>
                                                     <span @class([
                                                         'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg',
-                                                        'bg-primary/10 text-primary' => $index === 0,
-                                                        'bg-slate-100 text-slate-500' => $index !== 0,
+                                                        'bg-emerald-100 text-emerald-700' => $isStepCompleted,
+                                                        'bg-primary/10 text-primary' => ! $isStepCompleted && $index === 0,
+                                                        'bg-slate-100 text-slate-500' => ! $isStepCompleted && $index !== 0,
                                                     ]) aria-hidden="true">
                                                         <svg class="size-5" fill="none" stroke="currentColor"
                                                             stroke-width="1.7" viewBox="0 0 24 24">
@@ -514,10 +534,308 @@
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
                                                                 Penyetoran sisa pelunasan harga properti ke rekening bersama (escrow) sebelum penandatanganan AJB.
                                                             </p>
+
+                                                            <div class="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white p-3 text-left">
+                                                                @if ($isEscrowPaid)
+                                                                    <div class="space-y-1">
+                                                                        <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                                                                            Pelunasan Terkonfirmasi
+                                                                        </span>
+                                                                        <p class="text-xs font-semibold text-emerald-700">
+                                                                            Pelunasan terkonfirmasi. Seluruh dana telah tersimpan aman di rekening bersama (escrow) Mihom dan siap untuk tahap penandatanganan AJB.
+                                                                        </p>
+                                                                    </div>
+                                                                @elseif ($escrowPaymentAttempt?->status === \App\Models\DpPaymentAttempt::STATUS_PENDING)
+                                                                    <div class="space-y-2">
+                                                                        <div class="flex items-center justify-between">
+                                                                            <span class="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+                                                                                Menunggu Pembayaran
+                                                                            </span>
+                                                                            <span class="text-[11px] font-medium text-slate-500">
+                                                                                Virtual Account {{ $escrowPaymentAttempt->channel_code }}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p class="text-xs font-semibold text-slate-700">
+                                                                            Transfer tepat
+                                                                            <span class="text-secondary">Rp {{ number_format((float) $escrowPaymentAttempt->amount, 0, ',', '.') }}</span>
+                                                                            ke Virtual Account berikut:
+                                                                        </p>
+                                                                        <div class="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
+                                                                            <p class="font-mono text-sm font-bold tracking-wider text-secondary">
+                                                                                {{ $escrowPaymentAttempt->virtual_account_number }}
+                                                                            </p>
+                                                                            <button type="button"
+                                                                                onclick="navigator.clipboard.writeText('{{ $escrowPaymentAttempt->virtual_account_number }}')"
+                                                                                class="text-xs font-semibold text-primary hover:underline">
+                                                                                Salin
+                                                                            </button>
+                                                                        </div>
+                                                                        <p class="text-xs leading-5 text-slate-500">
+                                                                            Selesaikan sebelum
+                                                                            {{ $escrowPaymentAttempt->expires_at->locale('id')->translatedFormat('d F Y, H:i') }} WIB.
+                                                                            Status diperbarui otomatis setelah pembayaran dikonfirmasi oleh Xendit.
+                                                                        </p>
+                                                                    </div>
+                                                                @elseif ($isStageFourUnlocked && $transaction?->state === 'bpn_cleared')
+                                                                    @if (in_array($escrowPaymentAttempt?->status, [
+                                                                        \App\Models\DpPaymentAttempt::STATUS_EXPIRED,
+                                                                        \App\Models\DpPaymentAttempt::STATUS_FAILED,
+                                                                        \App\Models\DpPaymentAttempt::STATUS_CANCELED,
+                                                                    ], true))
+                                                                        <p class="text-xs text-amber-700">
+                                                                            VA pelunasan sebelumnya tidak berlaku lagi. Buat VA baru untuk melanjutkan pembayaran pelunasan.
+                                                                        </p>
+                                                                    @endif
+                                                                    @if ($escrowPaymentAttempt?->status === \App\Models\DpPaymentAttempt::STATUS_CREATING)
+                                                                        <p class="text-xs text-slate-500">
+                                                                            Pembuatan VA pelunasan belum terkonfirmasi. Coba lagi untuk melanjutkan permintaan yang sama.
+                                                                        </p>
+                                                                    @endif
+                                                                    <p class="text-xs leading-5 text-slate-600">
+                                                                        Sisa pelunasan sebesar
+                                                                        <span class="font-bold text-secondary">Rp {{ number_format((float) ($remainingEscrowAmount ?? $transaction?->remainingEscrowAmount()), 0, ',', '.') }}</span>.
+                                                                        Dana akan disimpan di rekening bersama (escrow) dan belum dicairkan ke penjual pada tahap ini.
+                                                                    </p>
+                                                                    @if ($showEscrowPaymentAction)
+                                                                        @canany(['transactions.initiate_dp', 'transactions.view_own_tracker'])
+                                                                            <form method="POST"
+                                                                                action="{{ route('buyer.escrow-payments.store', ['transaction' => $transaction->uuid]) }}">
+                                                                                @csrf
+                                                                                <button type="submit"
+                                                                                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                                                                                    {{ $escrowPaymentAttempt?->status === \App\Models\DpPaymentAttempt::STATUS_CREATING ? 'Coba lagi membuat VA' : 'Bayar Pelunasan (Escrow)' }}
+                                                                                </button>
+                                                                            </form>
+                                                                        @endcanany
+                                                                    @else
+                                                                        <p class="text-xs leading-5 text-slate-500">
+                                                                            Menunggu pembeli melakukan pembayaran sisa pelunasan ke rekening bersama (escrow).
+                                                                        </p>
+                                                                    @endif
+                                                                @else
+                                                                    <p class="text-xs leading-5 text-amber-700">
+                                                                        Pelunasan properti terkunci sampai pengecekan legalitas BPN dan validasi pajak selesai disetujui PPAT.
+                                                                    </p>
+                                                                @endif
+
+                                                                @error('escrow_payment')
+                                                                    <p role="alert" class="text-xs font-medium text-rose-700">{{ $message }}</p>
+                                                                @enderror
+                                                            </div>
                                                         @elseif ($index === 4)
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
-                                                                Penandatanganan resmi Akta Jual Beli bersama PPAT.
+                                                                Penandatanganan resmi Akta Jual Beli bersama PPAT secara offline setelah pelunasan escrow terverifikasi.
                                                             </p>
+
+                                                            <div class="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white p-3 text-left">
+                                                                @if (! $isEscrowPaid)
+                                                                    <div class="space-y-1">
+                                                                        <span class="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+                                                                            Terkunci
+                                                                        </span>
+                                                                        <p class="text-xs leading-5 text-amber-700">
+                                                                            Tahap ini terkunci sampai pelunasan properti (escrow) terkonfirmasi.
+                                                                        </p>
+                                                                    </div>
+                                                                @elseif (filled($selectedAppointment->ajb_document_path) || filled($transaction?->ajb_document_path))
+                                                                    <div class="space-y-2">
+                                                                        <div class="flex items-center justify-between">
+                                                                            <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                                                                                Akta Jual Beli Selesai Ditandatangani
+                                                                            </span>
+                                                                            @if ($selectedAppointment->ajb_signed_at ?? $transaction?->ajb_signed_at)
+                                                                                <span class="text-[11px] font-medium text-slate-500">
+                                                                                    {{ ($selectedAppointment->ajb_signed_at ?? $transaction?->ajb_signed_at)->locale('id')->translatedFormat('d F Y, H:i') }} WIB
+                                                                                </span>
+                                                                            @endif
+                                                                        </div>
+                                                                        <p class="text-xs leading-5 text-slate-600">
+                                                                            Penandatanganan AJB telah selesai dilaksanakan dan bukti akta telah diunggah oleh PPAT. Transaksi siap untuk eksekusi pencairan dana escrow.
+                                                                        </p>
+                                                                        @php
+                                                                            $docUrl = $selectedAppointment->ajbDocumentUrl() ?? $transaction?->ajbDocumentUrl();
+                                                                        @endphp
+                                                                        @if ($docUrl)
+                                                                            <div class="pt-1">
+                                                                                <a href="{{ $docUrl }}" target="_blank" rel="noopener noreferrer"
+                                                                                    class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100">
+                                                                                    <svg class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                                                                    </svg>
+                                                                                    Lihat Bukti Akta Jual Beli (AJB)
+                                                                                </a>
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                @elseif ($selectedAppointment->ajb_meeting_date)
+                                                                    <div class="space-y-2">
+                                                                        <p class="text-xs leading-5 text-slate-600">
+                                                                            Jadwal penandatanganan AJB:
+                                                                            <span class="font-bold text-secondary">
+                                                                                {{ $selectedAppointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y') }}
+                                                                            </span>
+                                                                            @if ($selectedAppointment->ajb_meeting_time)
+                                                                                pukul <span class="font-bold text-secondary">{{ $selectedAppointment->ajb_meeting_time }} WIB</span>
+                                                                            @endif
+                                                                        </p>
+                                                                        @if ($selectedAppointment->ajbMeetingStatusLabel())
+                                                                            <div>
+                                                                                <span @class([
+                                                                                    'inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold',
+                                                                                    'border-amber-200 bg-amber-50 text-amber-800' => $selectedAppointment->ajb_meeting_status === \App\Models\Appointment::AJB_MEETING_STATUS_REQUESTED,
+                                                                                    'border-emerald-200 bg-emerald-50 text-emerald-700' => $selectedAppointment->ajb_meeting_status === \App\Models\Appointment::AJB_MEETING_STATUS_CONFIRMED,
+                                                                                    'border-rose-200 bg-rose-50 text-rose-700' => $selectedAppointment->ajb_meeting_status === \App\Models\Appointment::AJB_MEETING_STATUS_REJECTED,
+                                                                                    'border-violet-200 bg-violet-50 text-violet-700' => $selectedAppointment->ajb_meeting_status === \App\Models\Appointment::AJB_MEETING_STATUS_RESCHEDULED,
+                                                                                ])>
+                                                                                    {{ $selectedAppointment->ajbMeetingStatusLabel() }}
+                                                                                </span>
+                                                                            </div>
+                                                                        @endif
+                                                                        @if ($selectedAppointment->ajb_notes)
+                                                                            <p class="text-xs text-slate-500">
+                                                                                Catatan: {{ $selectedAppointment->ajb_notes }}
+                                                                            </p>
+                                                                        @endif
+                                                                    </div>
+
+                                                                    @if (($canManageAjbMeeting ?? false) && $selectedAppointment->ajb_meeting_status === \App\Models\Appointment::AJB_MEETING_STATUS_REQUESTED)
+                                                                        <div x-data="{ rescheduling: false }" class="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+                                                                            <p class="text-xs font-semibold text-amber-900">
+                                                                                Permintaan Jadwal dari Penjual:
+                                                                            </p>
+                                                                            <p class="mt-1 text-xs text-amber-800">
+                                                                                {{ $selectedAppointment->seller->name }} mengajukan pertemuan pada
+                                                                                <span class="font-bold">{{ $selectedAppointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y') }}</span>
+                                                                                @if ($selectedAppointment->ajb_meeting_time)
+                                                                                    pukul <span class="font-bold">{{ $selectedAppointment->ajb_meeting_time }} WIB</span>
+                                                                                @endif
+                                                                                untuk penandatanganan AJB.
+                                                                            </p>
+
+                                                                            <form method="POST"
+                                                                                action="{{ route('land-deed.ajb-meetings.update', $selectedAppointment) }}"
+                                                                                class="mt-3 space-y-3">
+                                                                                @csrf
+
+                                                                                <div x-show="rescheduling" x-cloak class="space-y-3 rounded-md border border-amber-300 bg-white p-3">
+                                                                                    <div>
+                                                                                        <label for="suggested-ajb-date-inline" class="block text-[11px] font-bold text-slate-700">
+                                                                                            Tanggal Pengganti
+                                                                                        </label>
+                                                                                        <input id="suggested-ajb-date-inline" type="date" name="ajb_suggested_date"
+                                                                                            min="{{ now()->toDateString() }}" x-bind:required="rescheduling"
+                                                                                            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-700">
+                                                                                    </div>
+
+                                                                                    <div>
+                                                                                        <span class="block text-[11px] font-bold text-slate-700">
+                                                                                            Waktu Pengganti
+                                                                                        </span>
+                                                                                        <div class="mt-1 grid grid-cols-3 gap-2">
+                                                                                            @foreach (\App\Models\Appointment::TIME_SLOTS as $slot)
+                                                                                                <label class="cursor-pointer">
+                                                                                                    <input type="radio" name="ajb_suggested_time" value="{{ $slot }}"
+                                                                                                        class="peer sr-only" x-bind:required="rescheduling">
+                                                                                                    <span class="flex items-center justify-center rounded border border-slate-200 p-1.5 text-center text-xs font-bold peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white">
+                                                                                                        {{ str_replace(':', '.', $slot) }}
+                                                                                                    </span>
+                                                                                                </label>
+                                                                                            @endforeach
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div class="flex flex-col gap-2 sm:flex-row">
+                                                                                    <button type="submit" name="decision" value="confirmed"
+                                                                                        x-show="!rescheduling"
+                                                                                        class="inline-flex flex-1 items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700">
+                                                                                        Setujui Jadwal
+                                                                                    </button>
+                                                                                    <button type="submit" name="decision" value="rejected"
+                                                                                        x-show="!rescheduling"
+                                                                                        onclick="if (! confirm('Tolak usulan jadwal AJB ini?')) event.preventDefault()"
+                                                                                        class="inline-flex flex-1 items-center justify-center rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50">
+                                                                                        Tolak
+                                                                                    </button>
+                                                                                    <button type="button" x-show="!rescheduling"
+                                                                                        x-on:click="rescheduling = true"
+                                                                                        class="inline-flex flex-1 items-center justify-center rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-50">
+                                                                                        Atur Ulang
+                                                                                    </button>
+                                                                                    <button type="submit" name="decision" value="rescheduled"
+                                                                                        x-show="rescheduling" x-cloak
+                                                                                        class="inline-flex flex-1 items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white transition hover:bg-primary-hover">
+                                                                                        Kirim Usulan Tanggal
+                                                                                    </button>
+                                                                                    <button type="button" x-show="rescheduling" x-cloak
+                                                                                        x-on:click="rescheduling = false"
+                                                                                        class="inline-flex flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                                                                                        Batal
+                                                                                    </button>
+                                                                                </div>
+                                                                            </form>
+                                                                        </div>
+                                                                    @elseif (($canManageAjbMeeting ?? false) && $selectedAppointment->ajb_meeting_status === \App\Models\Appointment::AJB_MEETING_STATUS_CONFIRMED)
+                                                                        <div class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
+                                                                            <p class="text-xs font-semibold text-emerald-800">
+                                                                                Jadwal penandatanganan AJB telah disetujui.
+                                                                            </p>
+                                                                            <p class="mt-1 text-xs text-slate-600">
+                                                                                Setelah penandatanganan selesai dilaksanakan, unggah berkas bukti penandatanganan Akta Jual Beli (AJB) berikut:
+                                                                            </p>
+
+                                                                            <form method="POST"
+                                                                                action="{{ route('land-deed.ajb-evidence.store', ['property' => $property->uuid]) }}"
+                                                                                enctype="multipart/form-data"
+                                                                                class="mt-3 space-y-3">
+                                                                                @csrf
+                                                                                <div>
+                                                                                    <label for="ajb-document-file-client" class="block text-xs font-semibold text-slate-700">
+                                                                                        Berkas Akta Jual Beli (PDF, JPG, PNG maks 10MB)
+                                                                                    </label>
+                                                                                    <input id="ajb-document-file-client" name="ajb_document" type="file" required
+                                                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                                                        class="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-primary-hover">
+                                                                                    @error('ajb_document')
+                                                                                        <p class="mt-1 text-xs font-medium text-rose-700">{{ $message }}</p>
+                                                                                    @enderror
+                                                                                </div>
+
+                                                                                <div>
+                                                                                    <label for="ajb-evidence-notes-client" class="block text-xs font-semibold text-slate-700">
+                                                                                        Catatan Tambahan (Opsional)
+                                                                                    </label>
+                                                                                    <textarea id="ajb-evidence-notes-client" name="ajb_notes" rows="2"
+                                                                                        placeholder="Nomor akta atau keterangan tambahan..."
+                                                                                        class="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-secondary shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">{{ old('ajb_notes') }}</textarea>
+                                                                                </div>
+
+                                                                                <button type="submit"
+                                                                                    class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30">
+                                                                                    Unggah Bukti Penandatanganan AJB
+                                                                                </button>
+                                                                            </form>
+                                                                        </div>
+                                                                    @elseif ($selectedAppointment->ajb_meeting_status === \App\Models\Appointment::AJB_MEETING_STATUS_RESCHEDULED)
+                                                                        <p class="text-xs text-violet-700">
+                                                                            Usulan jadwal pengganti: <span class="font-bold">{{ $selectedAppointment->ajb_suggested_date?->locale('id')->translatedFormat('l, d F Y') }}</span> pukul {{ $selectedAppointment->ajb_suggested_time }} WIB. Menunggu konfirmasi penjual.
+                                                                        </p>
+                                                                    @elseif ($selectedAppointment->ajb_meeting_status === \App\Models\Appointment::AJB_MEETING_STATUS_CONFIRMED)
+                                                                        <div class="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
+                                                                            <p class="text-xs font-semibold text-emerald-800">
+                                                                                Jadwal penandatanganan AJB disetujui.
+                                                                            </p>
+                                                                            <p class="mt-1 text-xs text-slate-600">
+                                                                                Silakan hadir di kantor PPAT sesuai tanggal dan waktu yang telah disepakati untuk proses penandatanganan.
+                                                                            </p>
+                                                                        </div>
+                                                                    @endif
+                                                                @else
+                                                                    <p class="text-xs leading-5 text-slate-500">
+                                                                        Menunggu penjual mengajukan jadwal pertemuan untuk penandatanganan Akta Jual Beli (AJB) dengan PPAT.
+                                                                    </p>
+                                                                @endif
+                                                            </div>
                                                         @elseif ($index === 5)
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
                                                                 Pencairan dana escrow kepada penjual setelah dokumen sah ditandatangani.
@@ -531,9 +849,18 @@
                                                 </div>
                                             </div>
 
-                                            <div
-                                                class="col-start-1 row-start-1 flex size-10 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-xs font-bold text-slate-600 shadow sm:col-start-2">
-                                                {{ $index + 1 }}
+                                            <div @class([
+                                                'col-start-1 row-start-1 flex size-10 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow sm:col-start-2',
+                                                'bg-emerald-600 text-white' => $isStepCompleted,
+                                                'bg-slate-100 text-slate-600' => ! $isStepCompleted,
+                                            ])>
+                                                @if ($isStepCompleted)
+                                                    <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                                    </svg>
+                                                @else
+                                                    {{ $index + 1 }}
+                                                @endif
                                             </div>
                                         </li>
                                     @endforeach
