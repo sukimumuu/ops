@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\PropertyPhoto;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Notifications\AppointmentNotification;
 use App\Services\Payments\DpAmountCalculator;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -40,6 +41,7 @@ class LandDeedController extends Controller
             ->where('status', Appointment::STATUS_COMPLETED)
             ->where('buyer_intent', Appointment::BUYER_INTENT_DEAL)
             ->whereNotNull('ppat_meeting_status')
+            ->whereNotNull('ppat_meeting_date')
             ->whereBetween('ppat_meeting_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->with([
                 'buyer:id,name,email,phone,avatar_path',
@@ -59,10 +61,72 @@ class LandDeedController extends Controller
                 return $calendarAppointment;
             });
 
-        $calendarAppointments = $ppatMeetings->sortBy('scheduled_at')->values();
+        $ajbMeetings = Appointment::query()
+            ->whereHas('property', fn (Builder $query): Builder => $query->where('assigned_ppat_id', $ppat->id))
+            ->where('status', Appointment::STATUS_COMPLETED)
+            ->where('buyer_intent', Appointment::BUYER_INTENT_DEAL)
+            ->whereNotNull('ajb_meeting_status')
+            ->whereNotNull('ajb_meeting_date')
+            ->whereBetween('ajb_meeting_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->with([
+                'buyer:id,name,email,phone,avatar_path',
+                'seller:id,name',
+                'property:id,title,address,city,district,certificate_type,url_maps,assigned_ppat_id',
+            ])
+            ->get()
+            ->map(function (Appointment $appointment): Appointment {
+                $calendarAppointment = clone $appointment;
+                $calendarAppointment->setAttribute(
+                    'scheduled_at',
+                    $appointment->ajb_meeting_date->copy()->startOfDay(),
+                );
+                $calendarAppointment->setAttribute('calendar_event_id', 'ajb-meeting-'.$appointment->id);
+                $calendarAppointment->setAttribute('calendar_event_type', 'ajb_meeting');
+
+                return $calendarAppointment;
+            });
+
+        $calendarAppointments = $ppatMeetings->concat($ajbMeetings)->sortBy('scheduled_at')->values();
 
         $calendarBookings = $calendarAppointments->map(function (Appointment $appointment) use ($ppat): array {
             $isPpatMeeting = $appointment->calendar_event_type === 'ppat_meeting';
+            $isAjbMeeting = $appointment->calendar_event_type === 'ajb_meeting';
+
+            if ($isAjbMeeting) {
+                return [
+                    'id' => $appointment->calendar_event_id,
+                    'event_type' => 'ajb_meeting',
+                    'counterpart_name' => $appointment->buyer->name,
+                    'counterpart_email' => $appointment->buyer->email,
+                    'counterpart_phone' => $appointment->buyer->phone,
+                    'avatar_url' => $appointment->buyer->avatar_url,
+                    'seller_name' => $appointment->seller->name,
+                    'date' => $appointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y'),
+                    'time' => $appointment->ajb_meeting_time,
+                    'reschedule_date' => $appointment->ajb_suggested_date?->locale('id')->translatedFormat('l, d F Y'),
+                    'reschedule_time' => $appointment->ajb_suggested_time,
+                    'status_key' => 'ajb_meeting_'.$appointment->ajb_meeting_status,
+                    'status' => $appointment->ajbMeetingStatusLabel(),
+                    'buyer_intent_key' => $appointment->buyer_intent,
+                    'buyer_intent_label' => $appointment->buyerIntentLabel(),
+                    'result_notes' => $appointment->ajb_notes,
+                    'result_recorded_at' => $appointment->ajb_signed_at
+                        ? $appointment->ajb_signed_at->locale('id')->translatedFormat('l, d F Y, H:i').' WIB'
+                        : null,
+                    'can_review' => false,
+                    'can_manage_meeting' => $appointment->ajb_meeting_status === Appointment::AJB_MEETING_STATUS_REQUESTED
+                        && $ppat->can('manageAjbMeeting', $appointment),
+                    'status_url' => null,
+                    'ppat_meeting_url' => route('land-deed.ajb-meetings.update', $appointment),
+                    'ppat_meeting_status' => $appointment->ajb_meeting_status,
+                    'notes' => $appointment->ajb_notes,
+                    'property_title' => $appointment->property->title,
+                    'property_certificate' => $appointment->property->certificate_type,
+                    'property_address' => $appointment->property->address,
+                    'property_location' => $appointment->property->district.', '.$appointment->property->city,
+                    'property_maps_url' => $appointment->property->url_maps,
+                ];
+            }
 
             return [
                 'id' => $appointment->calendar_event_id,
@@ -1000,6 +1064,8 @@ class LandDeedController extends Controller
             ?? $latestAppointment;
         $canManagePpatMeeting = $pendingPpatMeetingRequests->isNotEmpty()
             && $ppat->can('managePpatMeeting', $pendingPpatMeetingRequests->first());
+        $canManageAjbMeeting = $selectedAppointment !== null
+            && $ppat->can('manageAjbMeeting', $selectedAppointment);
 
         $progress = $latestAppointment?->progressState() ?? [
             'label' => 'Belum ada pengajuan survei',
@@ -1049,6 +1115,7 @@ class LandDeedController extends Controller
             'selectedAppointment',
             'pendingPpatMeetingRequests',
             'canManagePpatMeeting',
+            'canManageAjbMeeting',
             'transaction',
             'dpPaymentAttempt',
             'escrowPaymentAttempt',
@@ -1227,6 +1294,82 @@ class LandDeedController extends Controller
             : 'Dokumen ditolak dan menunggu perbaikan.';
 
         return back()->with('status', $message);
+    }
+
+    /**
+     * Upload AJB signing evidence by the PPAT.
+     */
+    public function uploadAjbEvidence(Request $request, Property $property): RedirectResponse
+    {
+        $ppat = $request->user();
+        abort_unless($ppat instanceof User && ($ppat->can('appointments.view_all') || $property->assigned_ppat_id === $ppat->id), 403);
+
+        $transaction = $property->transactions()->latest('id')->first();
+        if (! $transaction || ! $transaction->hasCompletedEscrowPayment()) {
+            return back()->withErrors([
+                'ajb_document' => 'Pelunasan escrow belum selesai diverifikasi.',
+            ]);
+        }
+
+        $appointment = $property->appointments()
+            ->where('status', Appointment::STATUS_COMPLETED)
+            ->where('buyer_intent', Appointment::BUYER_INTENT_DEAL)
+            ->latest('id')
+            ->first();
+
+        if (! $appointment || $appointment->ajb_meeting_status !== Appointment::AJB_MEETING_STATUS_CONFIRMED) {
+            return back()->withErrors([
+                'ajb_document' => 'Jadwal penandatanganan AJB harus disetujui terlebih dahulu sebelum mengunggah bukti.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'ajb_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'ajb_notes' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'ajb_document.required' => 'Pilih berkas bukti penandatanganan AJB.',
+            'ajb_document.file' => 'Berkas yang diunggah tidak valid.',
+            'ajb_document.mimes' => 'Format berkas bukti harus berupa PDF, JPG, JPEG, atau PNG.',
+            'ajb_document.max' => 'Ukuran berkas bukti maksimal 10MB.',
+        ]);
+
+        $filePath = $request->file('ajb_document')->store('ajb-documents', 'public');
+
+        $appointment->update([
+            'ajb_document_path' => $filePath,
+            'ajb_signed_at' => now(),
+            'ajb_notes' => $validated['ajb_notes'] ?? $appointment->ajb_notes,
+        ]);
+
+        $transaction->update([
+            'ajb_document_path' => $filePath,
+            'ajb_signed_at' => now(),
+        ]);
+
+        $this->moveTransactionTo(
+            $transaction,
+            'ajb_scheduled',
+            $ppat,
+            'PPAT mengunggah bukti penandatanganan Akta Jual Beli (AJB).',
+        );
+
+        $appointment->load(['seller', 'buyer']);
+        if ($appointment->seller) {
+            $appointment->seller->notify(new AppointmentNotification(
+                'Bukti AJB telah diunggah',
+                'PPAT telah mengunggah bukti penandatanganan Akta Jual Beli (AJB) untuk '.$property->title.'. Tahap 5 selesai.',
+                route('seller.my-properties.show', ['property' => $property->uuid, 'appointment' => $appointment->id]),
+            ));
+        }
+        if ($appointment->buyer) {
+            $appointment->buyer->notify(new AppointmentNotification(
+                'Bukti AJB telah diunggah',
+                'PPAT telah mengunggah bukti penandatanganan Akta Jual Beli (AJB) untuk '.$property->title.'. Tahap 5 selesai.',
+                route('buyer.bought-properties.show', ['property' => $property->uuid]),
+            ));
+        }
+
+        return back()->with('status', 'Bukti penandatanganan Akta Jual Beli (AJB) berhasil diunggah. Tahap 5 selesai.');
     }
 
     private function moveTransactionTo(

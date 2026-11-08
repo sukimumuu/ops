@@ -87,6 +87,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereUuid('property')
             ->whereNumber('appointment')
             ->name('my-properties.ppat-meetings.store');
+        Route::post('/properti-saya/{property:uuid}/survei/{appointment}/jadwal-ajb', [AppointmentController::class, 'scheduleAjbMeeting'])
+            ->whereUuid('property')
+            ->whereNumber('appointment')
+            ->name('my-properties.ajb-meetings.store');
+        Route::post('/properti-saya/{property:uuid}/survei/{appointment}/jadwal-ajb/tanggapi', [AppointmentController::class, 'respondToAjbReschedule'])
+            ->whereUuid('property')
+            ->whereNumber('appointment')
+            ->name('my-properties.ajb-meetings.respond');
         Route::get('/permintaan-survei', [ListingController::class, 'requestSurvey'])->name('request-survey');
         Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])
             ->middleware('permission:transactions.view_own_tracker')
@@ -165,6 +173,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('appointment')
             ->middleware('permission:appointments.view_all')
             ->name('ppat-meetings.update');
+        Route::post('/dashboard-antrian/{appointment}/jadwal-ajb', [AppointmentController::class, 'respondToAjbMeeting'])
+            ->whereNumber('appointment')
+            ->middleware('permission:appointments.view_all')
+            ->name('ajb-meetings.update');
         Route::get('/properti-klien', [LandDeedController::class, 'clientProperties'])
             ->middleware('permission:appointments.view_all')
             ->name('client-properties');
@@ -172,6 +184,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereUuid('property')
             ->middleware('permission:appointments.view_all')
             ->name('client-properties.show');
+        Route::post('/properti-klien/{property:uuid}/ajb-evidence', [LandDeedController::class, 'uploadAjbEvidence'])
+            ->whereUuid('property')
+            ->middleware('permission:appointments.view_all')
+            ->name('ajb-evidence.store');
         Route::get('/properti-klien/{property:uuid}/pengecekan-legalitas-bpn', [LandDeedController::class, 'bpnLegalCheck'])
             ->whereUuid('property')
             ->middleware('permission:documents.verify_status')

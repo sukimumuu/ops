@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Appointment extends Model
 {
@@ -60,6 +61,37 @@ class Appointment extends Model
         self::PPAT_MEETING_STATUS_RESCHEDULED,
     ];
 
+    public const AJB_MEETING_STATUS_REQUESTED = 'requested';
+
+    public const AJB_MEETING_STATUS_CONFIRMED = 'confirmed';
+
+    public const AJB_MEETING_STATUS_REJECTED = 'rejected';
+
+    public const AJB_MEETING_STATUS_RESCHEDULED = 'rescheduled';
+
+    /**
+     * Supported Stage 5 AJB meeting request statuses.
+     *
+     * @var list<string>
+     */
+    public const AJB_MEETING_STATUSES = [
+        self::AJB_MEETING_STATUS_REQUESTED,
+        self::AJB_MEETING_STATUS_CONFIRMED,
+        self::AJB_MEETING_STATUS_REJECTED,
+        self::AJB_MEETING_STATUS_RESCHEDULED,
+    ];
+
+    /**
+     * Decisions that a PPAT may take on an AJB meeting request.
+     *
+     * @var list<string>
+     */
+    public const AJB_MEETING_DECISIONS = [
+        self::AJB_MEETING_STATUS_CONFIRMED,
+        self::AJB_MEETING_STATUS_REJECTED,
+        self::AJB_MEETING_STATUS_RESCHEDULED,
+    ];
+
     /**
      * All supported buyer decisions after a survey.
      *
@@ -108,6 +140,9 @@ class Appointment extends Model
             'reschedule_suggested_at' => 'datetime',
             'completed_at' => 'datetime',
             'ppat_meeting_date' => 'date',
+            'ajb_meeting_date' => 'date',
+            'ajb_suggested_date' => 'date',
+            'ajb_signed_at' => 'datetime',
         ];
     }
 
@@ -145,6 +180,36 @@ class Appointment extends Model
             self::PPAT_MEETING_STATUS_RESCHEDULED => 'Jadwal diubah PPAT',
             default => null,
         };
+    }
+
+    public function ajbMeetingStatusLabel(): ?string
+    {
+        return match ($this->ajb_meeting_status) {
+            self::AJB_MEETING_STATUS_REQUESTED => 'Menunggu persetujuan PPAT',
+            self::AJB_MEETING_STATUS_CONFIRMED => 'Jadwal disetujui PPAT',
+            self::AJB_MEETING_STATUS_REJECTED => 'Jadwal ditolak PPAT',
+            self::AJB_MEETING_STATUS_RESCHEDULED => 'Jadwal diubah PPAT',
+            default => null,
+        };
+    }
+
+    public function ajbDocumentUrl(): ?string
+    {
+        if (empty($this->ajb_document_path)) {
+            return null;
+        }
+
+        $publicDisk = Storage::disk('public');
+        if ($publicDisk->exists($this->ajb_document_path)) {
+            return $publicDisk->url($this->ajb_document_path);
+        }
+
+        $localDisk = Storage::disk('local');
+        if ($localDisk->exists($this->ajb_document_path)) {
+            return $localDisk->temporaryUrl($this->ajb_document_path, now()->addHour());
+        }
+
+        return $publicDisk->url($this->ajb_document_path);
     }
 
     /**

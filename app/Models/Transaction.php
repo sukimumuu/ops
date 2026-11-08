@@ -6,6 +6,7 @@ use Brick\Math\BigDecimal;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Transaction extends Model
 {
@@ -36,6 +37,20 @@ class Transaction extends Model
 
     protected $guarded = ['id'];
 
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'paid_at' => 'datetime',
+            'settled_at' => 'datetime',
+            'ajb_signed_at' => 'datetime',
+        ];
+    }
+
     public function hasCompletedDownPayment(): bool
     {
         return in_array((string) $this->state, self::DP_PAID_STATES, true);
@@ -54,6 +69,30 @@ class Transaction extends Model
             'ajb_scheduled',
             'completed',
         ], true);
+    }
+
+    public function isStageFiveUnlocked(): bool
+    {
+        return $this->hasCompletedEscrowPayment();
+    }
+
+    public function ajbDocumentUrl(): ?string
+    {
+        if (empty($this->ajb_document_path)) {
+            return null;
+        }
+
+        $publicDisk = Storage::disk('public');
+        if ($publicDisk->exists($this->ajb_document_path)) {
+            return $publicDisk->url($this->ajb_document_path);
+        }
+
+        $localDisk = Storage::disk('local');
+        if ($localDisk->exists($this->ajb_document_path)) {
+            return $localDisk->temporaryUrl($this->ajb_document_path, now()->addHour());
+        }
+
+        return $publicDisk->url($this->ajb_document_path);
     }
 
     /**
