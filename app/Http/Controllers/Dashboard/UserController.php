@@ -265,6 +265,7 @@ class UserController extends Controller
 
         $property->load([
             'photos',
+            'documents.validatedBy:id,name',
             'assignedPpat:id,name,email,phone,avatar_path',
             'seller:id,name,email,phone,avatar_path',
         ]);
@@ -326,6 +327,8 @@ class UserController extends Controller
             'pending' => $appointments->where('status', Appointment::STATUS_REQUESTED)->count(),
         ];
 
+        $bpnProgress = $property->bpnVerificationProgress();
+
         return view('dashboard.user.property-detail', compact(
             'property',
             'appointments',
@@ -337,6 +340,7 @@ class UserController extends Controller
             'progress',
             'mapUrl',
             'surveyStats',
+            'bpnProgress',
         ));
     }
 }

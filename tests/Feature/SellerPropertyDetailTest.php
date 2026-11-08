@@ -2,6 +2,7 @@
 
 use App\Models\Appointment;
 use App\Models\Property;
+use App\Models\PropertyPhoto;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -550,6 +551,44 @@ it('forbids other sellers from viewing or updating the survey', function () {
         ->assertForbidden();
 
     expect($appointment->fresh()->status)->toBe(Appointment::STATUS_CONFIRMED);
+});
+
+it('shows live PPAT document verification progress on the seller detail page', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $ppat = User::factory()->create(['name' => 'PPAT Sari']);
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+
+    createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => now()->addWeek()->format('Y-m-d'),
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+        'completed_at' => now()->subDay(),
+    ]);
+
+    foreach ([PropertyPhoto::TYPE_CERTIFICATE, PropertyPhoto::TYPE_IMB] as $index => $type) {
+        PropertyPhoto::query()->create([
+            'property_id' => $property->id,
+            'file_path' => 'properties/'.$property->id.'/documents/'.$type.'.pdf',
+            'type' => $type,
+            'sort_order' => $index,
+            'validation_status' => PropertyPhoto::VALIDATION_APPROVED,
+            'validated_by_id' => $ppat->id,
+            'validated_at' => now(),
+        ]);
+    }
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties.show', ['property' => $property->uuid]))
+        ->assertOk()
+        ->assertSeeText('Progres pengecekan PPAT')
+        ->assertSeeText('Pengecekan selesai')
+        ->assertSeeText('100%')
+        ->assertSeeText('2 dari 2 dokumen disetujui')
+        ->assertSeeText('Disetujui')
+        ->assertSeeText('PPAT Sari');
 });
 
 it('rejects an appointment that belongs to another property', function () {

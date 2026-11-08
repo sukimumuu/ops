@@ -160,6 +160,22 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('appointment')
             ->middleware('permission:appointments.view_all')
             ->name('ppat-meetings.update');
+        Route::get('/properti-klien', [LandDeedController::class, 'clientProperties'])
+            ->middleware('permission:appointments.view_all')
+            ->name('client-properties');
+        Route::get('/properti-klien/{property:uuid}', [LandDeedController::class, 'clientDetailProperty'])
+            ->whereUuid('property')
+            ->middleware('permission:appointments.view_all')
+            ->name('client-properties.show');
+        Route::get('/properti-klien/{property:uuid}/pengecekan-legalitas-bpn', [LandDeedController::class, 'bpnLegalCheck'])
+            ->whereUuid('property')
+            ->middleware('permission:documents.verify_status')
+            ->name('bpn-legal-check');
+        Route::post('/properti-klien/{property:uuid}/dokumen/{document}/validasi', [LandDeedController::class, 'reviewDocument'])
+            ->whereUuid('property')
+            ->whereNumber('document')
+            ->middleware('permission:documents.verify_status')
+            ->name('documents.review');
         Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])
             ->middleware('permission:documents.input_bpn_result|transactions.mark_bpn_cleared')
             ->name('bpn-check');

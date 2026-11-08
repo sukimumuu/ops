@@ -2,6 +2,7 @@
 
 use App\Models\Appointment;
 use App\Models\Property;
+use App\Models\PropertyPhoto;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -273,4 +274,60 @@ it('shows deed timeline steps when survey buyer intent is deal', function () {
         ->assertSeeText('Menunggu persetujuan PPAT')
         ->assertSeeText('Pembayaran DP terkunci sampai jadwal temu PPAT disetujui.')
         ->assertDontSeeText('Bayar DP');
+});
+
+it('shows live PPAT document verification progress on the buyer detail page', function () {
+    $buyer = User::factory()->create();
+    $buyer->assignRole('User');
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $ppat = User::factory()->create(['name' => 'PPAT Sari']);
+    $property = createBuyerPropertyForTest($seller, ['assigned_ppat_id' => $ppat->id]);
+
+    createBuyerAppointmentForTest($buyer, $seller, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => now()->addWeek()->format('Y-m-d'),
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+        'completed_at' => now()->subDay(),
+    ]);
+
+    PropertyPhoto::query()->create([
+        'property_id' => $property->id,
+        'file_path' => 'properties/'.$property->id.'/documents/certificate.pdf',
+        'type' => PropertyPhoto::TYPE_CERTIFICATE,
+        'sort_order' => 0,
+        'validation_status' => PropertyPhoto::VALIDATION_APPROVED,
+        'validated_by_id' => $ppat->id,
+        'validated_at' => now(),
+    ]);
+    PropertyPhoto::query()->create([
+        'property_id' => $property->id,
+        'file_path' => 'properties/'.$property->id.'/documents/imb.pdf',
+        'type' => PropertyPhoto::TYPE_IMB,
+        'sort_order' => 1,
+        'validation_status' => PropertyPhoto::VALIDATION_REJECTED,
+        'validation_notes' => 'IMB tidak sesuai dengan luas bangunan.',
+        'validated_by_id' => $ppat->id,
+        'validated_at' => now(),
+    ]);
+    PropertyPhoto::query()->create([
+        'property_id' => $property->id,
+        'file_path' => 'properties/'.$property->id.'/documents/pbb.pdf',
+        'type' => PropertyPhoto::TYPE_PBB,
+        'sort_order' => 2,
+    ]);
+
+    $this->actingAs($buyer)
+        ->get(route('buyer.bought-properties.show', ['property' => $property->uuid]))
+        ->assertOk()
+        ->assertSeeText('Progres pengecekan PPAT')
+        ->assertSeeText('Perlu perbaikan')
+        ->assertSeeText('33%')
+        ->assertSeeText('1 dari 3 dokumen disetujui')
+        ->assertSeeText('Disetujui')
+        ->assertSeeText('Ditolak')
+        ->assertSeeText('Menunggu validasi')
+        ->assertSeeText('IMB tidak sesuai dengan luas bangunan.')
+        ->assertSeeText('PPAT Sari');
 });
