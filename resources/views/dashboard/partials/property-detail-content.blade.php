@@ -8,6 +8,7 @@
         $showBuyerInHistory = $showBuyerInHistory ?? false;
         $stageThreeUrl = $stageThreeUrl ?? null;
         $clientBuyer = $clientBuyer ?? null;
+        $isStageThreeUnlocked = $isStageThreeUnlocked ?? (($transaction ?? null)?->hasCompletedDownPayment() ?? false);
         $breadcrumbs = $breadcrumbs ?? [
             ['label' => 'Beranda', 'url' => route('home')],
             ['label' => 'Properti Dibeli', 'url' => route('buyer.bought-properties')],
@@ -394,6 +395,36 @@
                                                                         Menunggu penjual atau PPAT mengajukan tanggal pertemuan.
                                                                     </p>
                                                                 @endif
+
+                                                                @if (($canManagePpatMeeting ?? false) && $pendingPpatMeetingRequests->isNotEmpty())
+                                                                    <div class="mt-4 space-y-3 border-t border-slate-100 pt-3">
+                                                                        <p class="text-xs font-semibold text-slate-700">
+                                                                            Permintaan jadwal dari penjual
+                                                                        </p>
+                                                                        @foreach ($pendingPpatMeetingRequests as $meetingRequest)
+                                                                            <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                                                                <p class="text-xs leading-5 text-amber-900">
+                                                                                    {{ $meetingRequest->seller->name }} mengajukan jadwal
+                                                                                    <span class="font-bold">
+                                                                                        {{ $meetingRequest->ppat_meeting_date->locale('id')->translatedFormat('l, d F Y') }}
+                                                                                    </span>
+                                                                                    untuk {{ $meetingRequest->buyer->name }}.
+                                                                                </p>
+                                                                                <form method="POST"
+                                                                                    action="{{ route('land-deed.ppat-meetings.update', $meetingRequest) }}"
+                                                                                    class="mt-3">
+                                                                                    @csrf
+                                                                                    <input type="hidden" name="decision"
+                                                                                        value="{{ \App\Models\Appointment::PPAT_MEETING_STATUS_CONFIRMED }}">
+                                                                                    <button type="submit"
+                                                                                        class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30">
+                                                                                        Setujui jadwal (Accept)
+                                                                                    </button>
+                                                                                </form>
+                                                                            </div>
+                                                                        @endforeach
+                                                                    </div>
+                                                                @endif
                                                             </div>
                                                         @elseif ($index === 1)
                                                             <div class="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white p-3 text-left">
@@ -468,12 +499,16 @@
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
                                                                 Verifikasi keabsahan sertifikat di BPN dan validasi kewajiban pajak (PPh & BPHTB).
                                                             </p>
-                                                            @include('dashboard.partials.bpn-verification-progress')
-                                                            @if ($stageThreeUrl)
-                                                                <a href="{{ $stageThreeUrl }}"
-                                                                    class="mt-3 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
-                                                                    Buka Pengecekan Legalitas BPN & Validasi Pajak
-                                                                </a>
+                                                            @if ($isStageThreeUnlocked)
+                                                                @include('dashboard.partials.bpn-verification-progress')
+                                                                @if ($stageThreeUrl)
+                                                                    <a href="{{ $stageThreeUrl }}"
+                                                                        class="mt-3 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                                                                        Buka Pengecekan Legalitas BPN & Validasi Pajak
+                                                                    </a>
+                                                                @endif
+                                                            @else
+                                                                @include('dashboard.partials.stage-three-locked')
                                                             @endif
                                                         @elseif ($index === 3)
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">

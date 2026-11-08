@@ -8,7 +8,26 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Transaction extends Model
 {
+    /**
+     * States where the down payment has been confirmed and Stage 3 is unlocked.
+     *
+     * @var list<string>
+     */
+    public const DP_PAID_STATES = [
+        'dp_paid',
+        'held_in_escrow',
+        'bpn_checking',
+        'bpn_cleared',
+        'ajb_scheduled',
+        'completed',
+    ];
+
     protected $guarded = ['id'];
+
+    public function hasCompletedDownPayment(): bool
+    {
+        return in_array((string) $this->state, self::DP_PAID_STATES, true);
+    }
 
     public function property(): BelongsTo
     {

@@ -3,6 +3,7 @@
 use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -134,6 +135,47 @@ it('shows the purchase timeline and PPAT date picker when the buyer is intereste
             'property' => $property->uuid,
             'appointment' => $property->appointments()->first()->id,
         ]).'"', false);
+});
+
+it('locks stage three until the down payment is confirmed', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $ppat = User::factory()->create();
+    $buyer = User::factory()->create();
+    $property = createSellerDetailProperty($seller, ['assigned_ppat_id' => $ppat->id]);
+
+    createSellerDetailAppointment($seller, $buyer, $property, [
+        'status' => Appointment::STATUS_COMPLETED,
+        'buyer_intent' => Appointment::BUYER_INTENT_DEAL,
+        'ppat_meeting_date' => now()->addWeek()->format('Y-m-d'),
+        'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+        'completed_at' => now()->subDay(),
+    ]);
+
+    $transaction = Transaction::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'property_id' => $property->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $seller->id,
+        'booking_fee_amount' => 150000000,
+        'total_property_amount' => $property->price,
+        'state' => 'draft',
+    ]);
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties.show', ['property' => $property->uuid]))
+        ->assertOk()
+        ->assertSeeText('Tahap terkunci')
+        ->assertSeeText('Tahap ini akan tersedia setelah pembayaran DP (uang muka) berhasil dikonfirmasi.')
+        ->assertDontSeeText('Progres pengecekan PPAT');
+
+    $transaction->update(['state' => 'dp_paid']);
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties.show', ['property' => $property->uuid]))
+        ->assertOk()
+        ->assertDontSeeText('Tahap ini akan tersedia setelah pembayaran DP (uang muka) berhasil dikonfirmasi.')
+        ->assertSeeText('Progres pengecekan PPAT');
 });
 
 it('saves the requested PPAT meeting date without changing the survey schedule', function () {
@@ -566,6 +608,16 @@ it('shows live PPAT document verification progress on the seller detail page', f
         'ppat_meeting_date' => now()->addWeek()->format('Y-m-d'),
         'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_CONFIRMED,
         'completed_at' => now()->subDay(),
+    ]);
+
+    Transaction::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'property_id' => $property->id,
+        'buyer_id' => $buyer->id,
+        'seller_id' => $seller->id,
+        'booking_fee_amount' => 150000000,
+        'total_property_amount' => $property->price,
+        'state' => 'dp_paid',
     ]);
 
     foreach ([PropertyPhoto::TYPE_CERTIFICATE, PropertyPhoto::TYPE_IMB] as $index => $type) {
