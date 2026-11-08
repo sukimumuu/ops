@@ -281,7 +281,11 @@ class UserController extends Controller
             ->where('buyer_id', $user->id)
             ->latest('id')
             ->first();
-        $dpPaymentAttempt = $transaction?->dpPaymentAttempts()->latest('id')->first();
+        $dpPaymentAttempt = $transaction?->latestDpPaymentAttempt();
+        $escrowPaymentAttempt = $transaction?->latestEscrowPaymentAttempt();
+        $remainingEscrowAmount = $transaction?->remainingEscrowAmount();
+        $isStageFourUnlocked = $transaction?->isStageFourUnlocked() ?? false;
+        $isEscrowPaid = $transaction?->hasCompletedEscrowPayment() ?? false;
         $requiredDpAmount = $transaction?->state === 'draft'
             ? $amountCalculator->calculate($transaction->total_property_amount)
             : null;
@@ -337,12 +341,16 @@ class UserController extends Controller
             'selectedAppointment',
             'transaction',
             'dpPaymentAttempt',
+            'escrowPaymentAttempt',
             'requiredDpAmount',
+            'remainingEscrowAmount',
             'progress',
             'mapUrl',
             'surveyStats',
             'bpnProgress',
             'isStageThreeUnlocked',
+            'isStageFourUnlocked',
+            'isEscrowPaid',
         ));
     }
 }

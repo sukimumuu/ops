@@ -6,6 +6,7 @@ use App\Http\Controllers\Dashboard\AdminController;
 use App\Http\Controllers\Dashboard\AppointmentController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DpPaymentController;
+use App\Http\Controllers\Dashboard\EscrowPaymentController;
 use App\Http\Controllers\Dashboard\LandDeedController;
 use App\Http\Controllers\Dashboard\ListingController;
 use App\Http\Controllers\Dashboard\NotificationController;
@@ -145,6 +146,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereUuid('transaction')
             ->middleware(['throttle:10,1', 'permission:transactions.initiate_dp'])
             ->name('dp-payments.store');
+        Route::post('/transaksi/{transaction:uuid}/pelunasan', [EscrowPaymentController::class, 'store'])
+            ->whereUuid('transaction')
+            ->middleware(['throttle:10,1', 'permission:transactions.initiate_dp|transactions.view_own_tracker'])
+            ->name('escrow-payments.store');
     });
 
     Route::post('/jadwal-survei/{appointment}/status', [AppointmentController::class, 'updateStatus'])

@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TransactionLedgerEntry extends Model
 {
+    public const TYPE_DP = 'dp';
+
+    public const TYPE_FINAL = 'final';
+
     public const STATUS_RESERVED = 'reserved';
 
     protected $guarded = ['id'];

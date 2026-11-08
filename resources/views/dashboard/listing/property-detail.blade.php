@@ -2,6 +2,12 @@
 @section('page-title', 'Detail Properti')
 @section('content')
     @php
+        $isStageThreeUnlocked = $isStageThreeUnlocked ?? (($transaction ?? null)?->hasCompletedDownPayment() ?? false);
+        $isStageFourUnlocked = $isStageFourUnlocked ?? (($transaction ?? null)?->isStageFourUnlocked() ?? false);
+        $isEscrowPaid = $isEscrowPaid ?? (($transaction ?? null)?->hasCompletedEscrowPayment() ?? false);
+        $remainingEscrowAmount = $remainingEscrowAmount ?? (($transaction ?? null)?->remainingEscrowAmount() ?? 0);
+        $escrowPaymentAttempt = $escrowPaymentAttempt ?? (($transaction ?? null)?->latestEscrowPaymentAttempt());
+
         $propertyFacts = array_filter(
             [
                 'Tipe properti' => $property->property_type === 'tanah' ? 'Tanah' : 'Bangunan',
@@ -331,16 +337,33 @@
 
                                 <ol class="space-y-4 sm:space-y-5">
                                     @foreach ($deedTimelineSteps as $index => $step)
+                                        @php
+                                            $isStepCompleted = match ($index) {
+                                                0 => in_array($selectedAppointment->ppat_meeting_status, [
+                                                    \App\Models\Appointment::PPAT_MEETING_STATUS_CONFIRMED,
+                                                    \App\Models\Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
+                                                ], true),
+                                                1 => (bool) $transaction?->hasCompletedDownPayment(),
+                                                2 => in_array((string) $transaction?->state, ['bpn_cleared', 'held_in_escrow', 'ajb_scheduled', 'completed'], true),
+                                                3 => (bool) $isEscrowPaid,
+                                                4 => in_array((string) $transaction?->state, ['ajb_scheduled', 'completed'], true),
+                                                5 => (string) $transaction?->state === 'completed',
+                                                default => false,
+                                            };
+                                        @endphp
                                         <li
                                             class="relative grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] sm:gap-x-4">
 
                                             <div @class([
                                                 'col-start-2 row-start-1 rounded-xl border p-3 sm:p-4',
-                                                'border-primary/20 bg-primary/5 sm:col-start-1' => $index === 0,
+                                                'border-emerald-200 bg-emerald-50/20' => $isStepCompleted,
+                                                'border-primary/20 bg-primary/5 sm:col-start-1' => ! $isStepCompleted && $index === 0,
                                                 'border-slate-200 bg-white sm:col-start-3' =>
-                                                    $index !== 0 && $index % 2 === 1,
+                                                    ! $isStepCompleted && $index !== 0 && $index % 2 === 1,
                                                 'border-slate-200 bg-white sm:col-start-1' =>
-                                                    $index !== 0 && $index % 2 === 0,
+                                                    ! $isStepCompleted && $index !== 0 && $index % 2 === 0,
+                                                'sm:col-start-1' => $isStepCompleted && ($index === 0 || $index % 2 === 0),
+                                                'sm:col-start-3' => $isStepCompleted && $index % 2 === 1,
                                             ])>
                                                 <div @class([
                                                     'flex items-start gap-3',
@@ -349,8 +372,9 @@
                                                 ])>
                                                     <span @class([
                                                         'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg',
-                                                        'bg-primary/10 text-primary' => $index === 0,
-                                                        'bg-slate-100 text-slate-500' => $index !== 0,
+                                                        'bg-emerald-100 text-emerald-700' => $isStepCompleted,
+                                                        'bg-primary/10 text-primary' => ! $isStepCompleted && $index === 0,
+                                                        'bg-slate-100 text-slate-500' => ! $isStepCompleted && $index !== 0,
                                                     ]) aria-hidden="true">
                                                         <svg class="size-5" fill="none" stroke="currentColor"
                                                             stroke-width="1.7" viewBox="0 0 24 24">
@@ -450,12 +474,16 @@
                                                             <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
                                                                 {{ $step['title'] }}
                                                             </h3>
-                                                            @if (in_array($selectedAppointment->ppat_meeting_status, [
+                                                            @if ($transaction?->hasCompletedDownPayment())
+                                                                <p class="mt-2 text-xs leading-5 text-emerald-700">
+                                                                    DP terkonfirmasi. Dana dicatat sebagai dana cadangan Mihom dan tersimpan aman di escrow.
+                                                                </p>
+                                                            @elseif (in_array($selectedAppointment->ppat_meeting_status, [
                                                                     \App\Models\Appointment::PPAT_MEETING_STATUS_CONFIRMED,
                                                                     \App\Models\Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
                                                                 ], true))
                                                                 <p class="mt-2 text-xs leading-5 text-emerald-700">
-                                                                    Jadwal temu PPAT disetujui. Tahap ini dapat dilanjutkan oleh pembeli.
+                                                                    Jadwal temu PPAT disetujui. Menunggu pembayaran DP dari pembeli.
                                                                 </p>
                                                             @else
                                                                 <p class="mt-2 text-xs leading-5 text-slate-500">
@@ -474,6 +502,55 @@
                                                             @else
                                                                 @include('dashboard.partials.stage-three-locked')
                                                             @endif
+                                                        @elseif ($index === 3)
+                                                            <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
+                                                                {{ $step['title'] }}
+                                                            </h3>
+                                                            <p class="mt-2 text-xs leading-5 text-slate-500">
+                                                                Penyetoran sisa pelunasan harga properti ke rekening bersama (escrow) sebelum penandatanganan AJB.
+                                                            </p>
+
+                                                            <div class="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white p-3 text-left">
+                                                                @if ($isEscrowPaid)
+                                                                    <div class="space-y-1">
+                                                                        <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                                                                            Pelunasan Terkonfirmasi
+                                                                        </span>
+                                                                        <p class="text-xs font-semibold text-emerald-700">
+                                                                            Pelunasan terkonfirmasi. Seluruh dana telah tersimpan aman di rekening bersama (escrow) Mihom dan siap untuk tahap penandatanganan AJB.
+                                                                        </p>
+                                                                    </div>
+                                                                @elseif ($escrowPaymentAttempt?->status === \App\Models\DpPaymentAttempt::STATUS_PENDING)
+                                                                    <div class="space-y-1">
+                                                                        <span class="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+                                                                            Menunggu Pembayaran Pembeli
+                                                                        </span>
+                                                                        <p class="text-xs leading-5 text-slate-600">
+                                                                            Menunggu pembeli melakukan pembayaran pelunasan sebesar
+                                                                            <span class="font-bold text-secondary">Rp {{ number_format((float) $escrowPaymentAttempt->amount, 0, ',', '.') }}</span>
+                                                                            melalui Virtual Account {{ $escrowPaymentAttempt->channel_code }}.
+                                                                        </p>
+                                                                        <p class="text-xs leading-5 text-slate-500">
+                                                                            Batas waktu: {{ $escrowPaymentAttempt->expires_at->locale('id')->translatedFormat('d F Y, H:i') }} WIB.
+                                                                        </p>
+                                                                    </div>
+                                                                @elseif ($isStageFourUnlocked && $transaction?->state === 'bpn_cleared')
+                                                                    <div class="space-y-1">
+                                                                        <span class="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-bold text-sky-800">
+                                                                            Siap Dilunasi
+                                                                        </span>
+                                                                        <p class="text-xs leading-5 text-slate-600">
+                                                                            Pengecekan BPN & validasi pajak selesai. Menunggu pembeli menyetorkan sisa pelunasan sebesar
+                                                                            <span class="font-bold text-secondary">Rp {{ number_format((float) ($remainingEscrowAmount ?? $transaction?->remainingEscrowAmount()), 0, ',', '.') }}</span>
+                                                                            ke rekening bersama (escrow).
+                                                                        </p>
+                                                                    </div>
+                                                                @else
+                                                                    <p class="text-xs leading-5 text-amber-700">
+                                                                        Tahap ini terkunci sampai pengecekan legalitas BPN dan validasi pajak selesai disetujui PPAT.
+                                                                    </p>
+                                                                @endif
+                                                            </div>
                                                         @else
                                                             <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
                                                                 {{ $step['title'] }}
@@ -481,6 +558,20 @@
                                                         @endif
                                                     </div>
                                                 </div>
+                                            </div>
+
+                                            <div @class([
+                                                'col-start-1 row-start-1 flex size-10 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow sm:col-start-2',
+                                                'bg-emerald-600 text-white' => $isStepCompleted,
+                                                'bg-slate-100 text-slate-600' => ! $isStepCompleted,
+                                            ])>
+                                                @if ($isStepCompleted)
+                                                    <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                                    </svg>
+                                                @else
+                                                    {{ $index + 1 }}
+                                                @endif
                                             </div>
                                         </li>
                                     @endforeach

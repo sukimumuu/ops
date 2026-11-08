@@ -979,7 +979,11 @@ class LandDeedController extends Controller
             ->latest('id')
             ->first();
 
-        $dpPaymentAttempt = $transaction?->dpPaymentAttempts()->latest('id')->first();
+        $dpPaymentAttempt = $transaction?->latestDpPaymentAttempt();
+        $escrowPaymentAttempt = $transaction?->latestEscrowPaymentAttempt();
+        $remainingEscrowAmount = $transaction?->remainingEscrowAmount();
+        $isStageFourUnlocked = $transaction?->isStageFourUnlocked() ?? false;
+        $isEscrowPaid = $transaction?->hasCompletedEscrowPayment() ?? false;
         $requiredDpAmount = $transaction?->state === 'draft'
             ? $amountCalculator->calculate($transaction->total_property_amount)
             : null;
@@ -1047,13 +1051,17 @@ class LandDeedController extends Controller
             'canManagePpatMeeting',
             'transaction',
             'dpPaymentAttempt',
+            'escrowPaymentAttempt',
             'requiredDpAmount',
+            'remainingEscrowAmount',
             'progress',
             'mapUrl',
             'surveyStats',
             'clientBuyer',
             'bpnProgress',
             'isStageThreeUnlocked',
+            'isStageFourUnlocked',
+            'isEscrowPaid',
         ));
     }
 

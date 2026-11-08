@@ -146,7 +146,7 @@ it('creates one IDR Virtual Account request and ignores browser-supplied payment
         && $request['type'] === 'PAY'
         && $request['channel_code'] === 'BNI'
         && $request->hasHeader('idempotency-key')
-        && $request->hasHeader('api-version', '2022-07-31'));
+        && $request->hasHeader('api-version', '2024-11-11'));
 });
 
 it('reuses an active payment request and shows the VA instructions to its buyer', function () {
