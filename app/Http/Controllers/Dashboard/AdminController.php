@@ -39,11 +39,6 @@ class AdminController extends Controller
         return view('dashboard.admin.user-management', compact('users', 'roles'));
     }
 
-    public function transactionAndEscrow()
-    {
-        return view('dashboard.admin.transaction-and-escrow');
-    }
-
     public function masterDataProperty(Request $request): View
     {
         $filters = $request->validate([

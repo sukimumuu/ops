@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\Transaction;
+use App\Models\TransactionLedgerEntry;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
@@ -228,6 +229,10 @@ class ListingController extends Controller
         ];
 
         $transaction = $property->transactions()->latest('id')->first();
+        $escrowDisbursement = $transaction?->latestEscrowDisbursement();
+        $escrowReleaseAmount = $transaction?->ledgerEntries()
+            ->where('status', TransactionLedgerEntry::STATUS_RESERVED)
+            ->sum('amount') ?? 0;
         $dpPaymentAttempt = $transaction?->latestDpPaymentAttempt();
         $escrowPaymentAttempt = $transaction?->latestEscrowPaymentAttempt();
         $remainingEscrowAmount = $transaction?->remainingEscrowAmount();
@@ -245,6 +250,8 @@ class ListingController extends Controller
             'mapUrl',
             'surveyStats',
             'transaction',
+            'escrowDisbursement',
+            'escrowReleaseAmount',
             'dpPaymentAttempt',
             'escrowPaymentAttempt',
             'remainingEscrowAmount',

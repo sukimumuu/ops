@@ -185,4 +185,14 @@ class Transaction extends Model
     {
         return $this->hasMany(TransactionLedgerEntry::class);
     }
+
+    public function escrowDisbursements(): HasMany
+    {
+        return $this->hasMany(EscrowDisbursement::class);
+    }
+
+    public function latestEscrowDisbursement(): ?EscrowDisbursement
+    {
+        return $this->escrowDisbursements()->latest('id')->first();
+    }
 }

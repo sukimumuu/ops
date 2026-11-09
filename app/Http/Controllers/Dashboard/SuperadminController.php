@@ -92,11 +92,6 @@ class SuperadminController extends Controller
             ->with('status', 'Pengguna baru berhasil ditambahkan.');
     }
 
-    public function transactionAndEscrow()
-    {
-        return view('dashboard.superadmin.transaction-and-escrow');
-    }
-
     public function masterDataProperty(Request $request): View
     {
         $filters = $request->validate([
