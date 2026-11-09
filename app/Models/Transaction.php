@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Storage;
 
 class Transaction extends Model
 {
+    public const STATE_CERTIFICATE_TRANSFER_PENDING = 'certificate_transfer_pending';
+
+    public const STATE_COMPLETED = 'completed';
+
     /**
      * States where the down payment has been confirmed and Stage 3 is unlocked.
      *
@@ -21,7 +25,8 @@ class Transaction extends Model
         'bpn_checking',
         'bpn_cleared',
         'ajb_scheduled',
-        'completed',
+        self::STATE_CERTIFICATE_TRANSFER_PENDING,
+        self::STATE_COMPLETED,
     ];
 
     /**
@@ -32,7 +37,8 @@ class Transaction extends Model
     public const ESCROW_PAID_STATES = [
         'held_in_escrow',
         'ajb_scheduled',
-        'completed',
+        self::STATE_CERTIFICATE_TRANSFER_PENDING,
+        self::STATE_COMPLETED,
     ];
 
     protected $guarded = ['id'];
@@ -48,6 +54,7 @@ class Transaction extends Model
             'paid_at' => 'datetime',
             'settled_at' => 'datetime',
             'ajb_signed_at' => 'datetime',
+            'certificate_transfer_submitted_at' => 'datetime',
         ];
     }
 
@@ -61,13 +68,20 @@ class Transaction extends Model
         return in_array((string) $this->state, self::ESCROW_PAID_STATES, true);
     }
 
+    public function hasCompletedCertificateTransfer(): bool
+    {
+        return $this->state === self::STATE_COMPLETED
+            && filled($this->certificate_transfer_receipt_path);
+    }
+
     public function isStageFourUnlocked(): bool
     {
         return in_array((string) $this->state, [
             'bpn_cleared',
             'held_in_escrow',
             'ajb_scheduled',
-            'completed',
+            self::STATE_CERTIFICATE_TRANSFER_PENDING,
+            self::STATE_COMPLETED,
         ], true);
     }
 
@@ -194,5 +208,10 @@ class Transaction extends Model
     public function latestEscrowDisbursement(): ?EscrowDisbursement
     {
         return $this->escrowDisbursements()->latest('id')->first();
+    }
+
+    public function certificateTransferSubmittedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'certificate_transfer_submitted_by');
     }
 }

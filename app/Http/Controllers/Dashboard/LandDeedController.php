@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\EscrowDisbursement;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
 use App\Models\Transaction;
@@ -1041,9 +1042,11 @@ class LandDeedController extends Controller
 
         $transaction = $property->transactions()
             ->with(['buyer:id,name,email,phone,avatar_path'])
+            ->with('certificateTransferSubmittedBy:id,name')
             ->latest('id')
             ->first();
         $escrowDisbursement = $transaction?->latestEscrowDisbursement();
+        $isStageSevenUnlocked = $escrowDisbursement?->status === EscrowDisbursement::STATUS_RELEASED;
         $escrowReleaseAmount = $transaction?->ledgerEntries()
             ->where('status', TransactionLedgerEntry::STATUS_RESERVED)
             ->sum('amount') ?? 0;
@@ -1123,6 +1126,7 @@ class LandDeedController extends Controller
             'canManageAjbMeeting',
             'transaction',
             'escrowDisbursement',
+            'isStageSevenUnlocked',
             'escrowReleaseAmount',
             'dpPaymentAttempt',
             'escrowPaymentAttempt',

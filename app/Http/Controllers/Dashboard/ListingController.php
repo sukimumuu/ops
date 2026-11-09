@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\EscrowDisbursement;
 use App\Models\Property;
 use App\Models\Transaction;
 use App\Models\TransactionLedgerEntry;
@@ -37,7 +38,7 @@ class ListingController extends Controller
                 ->count(),
             'activeTransactions' => Transaction::query()
                 ->where('seller_id', $user->id)
-                ->whereIn('state', ['dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'])
+                ->whereIn('state', ['dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled', Transaction::STATE_CERTIFICATE_TRANSFER_PENDING])
                 ->count(),
         ];
 
@@ -228,8 +229,12 @@ class ListingController extends Controller
             'pending' => $appointments->where('status', Appointment::STATUS_REQUESTED)->count(),
         ];
 
-        $transaction = $property->transactions()->latest('id')->first();
+        $transaction = $property->transactions()
+            ->with('certificateTransferSubmittedBy:id,name')
+            ->latest('id')
+            ->first();
         $escrowDisbursement = $transaction?->latestEscrowDisbursement();
+        $isStageSevenUnlocked = $escrowDisbursement?->status === EscrowDisbursement::STATUS_RELEASED;
         $escrowReleaseAmount = $transaction?->ledgerEntries()
             ->where('status', TransactionLedgerEntry::STATUS_RESERVED)
             ->sum('amount') ?? 0;
@@ -251,6 +256,7 @@ class ListingController extends Controller
             'surveyStats',
             'transaction',
             'escrowDisbursement',
+            'isStageSevenUnlocked',
             'escrowReleaseAmount',
             'dpPaymentAttempt',
             'escrowPaymentAttempt',

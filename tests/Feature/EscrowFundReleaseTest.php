@@ -9,6 +9,8 @@ use App\Models\TransactionLedgerEntry;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -250,9 +252,9 @@ it('confirms a manual bank transfer and synchronizes Stage 6 across buyer seller
         ->and($disbursement->transfer_reference)->toBe('TRF-BANK-20261109-001')
         ->and($disbursement->confirmed_by)->toBe($admin->id)
         ->and($disbursement->confirmed_at)->not->toBeNull()
-        ->and($scenario['transaction']->fresh()->state)->toBe('completed')
+        ->and($scenario['transaction']->fresh()->state)->toBe(Transaction::STATE_CERTIFICATE_TRANSFER_PENDING)
         ->and($scenario['transaction']->ledgerEntries()->where('status', TransactionLedgerEntry::STATUS_RELEASED)->count())->toBe(2)
-        ->and($scenario['transaction']->logs()->where('to_state', 'completed')->exists())->toBeTrue();
+        ->and($scenario['transaction']->logs()->where('to_state', Transaction::STATE_CERTIFICATE_TRANSFER_PENDING)->exists())->toBeTrue();
 
     $this->from(route('superadmin.transaction-and-escrow'))
         ->post($confirmUrl, ['transfer_reference' => 'TRF-DUPLICATE'])
@@ -276,6 +278,163 @@ it('confirms a manual bank transfer and synchronizes Stage 6 across buyer seller
         ->assertOk()
         ->assertSeeText('Dana telah dicairkan')
         ->assertSeeText('TRF-BANK-20261109-001');
+});
+
+it('keeps certificate transfer locked until Stage 6 has been confirmed', function () {
+    Storage::fake('local');
+    $scenario = createEscrowReleaseScenario();
+    $propertyUrl = route('land-deed.client-properties.show', ['property' => $scenario['property']->uuid]);
+
+    $this->actingAs($scenario['ppat'])
+        ->get($propertyUrl)
+        ->assertOk()
+        ->assertSeeText('Tahap 7 terkunci')
+        ->assertDontSee('name="bpn_receipt"', false);
+
+    $this->actingAs($scenario['ppat'])
+        ->from($propertyUrl)
+        ->post(route('land-deed.certificate-transfer.store', ['property' => $scenario['property']->uuid]), [
+            'bpn_receipt' => UploadedFile::fake()->create('tanda-terima-bpn.pdf', 200, 'application/pdf'),
+            'bpn_reference' => 'BPN-TR-2026-001',
+        ])
+        ->assertRedirect($propertyUrl)
+        ->assertSessionHasErrors('certificate_transfer');
+
+    expect($scenario['transaction']->fresh()->certificate_transfer_receipt_path)->toBeNull()
+        ->and($scenario['transaction']->fresh()->state)->toBe('ajb_scheduled')
+        ->and($scenario['property']->fresh()->status)->toBe('reserved');
+});
+
+it('finalizes the purchase after PPAT uploads the BPN receipt and shares it read-only', function () {
+    Storage::fake('local');
+    Storage::fake('public');
+    $scenario = createEscrowReleaseScenario();
+    $admin = createEscrowReleaseAdmin();
+
+    $this->actingAs($admin)
+        ->post(route('escrow-disbursements.store', ['transaction' => $scenario['transaction']->uuid]))
+        ->assertRedirect();
+    $disbursement = EscrowDisbursement::query()->firstOrFail();
+    $this->actingAs($admin)
+        ->post(route('escrow-disbursements.confirm', ['escrowDisbursement' => $disbursement->uuid]), [
+            'transfer_reference' => 'TRF-BANK-STAGE-6',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('status');
+
+    $propertyUrl = route('land-deed.client-properties.show', ['property' => $scenario['property']->uuid]);
+    $uploadUrl = route('land-deed.certificate-transfer.store', ['property' => $scenario['property']->uuid]);
+
+    $this->actingAs($scenario['buyer'])
+        ->get(route('buyer.bought-properties.show', ['property' => $scenario['property']->uuid]))
+        ->assertOk()
+        ->assertSeeText('Menunggu Tanda Terima BPN')
+        ->assertDontSee('name="bpn_receipt"', false);
+
+    $this->actingAs($scenario['seller'])
+        ->get(route('seller.my-properties.show', ['property' => $scenario['property']->uuid]))
+        ->assertOk()
+        ->assertSeeText('Menunggu Tanda Terima BPN')
+        ->assertDontSee('name="bpn_receipt"', false);
+
+    $this->actingAs($scenario['ppat'])
+        ->get($propertyUrl)
+        ->assertOk()
+        ->assertSee('name="bpn_receipt"', false);
+
+    $this->actingAs($scenario['ppat'])
+        ->from($propertyUrl)
+        ->post($uploadUrl, [
+            'bpn_receipt' => UploadedFile::fake()->create('tanda-terima-bpn.pdf', 200, 'application/pdf'),
+            'bpn_reference' => 'BPN-TR-2026-001',
+            'bpn_notes' => 'Berkas balik nama diterima oleh Kantor Pertanahan.',
+        ])
+        ->assertRedirect($propertyUrl)
+        ->assertSessionHas('status');
+
+    $transaction = $scenario['transaction']->fresh();
+    $receiptPath = $transaction->certificate_transfer_receipt_path;
+    Storage::disk('local')->assertExists($receiptPath);
+    Storage::disk('public')->assertMissing($receiptPath);
+
+    expect($transaction->state)->toBe(Transaction::STATE_COMPLETED)
+        ->and($transaction->certificate_transfer_reference)->toBe('BPN-TR-2026-001')
+        ->and($transaction->certificate_transfer_notes)->toBe('Berkas balik nama diterima oleh Kantor Pertanahan.')
+        ->and($transaction->certificate_transfer_submitted_by)->toBe($scenario['ppat']->id)
+        ->and($transaction->certificate_transfer_submitted_at)->not->toBeNull()
+        ->and($scenario['property']->fresh()->status)->toBe('sold')
+        ->and($transaction->logs()->where('to_state', Transaction::STATE_COMPLETED)->exists())->toBeTrue();
+
+    $this->actingAs($scenario['buyer'])
+        ->get(route('buyer.bought-properties.show', ['property' => $scenario['property']->uuid]))
+        ->assertOk()
+        ->assertSeeText('Balik nama sertifikat selesai')
+        ->assertSeeText('BPN-TR-2026-001')
+        ->assertSeeText('Lihat Tanda Terima BPN')
+        ->assertSeeText('Unduh Tanda Terima BPN')
+        ->assertDontSee('name="bpn_receipt"', false);
+
+    $this->actingAs($scenario['seller'])
+        ->get(route('seller.my-properties.show', ['property' => $scenario['property']->uuid]))
+        ->assertOk()
+        ->assertSeeText('Balik nama sertifikat selesai')
+        ->assertSeeText('BPN-TR-2026-001')
+        ->assertSeeText('Lihat Tanda Terima BPN')
+        ->assertSeeText('Unduh Tanda Terima BPN')
+        ->assertDontSee('name="bpn_receipt"', false);
+
+    $this->actingAs($scenario['ppat'])
+        ->get($propertyUrl)
+        ->assertOk()
+        ->assertSeeText('Balik nama sertifikat selesai')
+        ->assertSee('name="bpn_receipt"', false);
+
+    $downloadUrl = route('certificate-transfer.receipt.download', ['property' => $scenario['property']->uuid]);
+    $viewUrl = route('certificate-transfer.receipt.view', ['property' => $scenario['property']->uuid]);
+    $filename = 'rumah-pencairan-escrow-tanda-terima-bpn.pdf';
+
+    $this->actingAs($scenario['buyer'])->get($downloadUrl)->assertDownload($filename);
+    $this->actingAs($scenario['seller'])->get($downloadUrl)->assertDownload($filename);
+    $this->actingAs($scenario['ppat'])->get($downloadUrl)->assertDownload($filename);
+    $this->actingAs($scenario['buyer'])->get($viewUrl)
+        ->assertOk()
+        ->assertHeader('content-disposition', 'inline; filename="'.$filename.'"');
+    $this->actingAs($scenario['seller'])->get($viewUrl)
+        ->assertOk()
+        ->assertHeader('content-disposition', 'inline; filename="'.$filename.'"');
+    $this->actingAs($scenario['ppat'])->get($viewUrl)
+        ->assertOk()
+        ->assertHeader('content-disposition', 'inline; filename="'.$filename.'"');
+
+    $outsider = User::factory()->create();
+    $outsider->assignRole('User');
+
+    $this->actingAs($outsider)->get($downloadUrl)->assertForbidden();
+    $this->actingAs($outsider)->get($viewUrl)->assertForbidden();
+    $this->actingAs($scenario['seller'])
+        ->post($uploadUrl, [
+            'bpn_receipt' => UploadedFile::fake()->create('tanda-terima-bpn-tidak-diizinkan.pdf', 200, 'application/pdf'),
+            'bpn_reference' => 'BPN-TR-UNAUTHORIZED',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($scenario['ppat'])
+        ->from($propertyUrl)
+        ->post($uploadUrl, [
+            'bpn_receipt' => UploadedFile::fake()->create('tanda-terima-bpn-terbaru.pdf', 250, 'application/pdf'),
+            'bpn_reference' => 'BPN-TR-2026-002',
+            'bpn_notes' => 'Nomor dokumen diperbarui.',
+        ])
+        ->assertRedirect($propertyUrl)
+        ->assertSessionHas('status');
+
+    $transaction->refresh();
+    Storage::disk('local')->assertMissing($receiptPath);
+    Storage::disk('local')->assertExists($transaction->certificate_transfer_receipt_path);
+    expect($transaction->certificate_transfer_reference)->toBe('BPN-TR-2026-002')
+        ->and($transaction->certificate_transfer_notes)->toBe('Nomor dokumen diperbarui.')
+        ->and($transaction->state)->toBe(Transaction::STATE_COMPLETED)
+        ->and($transaction->logs()->where('to_state', Transaction::STATE_COMPLETED)->count())->toBe(2);
 });
 
 it('refuses escrow dashboard and release access to users outside Admin and Superadmin', function () {

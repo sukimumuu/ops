@@ -214,7 +214,7 @@
                             <span @class([
                                 'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold',
                                 'border-slate-200 bg-slate-100 text-slate-700' => $transaction->state === 'draft',
-                                'border-amber-200 bg-amber-50 text-amber-700' => in_array($transaction->state, ['dp_paid', 'held_in_escrow', 'bpn_checking', 'ajb_scheduled']),
+                                'border-amber-200 bg-amber-50 text-amber-700' => in_array($transaction->state, ['dp_paid', 'held_in_escrow', 'bpn_checking', 'ajb_scheduled', \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING]),
                                 'border-sky-200 bg-sky-50 text-sky-700' => $transaction->state === 'bpn_cleared',
                                 'border-emerald-200 bg-emerald-50 text-emerald-700' => $transaction->state === 'completed',
                                 'border-rose-200 bg-rose-50 text-rose-700' => $transaction->state === 'refunded',
@@ -225,6 +225,7 @@
                                     @case('bpn_checking') Verifikasi BPN @break
                                     @case('bpn_cleared') BPN selesai @break
                                     @case('ajb_scheduled') Jadwal AJB @break
+                                    @case('certificate_transfer_pending') Menunggu balik nama sertifikat @break
                                     @case('completed') Selesai @break
                                     @case('refunded') Dikembalikan @break
                                     @default Menunggu pembayaran

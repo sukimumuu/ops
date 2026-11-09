@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\EscrowDisbursement;
 use App\Models\Property;
 use App\Models\TransactionLedgerEntry;
 use App\Services\Payments\DpAmountCalculator;
@@ -280,9 +281,11 @@ class UserController extends Controller
 
         $transaction = $property->transactions()
             ->where('buyer_id', $user->id)
+            ->with('certificateTransferSubmittedBy:id,name')
             ->latest('id')
             ->first();
         $escrowDisbursement = $transaction?->latestEscrowDisbursement();
+        $isStageSevenUnlocked = $escrowDisbursement?->status === EscrowDisbursement::STATUS_RELEASED;
         $escrowReleaseAmount = $transaction?->ledgerEntries()
             ->where('status', TransactionLedgerEntry::STATUS_RESERVED)
             ->sum('amount') ?? 0;
@@ -346,6 +349,7 @@ class UserController extends Controller
             'selectedAppointment',
             'transaction',
             'escrowDisbursement',
+            'isStageSevenUnlocked',
             'escrowReleaseAmount',
             'dpPaymentAttempt',
             'escrowPaymentAttempt',

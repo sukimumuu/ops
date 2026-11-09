@@ -46,7 +46,7 @@ class DashboardController extends Controller
                         ->count(),
                     'activeTransactions' => Transaction::query()
                         ->where('seller_id', $user->id)
-                        ->whereIn('state', ['dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'])
+                        ->whereIn('state', ['dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled', Transaction::STATE_CERTIFICATE_TRANSFER_PENDING])
                         ->count(),
                 ],
                 'recentProperties' => Property::query()
@@ -91,7 +91,7 @@ class DashboardController extends Controller
                         ->count(),
                     'activeTransactions' => Transaction::query()
                         ->where('buyer_id', $user->id)
-                        ->whereIn('state', ['draft', 'dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'])
+                        ->whereIn('state', ['draft', 'dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled', Transaction::STATE_CERTIFICATE_TRANSFER_PENDING])
                         ->count(),
                     'completedTransactions' => Transaction::query()
                         ->where('buyer_id', $user->id)
@@ -109,7 +109,7 @@ class DashboardController extends Controller
                     ->get(['id', 'property_id', 'seller_id', 'scheduled_at', 'status']),
             ]);
         } else {
-            $activeTransactionStates = ['dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled'];
+            $activeTransactionStates = ['dp_paid', 'held_in_escrow', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled', Transaction::STATE_CERTIFICATE_TRANSFER_PENDING];
             $hasSuperadminAccess = $user?->hasRole('Superadmin') ?? false;
             $canViewUsers = $hasSuperadminAccess || ($user?->can('users.view_all_users') ?? false);
             $canViewProperties = $hasSuperadminAccess || ($user?->canAny([

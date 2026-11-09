@@ -102,15 +102,16 @@ class EscrowFundReleaseService
             ]);
 
             $fromState = (string) $lockedTransaction->state;
-            $lockedTransaction->update(['state' => 'completed']);
+            $lockedTransaction->update(['state' => Transaction::STATE_CERTIFICATE_TRANSFER_PENDING]);
 
             TransactionLogs::query()->create([
                 'transaction_id' => $lockedTransaction->getKey(),
                 'actor_id' => $actor->getKey(),
                 'from_state' => $fromState,
-                'to_state' => 'completed',
+                'to_state' => Transaction::STATE_CERTIFICATE_TRANSFER_PENDING,
                 'notes' => 'Pencairan escrow sebesar Rp '.number_format((float) $lockedDisbursement->amount, 0, ',', '.')
-                    .' kepada '.$lockedDisbursement->recipient_name.' dikonfirmasi. Referensi transfer: '.$transferReference.'.',
+                    .' kepada '.$lockedDisbursement->recipient_name.' dikonfirmasi. Referensi transfer: '.$transferReference
+                    .'. Tahap 7 balik nama sertifikat telah dibuka.',
             ]);
 
             return $lockedDisbursement->refresh();

@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\Dashboard\AdminController;
 use App\Http\Controllers\Dashboard\AppointmentController;
+use App\Http\Controllers\Dashboard\CertificateTransferController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DpPaymentController;
 use App\Http\Controllers\Dashboard\EscrowPaymentController;
@@ -73,6 +74,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::delete('/notifikasi/subscriptions/{endpointHash}', [NotificationController::class, 'destroySubscription'])
         ->where('endpointHash', '[a-f0-9]{64}')
         ->name('notifications.subscriptions.destroy');
+    Route::get('/properti/{property:uuid}/dokumen/tanda-terima-bpn', [CertificateTransferController::class, 'viewReceipt'])
+        ->whereUuid('property')
+        ->name('certificate-transfer.receipt.view');
+    Route::get('/properti/{property:uuid}/dokumen/tanda-terima-bpn/unduh', [CertificateTransferController::class, 'downloadReceipt'])
+        ->whereUuid('property')
+        ->name('certificate-transfer.receipt.download');
 
     Route::name('seller.')->group(function () {
         Route::get('/listing', [ListingController::class, 'index'])->name('listing');
@@ -189,6 +196,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereUuid('property')
             ->middleware('permission:appointments.view_all')
             ->name('ajb-evidence.store');
+        Route::post('/properti-klien/{property:uuid}/tanda-terima-bpn', [CertificateTransferController::class, 'store'])
+            ->whereUuid('property')
+            ->middleware('permission:appointments.view_all')
+            ->name('certificate-transfer.store');
         Route::get('/properti-klien/{property:uuid}/pengecekan-legalitas-bpn', [LandDeedController::class, 'bpnLegalCheck'])
             ->whereUuid('property')
             ->middleware('permission:documents.verify_status')
