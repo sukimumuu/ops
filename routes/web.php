@@ -14,6 +14,7 @@ use App\Http\Controllers\Dashboard\PropertyReviewController;
 use App\Http\Controllers\Dashboard\RolePermissionController;
 use App\Http\Controllers\Dashboard\SavedPropertyController;
 use App\Http\Controllers\Dashboard\SuperadminController;
+use App\Http\Controllers\Dashboard\TransactionAndEscrowController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingAiController;
@@ -224,7 +225,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
                 ->whereNumber('role')
                 ->name('configuration-system.permissions.update');
         });
-        Route::get('/transaksi-escrow', [SuperadminController::class, 'transactionAndEscrow'])
+        Route::get('/transaksi-escrow', [TransactionAndEscrowController::class, 'index'])
             ->middleware(['role:Superadmin', 'permission:transactions.view_all'])
             ->name('transaction-and-escrow');
         Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])
@@ -239,8 +240,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/manajemen-user', [AdminController::class, 'userManagement'])
             ->middleware('permission:users.view_all_users')
             ->name('user-management');
-        Route::get('/transaksi-escrow', [AdminController::class, 'transactionAndEscrow'])
-            ->middleware('permission:transactions.view_all')
+        Route::get('/transaksi-escrow', [TransactionAndEscrowController::class, 'index'])
+            ->middleware(['role:Admin|Superadmin', 'permission:transactions.view_all'])
             ->name('transaction-and-escrow');
         Route::get('/master-data-properti', [AdminController::class, 'masterDataProperty'])
             ->middleware([
@@ -252,6 +253,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->middleware('permission:system.view_audit_logs')
             ->name('audit-log');
     });
+
+    Route::post('/admin/transaksi-escrow/{transaction:uuid}/pencairan', [TransactionAndEscrowController::class, 'store'])
+        ->whereUuid('transaction')
+        ->middleware(['role:Admin|Superadmin', 'permission:transactions.trigger_escrow_release'])
+        ->name('escrow-disbursements.store');
+    Route::post('/admin/transaksi-escrow/pencairan/{escrowDisbursement:uuid}/konfirmasi', [TransactionAndEscrowController::class, 'confirm'])
+        ->whereUuid('escrowDisbursement')
+        ->middleware(['role:Admin|Superadmin', 'permission:transactions.trigger_escrow_release'])
+        ->name('escrow-disbursements.confirm');
 
     Route::prefix('property-review')->name('property-review.')->group(function () {
         Route::get('/properties/{property}/ppats', [PropertyReviewController::class, 'ppats'])

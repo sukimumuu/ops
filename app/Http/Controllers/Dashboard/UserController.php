@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Property;
+use App\Models\TransactionLedgerEntry;
 use App\Services\Payments\DpAmountCalculator;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -281,6 +282,10 @@ class UserController extends Controller
             ->where('buyer_id', $user->id)
             ->latest('id')
             ->first();
+        $escrowDisbursement = $transaction?->latestEscrowDisbursement();
+        $escrowReleaseAmount = $transaction?->ledgerEntries()
+            ->where('status', TransactionLedgerEntry::STATUS_RESERVED)
+            ->sum('amount') ?? 0;
         $dpPaymentAttempt = $transaction?->latestDpPaymentAttempt();
         $escrowPaymentAttempt = $transaction?->latestEscrowPaymentAttempt();
         $remainingEscrowAmount = $transaction?->remainingEscrowAmount();
@@ -340,6 +345,8 @@ class UserController extends Controller
             'latestAppointment',
             'selectedAppointment',
             'transaction',
+            'escrowDisbursement',
+            'escrowReleaseAmount',
             'dpPaymentAttempt',
             'escrowPaymentAttempt',
             'requiredDpAmount',

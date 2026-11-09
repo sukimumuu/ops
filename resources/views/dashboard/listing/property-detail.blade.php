@@ -755,6 +755,21 @@
                                                                     </p>
                                                                 @endif
                                                             </div>
+                                                        @elseif ($index === 5)
+                                                            <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
+                                                                {{ $step['title'] }}
+                                                            </h3>
+                                                            <p class="mt-2 text-xs leading-5 text-slate-500">
+                                                                Pencairan dana escrow kepada penjual setelah dokumen AJB ditandatangani dan pembayaran terverifikasi.
+                                                            </p>
+                                                            @include('dashboard.partials.escrow-release-status')
+                                                        @elseif ($index === 6)
+                                                            <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
+                                                                {{ $step['title'] }}
+                                                            </h3>
+                                                            <p class="mt-2 text-xs leading-5 text-slate-500">
+                                                                Penerbitan resi dan penyerahan sertifikat atas nama pembeli baru.
+                                                            </p>
                                                         @else
                                                             <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
                                                                 {{ $step['title'] }}

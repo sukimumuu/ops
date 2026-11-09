@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
 use App\Models\Transaction;
+use App\Models\TransactionLedgerEntry;
 use App\Models\User;
 use App\Notifications\AppointmentNotification;
 use App\Services\Payments\DpAmountCalculator;
@@ -1042,6 +1043,10 @@ class LandDeedController extends Controller
             ->with(['buyer:id,name,email,phone,avatar_path'])
             ->latest('id')
             ->first();
+        $escrowDisbursement = $transaction?->latestEscrowDisbursement();
+        $escrowReleaseAmount = $transaction?->ledgerEntries()
+            ->where('status', TransactionLedgerEntry::STATUS_RESERVED)
+            ->sum('amount') ?? 0;
 
         $dpPaymentAttempt = $transaction?->latestDpPaymentAttempt();
         $escrowPaymentAttempt = $transaction?->latestEscrowPaymentAttempt();
@@ -1117,6 +1122,8 @@ class LandDeedController extends Controller
             'canManagePpatMeeting',
             'canManageAjbMeeting',
             'transaction',
+            'escrowDisbursement',
+            'escrowReleaseAmount',
             'dpPaymentAttempt',
             'escrowPaymentAttempt',
             'requiredDpAmount',

@@ -840,6 +840,7 @@
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
                                                                 Pencairan dana escrow kepada penjual setelah dokumen sah ditandatangani.
                                                             </p>
+                                                            @include('dashboard.partials.escrow-release-status')
                                                         @elseif ($index === 6)
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
                                                                 Penerbitan resi dan penyerahan sertifikat atas nama pembeli baru.

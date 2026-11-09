@@ -13,6 +13,8 @@ class TransactionLedgerEntry extends Model
 
     public const STATUS_RESERVED = 'reserved';
 
+    public const STATUS_RELEASED = 'released';
+
     protected $guarded = ['id'];
 
     protected function casts(): array
