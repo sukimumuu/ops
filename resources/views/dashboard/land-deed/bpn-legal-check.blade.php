@@ -11,21 +11,22 @@
             'bpn_checking' => 'Pengecekan BPN',
             'bpn_cleared' => 'BPN selesai',
             'ajb_scheduled' => 'AJB terjadwal',
+            \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING => 'Menunggu balik nama sertifikat',
             'completed' => 'Selesai',
             'refunded' => 'Dikembalikan',
             default => 'Belum ada transaksi',
         };
         $stateVariant = match ($state) {
-            'bpn_cleared', 'ajb_scheduled', 'completed' => 'emerald',
+            'bpn_cleared', 'ajb_scheduled', \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING, 'completed' => 'emerald',
             'bpn_checking' => 'blue',
             'dp_paid', 'held_in_escrow' => 'amber',
             'refunded' => 'rose',
             default => 'slate',
         };
-        $isBpnStarted = in_array($state, ['bpn_checking', 'bpn_cleared', 'ajb_scheduled', 'completed'], true);
-        $isBpnCleared = in_array($state, ['bpn_cleared', 'ajb_scheduled', 'completed'], true);
+        $isBpnStarted = in_array($state, ['bpn_checking', 'bpn_cleared', 'ajb_scheduled', \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING, 'completed'], true);
+        $isBpnCleared = in_array($state, ['bpn_cleared', 'ajb_scheduled', \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING, 'completed'], true);
         $progressSteps = [
-            ['label' => 'DP dibayar', 'done' => in_array($state, ['dp_paid', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled', 'completed'], true)],
+            ['label' => 'DP dibayar', 'done' => in_array($state, ['dp_paid', 'bpn_checking', 'bpn_cleared', 'ajb_scheduled', \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING, 'completed'], true)],
             ['label' => 'Pengecekan BPN', 'done' => $isBpnStarted],
             ['label' => 'Siap lanjut AJB', 'done' => $isBpnCleared],
         ];

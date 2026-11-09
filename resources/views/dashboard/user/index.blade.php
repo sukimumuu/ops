@@ -181,11 +181,11 @@
                                         $transaction->state === 'draft',
                                     'border-amber-200 bg-amber-50 text-amber-700' => in_array(
                                         $transaction->state,
-                                        ['dp_paid', 'held_in_escrow', 'bpn_checking', 'ajb_scheduled']),
+                                        ['dp_paid', 'held_in_escrow', 'bpn_checking', 'ajb_scheduled', \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING]),
                                     'border-sky-200 bg-sky-50 text-sky-700' =>
                                         $transaction->state === 'bpn_cleared',
                                     'border-emerald-200 bg-emerald-50 text-emerald-700' =>
-                                        $transaction->state === 'completed',
+                                        $transaction->state === \App\Models\Transaction::STATE_COMPLETED,
                                     'border-rose-200 bg-rose-50 text-rose-700' =>
                                         $transaction->state === 'refunded',
                                 ])>
@@ -212,6 +212,10 @@
 
                                         @case('completed')
                                             Selesai
+                                        @break
+
+                                        @case('certificate_transfer_pending')
+                                            Menunggu balik nama sertifikat
                                         @break
 
                                         @case('refunded')

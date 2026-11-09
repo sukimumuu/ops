@@ -344,10 +344,11 @@
                                                     \App\Models\Appointment::PPAT_MEETING_STATUS_RESCHEDULED,
                                                 ], true),
                                                 1 => (bool) $transaction?->hasCompletedDownPayment(),
-                                                2 => in_array((string) $transaction?->state, ['bpn_cleared', 'held_in_escrow', 'ajb_scheduled', 'completed'], true),
+                                                2 => in_array((string) $transaction?->state, ['bpn_cleared', 'held_in_escrow', 'ajb_scheduled', \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING, \App\Models\Transaction::STATE_COMPLETED], true),
                                                 3 => (bool) $isEscrowPaid,
-                                                4 => in_array((string) $transaction?->state, ['ajb_scheduled', 'completed'], true) || filled($selectedAppointment->ajb_document_path) || filled($transaction?->ajb_document_path),
-                                                5 => (string) $transaction?->state === 'completed',
+                                                4 => in_array((string) $transaction?->state, ['ajb_scheduled', \App\Models\Transaction::STATE_CERTIFICATE_TRANSFER_PENDING, \App\Models\Transaction::STATE_COMPLETED], true) || filled($selectedAppointment->ajb_document_path) || filled($transaction?->ajb_document_path),
+                                                5 => $escrowDisbursement?->status === \App\Models\EscrowDisbursement::STATUS_RELEASED,
+                                                6 => $transaction?->hasCompletedCertificateTransfer() ?? false,
                                                 default => false,
                                             };
                                         @endphp
@@ -768,8 +769,9 @@
                                                                 {{ $step['title'] }}
                                                             </h3>
                                                             <p class="mt-2 text-xs leading-5 text-slate-500">
-                                                                Penerbitan resi dan penyerahan sertifikat atas nama pembeli baru.
+                                                                Tahap akhir balik nama sertifikat; Tanda Terima BPN diunggah PPAT setelah pencairan escrow dikonfirmasi.
                                                             </p>
+                                                            @include('dashboard.partials.certificate-transfer-status')
                                                         @else
                                                             <h3 class="mt-1 font-heading text-sm font-bold text-secondary">
                                                                 {{ $step['title'] }}
