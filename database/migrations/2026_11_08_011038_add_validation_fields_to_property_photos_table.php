@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('property_photos', function (Blueprint $table): void {
-            $table->string('validation_status')->default('pending')->after('certificate_type');
-            $table->text('validation_notes')->nullable()->after('validation_status');
-            $table->foreignId('validated_by_id')->nullable()->after('validation_notes')
+            $table->string('validation_status')->default('pending');
+            $table->text('validation_notes')->nullable();
+            $table->foreignId('validated_by_id')->nullable()
                 ->constrained('users')
                 ->nullOnDelete();
-            $table->timestamp('validated_at')->nullable()->after('validated_by_id');
+            $table->timestamp('validated_at')->nullable();
         });
     }
 

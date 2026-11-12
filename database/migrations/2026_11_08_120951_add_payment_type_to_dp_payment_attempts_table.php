@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('dp_payment_attempts', function (Blueprint $table): void {
-            $table->string('payment_type', 32)->default('dp')->after('transaction_id');
+            $table->string('payment_type', 32)->default('dp');
             $table->index(['transaction_id', 'payment_type', 'status']);
         });
 
         Schema::table('transaction_ledger_entries', function (Blueprint $table): void {
-            $table->string('type', 32)->default('dp')->after('transaction_id');
+            $table->string('type', 32)->default('dp');
         });
     }
 
