@@ -57,41 +57,50 @@
                 <p class="mb-10 mt-5 max-w-xl text-base leading-7 text-white/80 sm:text-lg">Kami membantu Anda menemukan
                     properti yang sempurna sesuai kebutuhan dan anggaran. Lebih dari 10.000 listing terpercaya tersedia.
                 </p>
-                <div class="max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-                    <div class="flex border-b border-gray-100"><button
-                            class="border-b-2 border-primary px-7 py-3.5 text-sm font-bold text-primary"
-                            onclick="setTab(this)">Beli</button><button
-                            class="px-7 py-3.5 text-sm font-bold text-gray-400" onclick="setTab(this)">Sewa</button>
+                <form method="GET" action="{{ route('properties') }}"
+                    class="max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                    <input type="hidden" name="category" id="searchCategory" value="sale">
+                    <div class="flex border-b border-gray-100">
+                        <button type="button" onclick="setSearchCategory(this, 'sale')"
+                            class="search-tab border-b-2 border-primary px-7 py-3.5 text-sm font-bold text-primary">Beli</button>
+                        <button type="button" onclick="setSearchCategory(this, 'rent')"
+                            class="search-tab px-7 py-3.5 text-sm font-bold text-gray-400">Sewa</button>
                     </div>
                     <div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_auto] lg:items-end">
                         <label class="block px-2"><span
-                                class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-400">Lokasi</span><select
-                                class="w-full border-0 bg-transparent p-0 text-sm font-semibold text-secondary outline-none">
-                                <option>Jakarta Selatan, Indonesia</option>
-                                <option>Bali</option>
-                                <option>Surabaya</option>
-                                <option>Bandung</option>
-                            </select></label>
+                                class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-400">Lokasi</span>
+                            <input type="text" name="search" list="landingCityOptions" maxlength="100"
+                                placeholder="Cari kota atau kata kunci"
+                                class="w-full border-0 bg-transparent p-0 text-sm font-semibold text-secondary outline-none placeholder:font-normal placeholder:text-gray-400">
+                            <datalist id="landingCityOptions">
+                                @foreach ($cities as $city)
+                                    <option value="{{ $city }}"></option>
+                                @endforeach
+                            </datalist>
+                        </label>
                         <label class="block border-gray-100 px-2 sm:border-l"><span
                                 class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-400">Tipe
-                                Properti</span><select
+                                Properti</span>
+                            <select name="type"
                                 class="w-full border-0 bg-transparent p-0 text-sm font-semibold text-secondary outline-none">
-                                <option>Semua Tipe</option>
-                                <option>Rumah</option>
-                                <option>Apartemen</option>
-                                <option>Villa</option>
-                                <option>Ruko</option>
-                            </select></label>
+                                <option value="">Semua Tipe</option>
+                                @foreach ($typeOptions as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </label>
                         <label class="block border-gray-100 px-2 sm:border-l"><span
                                 class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-gray-400">Kisaran
-                                Harga</span><select
+                                Harga</span>
+                            <select name="price_range"
                                 class="w-full border-0 bg-transparent p-0 text-sm font-semibold text-secondary outline-none">
-                                <option>Semua Harga</option>
-                                <option>Di bawah 500 Juta</option>
-                                <option>500 Juta - 1 Miliar</option>
-                                <option>1 - 3 Miliar</option>
-                            </select></label>
-                        <button
+                                <option value="">Semua Harga</option>
+                                @foreach ($priceRangeOptions as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <button type="submit"
                             class="group flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-bold text-white transition duration-200 hover:bg-[#df3f05] active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/50">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                                 stroke="currentColor" class="h-5 w-5 transition-transform group-hover:scale-110">
@@ -101,7 +110,7 @@
                             <span>Cari Properti</span>
                         </button>
                     </div>
-                </div>
+                </form>
             </div>
         </section>
 
@@ -220,9 +229,20 @@
                 <h2 class="font-display text-3xl font-extrabold text-white sm:text-5xl">Siap Menemukan Rumah Impian
                     Anda?</h2>
                 <p class="mx-auto mt-4 max-w-lg leading-7 text-white/70">Bergabunglah dengan lebih dari 50.000 pengguna
-                    yang telah menemukan properti impian mereka bersama Mihom.</p><a href="{{ route('login') }}"
-                    class="mt-8 inline-block rounded-lg bg-primary px-8 py-4 text-base font-extrabold text-white transition hover:bg-[#df3f05]">Mulai
-                    Sekarang</a>
+                    yang telah menemukan properti impian mereka bersama Mihom.
+                </p>
+                @guest
+                    <a href="{{ route('login') }}"
+                        class="mt-8 inline-block rounded-lg bg-primary px-8 py-4 text-base font-extrabold text-white transition hover:bg-[#df3f05]">Mulai
+                        Sekarang
+                    </a>
+                @endguest
+                @auth
+                    <a href="{{ route('properties') }}"
+                        class="mt-8 inline-block rounded-lg bg-primary px-8 py-4 text-base font-extrabold text-white transition hover:bg-[#df3f05]">Jelajahi
+                        Sekarang
+                    </a>
+                @endauth
             </div>
         </section>
     </main>
@@ -281,9 +301,14 @@
                 closeMobileNav();
         });
 
-        function setTab(button) {
-            document.querySelectorAll('.search-tab').forEach((tab) => tab.classList.remove('active'));
-            button.classList.add('active');
+        function setSearchCategory(button, category) {
+            document.querySelectorAll('.search-tab').forEach((tab) => {
+                tab.classList.remove('border-b-2', 'border-primary', 'text-primary');
+                tab.classList.add('text-gray-400');
+            });
+            button.classList.remove('text-gray-400');
+            button.classList.add('border-b-2', 'border-primary', 'text-primary');
+            document.getElementById('searchCategory').value = category;
         }
         const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {
             if (entry.isIntersecting) entry.target.classList.add('visible');

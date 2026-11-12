@@ -8,6 +8,7 @@ use App\Models\PropertyPhoto;
 use App\Models\User;
 use App\Notifications\AppointmentNotification;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,9 +19,53 @@ use Illuminate\Validation\Rule;
 
 class HomeController extends Controller
 {
+    /**
+     * Property types buyers can filter by in the public search forms.
+     *
+     * @var array<string, string>
+     */
+    private const PROPERTY_TYPE_OPTIONS = [
+        'rumah' => 'Rumah',
+        'apartemen' => 'Apartemen',
+        'villa' => 'Villa',
+        'ruko' => 'Ruko',
+        'gudang' => 'Gudang',
+        'kantor' => 'Kantor',
+        'kavling' => 'Kavling',
+        'sawah' => 'Sawah',
+        'kebun' => 'Kebun',
+        'komersial' => 'Komersial',
+        'industri' => 'Industri',
+    ];
+
+    /**
+     * Price buckets offered by the public search forms.
+     *
+     * @var array<string, string>
+     */
+    private const PRICE_RANGE_OPTIONS = [
+        'under_500' => 'Di bawah 500 Juta',
+        '500_1000' => '500 Juta - 1 Miliar',
+        '1000_3000' => '1 - 3 Miliar',
+        'over_3000' => 'Di atas 3 Miliar',
+    ];
+
+    /**
+     * Inclusive lower and exclusive upper price bounds for each bucket.
+     *
+     * @var array<string, array{0: int|null, 1: int|null}>
+     */
+    private const PRICE_RANGE_BOUNDS = [
+        'under_500' => [null, 500_000_000],
+        '500_1000' => [500_000_000, 1_000_000_000],
+        '1000_3000' => [1_000_000_000, 3_000_000_000],
+        'over_3000' => [3_000_000_000, null],
+    ];
+
     public function home(Request $request): View
     {
         $propertiesUnavailable = false;
+        $cities = collect();
 
         try {
             $properties = Property::query()
@@ -39,6 +84,13 @@ class HomeController extends Controller
                     $photo ? $this->propertyPhotoUrl($photo) : null,
                 );
             });
+
+            $cities = Property::query()
+                ->where('status', 'published')
+                ->whereNotNull('city')
+                ->distinct()
+                ->orderBy('city')
+                ->pluck('city');
         } catch (QueryException $exception) {
             report($exception);
 
@@ -47,11 +99,16 @@ class HomeController extends Controller
         }
 
         $savedPropertyIds = $this->savedPropertyIdsFor($request);
+        $typeOptions = self::PROPERTY_TYPE_OPTIONS;
+        $priceRangeOptions = self::PRICE_RANGE_OPTIONS;
 
         return view('welcome', compact(
             'properties',
             'propertiesUnavailable',
             'savedPropertyIds',
+            'cities',
+            'typeOptions',
+            'priceRangeOptions',
         ));
     }
 
@@ -59,9 +116,32 @@ class HomeController extends Controller
     {
         $propertiesUnavailable = false;
 
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'type' => ['nullable', Rule::in(array_keys(self::PROPERTY_TYPE_OPTIONS))],
+            'category' => ['nullable', Rule::in(['sale', 'rent'])],
+            'price_range' => ['nullable', Rule::in(array_keys(self::PRICE_RANGE_OPTIONS))],
+        ]);
+
+        $search = trim($filters['search'] ?? '');
+        [$minPrice, $maxPrice] = self::PRICE_RANGE_BOUNDS[$filters['price_range'] ?? ''] ?? [null, null];
+
         try {
             $properties = Property::query()
                 ->where('status', 'published')
+                ->when($search !== '', function (Builder $query) use ($search): void {
+                    $query->where(function (Builder $query) use ($search): void {
+                        $query->where('title', 'like', "%{$search}%")
+                            ->orWhere('city', 'like', "%{$search}%")
+                            ->orWhere('district', 'like', "%{$search}%")
+                            ->orWhere('province', 'like', "%{$search}%")
+                            ->orWhere('address', 'like', "%{$search}%");
+                    });
+                })
+                ->when($filters['type'] ?? null, fn (Builder $query, string $type): Builder => $query->where('type', $type))
+                ->when($filters['category'] ?? null, fn (Builder $query, string $category): Builder => $query->where('category', $category))
+                ->when($minPrice !== null, fn (Builder $query): Builder => $query->where('price', '>=', $minPrice))
+                ->when($maxPrice !== null, fn (Builder $query): Builder => $query->where('price', '<', $maxPrice))
                 ->with(['photos' => fn ($query) => $query->limit(1)])
                 ->orderByDesc('created_at')
                 ->orderByDesc('id')
@@ -106,8 +186,17 @@ class HomeController extends Controller
         }
 
         $savedPropertyIds = $this->savedPropertyIdsFor($request);
+        $typeOptions = self::PROPERTY_TYPE_OPTIONS;
+        $priceRangeOptions = self::PRICE_RANGE_OPTIONS;
 
-        return view('properties', compact('properties', 'propertiesUnavailable', 'savedPropertyIds'));
+        return view('properties', compact(
+            'properties',
+            'propertiesUnavailable',
+            'savedPropertyIds',
+            'filters',
+            'typeOptions',
+            'priceRangeOptions',
+        ));
     }
 
     public function propertyDetails(Request $request, string $uuid): View
