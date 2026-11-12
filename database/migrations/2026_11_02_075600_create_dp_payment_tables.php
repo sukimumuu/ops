@@ -42,7 +42,7 @@ return new class extends Migration
             $table->timestamp('processed_at')->nullable();
             $table->timestamps();
 
-            $table->index(['payment_request_id', 'processing_status']);
+            $table->index(['payment_request_id', 'processing_status'], 'pay_webhook_req_status_index');
         });
 
         Schema::create('transaction_ledger_entries', function (Blueprint $table): void {
