@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\DpPaymentAttempt;
 use App\Models\EscrowDisbursement;
 use App\Models\Property;
 use App\Models\Transaction;
@@ -18,6 +19,11 @@ use Illuminate\Support\Facades\Gate;
 
 class ListingController extends Controller
 {
+    /**
+     * Number of stages in the sale transaction pipeline.
+     */
+    private const TRANSACTION_STAGE_COUNT = 7;
+
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -365,9 +371,215 @@ class ListingController extends Controller
         return compact('appointments', 'appointmentsByDate', 'calendarBookings', 'calendarDays', 'month');
     }
 
-    public function sellingTransaction()
+    /**
+     * Show the selling transaction tracker for the authenticated seller.
+     */
+    public function sellingTransaction(Request $request): View
     {
-        return view('dashboard.listing.selling-transaction');
+        $user = $request->user();
+
+        $stateOptions = [
+            'draft' => 'Menunggu pembayaran DP',
+            'dp_paid' => 'DP dibayar, dana ditahan',
+            'bpn_checking' => 'Verifikasi BPN',
+            'bpn_cleared' => 'BPN selesai',
+            'held_in_escrow' => 'Dalam escrow',
+            'ajb_scheduled' => 'Jadwal AJB',
+            Transaction::STATE_CERTIFICATE_TRANSFER_PENDING => 'Menunggu balik nama sertifikat',
+            Transaction::STATE_COMPLETED => 'Selesai',
+            'refunded' => 'Dikembalikan',
+        ];
+        $sortOptions = [
+            'newest' => 'Terbaru',
+            'oldest' => 'Terlama',
+            'value_desc' => 'Nilai tertinggi',
+            'value_asc' => 'Nilai terendah',
+        ];
+
+        $search = trim((string) $request->query('search', ''));
+        $state = (string) $request->query('state', '');
+        $sort = (string) $request->query('sort', 'newest');
+
+        $state = array_key_exists($state, $stateOptions) ? $state : '';
+        $sort = array_key_exists($sort, $sortOptions) ? $sort : 'newest';
+
+        $transactions = Transaction::query()
+            ->where('seller_id', $user->id)
+            ->with([
+                'property:id,uuid,title,city,province,address',
+                'buyer:id,name,email',
+                'dpPaymentAttempts:id,transaction_id,payment_type,amount,status',
+                'ledgerEntries:id,transaction_id,dp_payment_attempt_id,amount,status',
+                'ledgerEntries.dpPaymentAttempt:id,payment_type,status,amount',
+                'escrowDisbursements:id,transaction_id,amount,status,recipient_name,confirmed_at',
+            ])
+            ->when($search !== '', fn (Builder $query): Builder => $this->searchSellerTransactions($query, $search))
+            ->when($state !== '', fn (Builder $query): Builder => $query->where('state', $state));
+
+        match ($sort) {
+            'oldest' => $transactions->orderBy('created_at')->orderBy('id'),
+            'value_desc' => $transactions->orderByDesc('total_property_amount')->orderByDesc('id'),
+            'value_asc' => $transactions->orderBy('total_property_amount')->orderByDesc('id'),
+            default => $transactions->orderByDesc('created_at')->orderByDesc('id'),
+        };
+
+        $transactions = $transactions->paginate(10)->withQueryString();
+
+        $transactions->getCollection()->each(function (Transaction $transaction): void {
+            $this->hydrateTransactionSummary($transaction);
+        });
+
+        $sellerTransactions = Transaction::query()->where('seller_id', $user->id);
+        $closedStates = [Transaction::STATE_COMPLETED, 'refunded'];
+        $stats = [
+            'total' => (clone $sellerTransactions)->count(),
+            'active' => (clone $sellerTransactions)->whereNotIn('state', $closedStates)->count(),
+            'awaiting_payment' => (clone $sellerTransactions)->where('state', 'draft')->count(),
+            'completed' => (clone $sellerTransactions)->where('state', Transaction::STATE_COMPLETED)->count(),
+            'active_value' => (float) (clone $sellerTransactions)
+                ->whereNotIn('state', $closedStates)
+                ->sum('total_property_amount'),
+        ];
+
+        $hasFilters = $search !== '' || $state !== '';
+
+        return view('dashboard.listing.selling-transaction', [
+            'transactions' => $transactions,
+            'stats' => $stats,
+            'search' => $search,
+            'state' => $state,
+            'sort' => $sort,
+            'hasFilters' => $hasFilters,
+            'stateOptions' => $stateOptions,
+            'sortOptions' => $sortOptions,
+            'totalStageCount' => self::TRANSACTION_STAGE_COUNT,
+        ]);
+    }
+
+    /**
+     * Attach the seller-facing summary attributes used by the transaction tracker.
+     */
+    private function hydrateTransactionSummary(Transaction $transaction): void
+    {
+        $ledgerDpAmount = (float) $transaction->ledgerEntries
+            ->filter(fn (TransactionLedgerEntry $entry): bool => $entry->dpPaymentAttempt?->isDpPayment() === true)
+            ->sum(fn (TransactionLedgerEntry $entry): float => (float) $entry->amount);
+
+        $confirmedDpAmount = $ledgerDpAmount > 0
+            ? $ledgerDpAmount
+            : (float) $transaction->dpPaymentAttempts
+                ->filter(fn (DpPaymentAttempt $attempt): bool => $attempt->isDpPayment()
+                    && $attempt->status === DpPaymentAttempt::STATUS_PAID)
+                ->sum(fn (DpPaymentAttempt $attempt): float => (float) $attempt->amount);
+
+        $latestDisbursement = $transaction->escrowDisbursements->sortByDesc('id')->first();
+        $stage = $this->transactionStage($transaction, $latestDisbursement);
+
+        $transaction->setAttribute('confirmed_dp_amount', $confirmedDpAmount);
+        $transaction->setAttribute(
+            'remaining_amount',
+            max(0, (float) $transaction->total_property_amount - $confirmedDpAmount),
+        );
+        $transaction->setAttribute('escrow_release_status', $latestDisbursement?->status);
+        $transaction->setAttribute('current_stage', $stage['step']);
+        $transaction->setAttribute('current_stage_label', $stage['label']);
+        $transaction->setAttribute('current_stage_progress', $stage['progress']);
+        $transaction->setAttribute('next_action', $stage['next_action']);
+    }
+
+    /**
+     * Map a transaction state to the stage shown in the seller tracker.
+     *
+     * @return array{step: int, label: string, progress: int, next_action: string}
+     */
+    private function transactionStage(Transaction $transaction, ?EscrowDisbursement $latestDisbursement): array
+    {
+        $state = (string) $transaction->state;
+
+        if ($state === 'ajb_scheduled' && $latestDisbursement?->status === EscrowDisbursement::STATUS_PENDING) {
+            return [
+                'step' => 6,
+                'label' => 'Eksekusi pencairan escrow',
+                'progress' => 85,
+                'next_action' => 'Menunggu admin mengonfirmasi pencairan dana escrow kepada Anda.',
+            ];
+        }
+
+        return match ($state) {
+            'draft' => [
+                'step' => 2,
+                'label' => 'Pembayaran DP',
+                'progress' => 30,
+                'next_action' => 'Menunggu pembeli menyelesaikan pembayaran DP.',
+            ],
+            'dp_paid' => [
+                'step' => 3,
+                'label' => 'Pengecekan legalitas BPN & validasi pajak',
+                'progress' => 45,
+                'next_action' => 'DP diterima dan dana ditahan. Menunggu verifikasi legalitas BPN oleh PPAT.',
+            ],
+            'bpn_checking' => [
+                'step' => 3,
+                'label' => 'Pengecekan legalitas BPN & validasi pajak',
+                'progress' => 50,
+                'next_action' => 'PPAT sedang melakukan pengecekan legalitas BPN dan validasi pajak.',
+            ],
+            'bpn_cleared' => [
+                'step' => 4,
+                'label' => 'Pelunasan properti (escrow)',
+                'progress' => 60,
+                'next_action' => 'Menunggu pembeli menyelesaikan pelunasan escrow.',
+            ],
+            'held_in_escrow' => [
+                'step' => 5,
+                'label' => 'Penjadwalan & tanda tangan AJB',
+                'progress' => 75,
+                'next_action' => 'Dana pelunasan aman di escrow. Menunggu jadwal penandatanganan AJB.',
+            ],
+            'ajb_scheduled' => [
+                'step' => 5,
+                'label' => 'Penjadwalan & tanda tangan AJB',
+                'progress' => 80,
+                'next_action' => 'Menunggu PPAT mengunggah bukti AJB yang telah ditandatangani.',
+            ],
+            Transaction::STATE_CERTIFICATE_TRANSFER_PENDING => [
+                'step' => 7,
+                'label' => 'Balik nama sertifikat',
+                'progress' => 90,
+                'next_action' => 'AJB ditandatangani. Menunggu proses balik nama sertifikat di BPN.',
+            ],
+            Transaction::STATE_COMPLETED => [
+                'step' => 7,
+                'label' => 'Balik nama sertifikat',
+                'progress' => 100,
+                'next_action' => 'Transaksi selesai dan sertifikat telah dialihkan ke pembeli.',
+            ],
+            'refunded' => [
+                'step' => 0,
+                'label' => 'Dana dikembalikan',
+                'progress' => 0,
+                'next_action' => 'Transaksi dibatalkan dan dana telah dikembalikan ke pembeli.',
+            ],
+            default => [
+                'step' => 1,
+                'label' => 'Pilih jadwal temu PPAT',
+                'progress' => 15,
+                'next_action' => 'Menunggu jadwal temu PPAT dikonfirmasi.',
+            ],
+        };
+    }
+
+    private function searchSellerTransactions(Builder $query, string $search): Builder
+    {
+        $term = '%'.$search.'%';
+
+        return $query->where(function (Builder $query) use ($term): void {
+            $query->whereHas('property', fn (Builder $property): Builder => $property
+                ->where('title', 'like', $term)
+                ->orWhere('address', 'like', $term)
+                ->orWhere('city', 'like', $term))
+                ->orWhereHas('buyer', fn (Builder $buyer): Builder => $buyer->where('name', 'like', $term));
+        });
     }
 
     public function disbursementAccount()
