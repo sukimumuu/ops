@@ -12,6 +12,7 @@
 
 .navbar.scrolled .nav-logo-text { color: #2C3E50; }
 .navbar.scrolled .nav-link { color: #2C3E50; }
+.navbar.scrolled .nav-user { color: #2C3E50; }
 .navbar.scrolled .nav-link:hover,
 .navbar.scrolled .nav-link.active { background: #fff0eb; color: #FC4907; }
 .navbar.scrolled .hamburger-line { background: #2C3E50; }
