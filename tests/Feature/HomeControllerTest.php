@@ -137,7 +137,7 @@ it('paginates only approved properties and preserves query parameters', function
 
     $createProperty('Properti Belum Disetujui', 'pending_verification');
 
-    $firstPage = $this->get(route('properties', ['search' => 'Jakarta', 'type' => 'rumah']))
+    $firstPage = $this->get(route('properties', ['search' => 'Properti Disetujui', 'type' => 'rumah']))
         ->assertOk()
         ->assertSee('Properti Disetujui 7')
         ->assertSee('Properti Disetujui 2')
@@ -145,13 +145,129 @@ it('paginates only approved properties and preserves query parameters', function
         ->assertDontSee('Properti Belum Disetujui');
 
     expect(html_entity_decode($firstPage->getContent()))
-        ->toContain(route('properties', ['search' => 'Jakarta', 'type' => 'rumah', 'page' => 2]));
+        ->toContain(route('properties', ['search' => 'Properti Disetujui', 'type' => 'rumah', 'page' => 2]));
 
-    $this->get(route('properties', ['search' => 'Jakarta', 'type' => 'rumah', 'page' => 2]))
+    $this->get(route('properties', ['search' => 'Properti Disetujui', 'type' => 'rumah', 'page' => 2]))
         ->assertOk()
         ->assertSee('Properti Disetujui 1')
         ->assertDontSee('Properti Disetujui 2')
         ->assertDontSee('Properti Belum Disetujui');
+});
+
+it('filters the public property catalog by keyword, type, category, and price range', function () {
+    $seller = User::factory()->create();
+
+    $createProperty = function (array $attributes) use ($seller): Property {
+        return Property::query()->create(array_merge([
+            'uuid' => (string) Str::uuid(),
+            'seller_id' => $seller->id,
+            'property_type' => 'bangunan',
+            'type' => 'rumah',
+            'category' => 'sale',
+            'status' => 'published',
+            'description' => 'Hunian nyaman di lokasi strategis.',
+            'negotiable' => false,
+            'province' => 'Jawa Barat',
+            'city' => 'Bandung',
+            'district' => 'Coblong',
+            'postal_code' => '40132',
+            'address' => 'Jl. Merdeka No. 1',
+            'land_area_sqm' => 120,
+            'building_area_sqm' => 90,
+            'rooms' => '3',
+            'bathrooms' => '2',
+            'floors' => '1',
+            'condition' => 'siap_huni',
+            'certificate_type' => 'SHM',
+        ], $attributes));
+    };
+
+    $createProperty(['title' => 'Rumah Bandung Murah', 'price' => 400_000_000]);
+    $createProperty([
+        'title' => 'Apartemen Bali Mewah',
+        'type' => 'apartemen',
+        'city' => 'Denpasar',
+        'province' => 'Bali',
+        'district' => 'Kuta',
+        'address' => 'Jl. Pantai Kuta No. 2',
+        'price' => 2_500_000_000,
+    ]);
+    $createProperty([
+        'title' => 'Villa Sewa Bali',
+        'type' => 'villa',
+        'category' => 'rent',
+        'city' => 'Denpasar',
+        'province' => 'Bali',
+        'district' => 'Seminyak',
+        'price' => 250_000_000,
+    ]);
+    $createProperty([
+        'title' => 'Ruko Premium Jakarta',
+        'type' => 'ruko',
+        'city' => 'Jakarta Selatan',
+        'province' => 'DKI Jakarta',
+        'district' => 'Kebayoran Baru',
+        'address' => 'Jl. Senopati No. 3',
+        'price' => 4_500_000_000,
+    ]);
+
+    $this->get(route('properties', ['search' => 'Bandung']))
+        ->assertOk()
+        ->assertSeeText('Rumah Bandung Murah')
+        ->assertDontSeeText('Apartemen Bali Mewah');
+
+    $this->get(route('properties', ['search' => 'Senopati']))
+        ->assertOk()
+        ->assertSeeText('Ruko Premium Jakarta')
+        ->assertDontSeeText('Rumah Bandung Murah');
+
+    $this->get(route('properties', ['type' => 'apartemen']))
+        ->assertOk()
+        ->assertSeeText('Apartemen Bali Mewah')
+        ->assertDontSeeText('Rumah Bandung Murah');
+
+    $this->get(route('properties', ['category' => 'rent']))
+        ->assertOk()
+        ->assertSeeText('Villa Sewa Bali')
+        ->assertDontSeeText('Rumah Bandung Murah');
+
+    $this->get(route('properties', ['price_range' => 'under_500']))
+        ->assertOk()
+        ->assertSeeText('Rumah Bandung Murah')
+        ->assertSeeText('Villa Sewa Bali')
+        ->assertDontSeeText('Apartemen Bali Mewah')
+        ->assertDontSeeText('Ruko Premium Jakarta');
+
+    $this->get(route('properties', ['price_range' => 'over_3000']))
+        ->assertOk()
+        ->assertSeeText('Ruko Premium Jakarta')
+        ->assertDontSeeText('Rumah Bandung Murah');
+
+    $this->get(route('properties', [
+        'search' => 'Bali',
+        'type' => 'apartemen',
+        'category' => 'sale',
+        'price_range' => '1000_3000',
+    ]))
+        ->assertOk()
+        ->assertSeeText('Apartemen Bali Mewah')
+        ->assertDontSeeText('Villa Sewa Bali')
+        ->assertDontSeeText('Rumah Bandung Murah');
+
+    $this->get(route('properties', ['search' => 'Tidak Ada Hasil']))
+        ->assertOk()
+        ->assertSeeText('Tidak ada properti yang cocok dengan pencarian Anda.');
+});
+
+it('submits the landing page search card to the property catalog', function () {
+    $this->get(route('home'))
+        ->assertOk()
+        ->assertSee('action="'.route('properties').'"', false)
+        ->assertSee('name="search"', false)
+        ->assertSee('name="type"', false)
+        ->assertSee('name="price_range"', false)
+        ->assertSee('name="category"', false)
+        ->assertSee('id="landingCityOptions"', false);
 });
 
 it('shows an empty state when the property catalog has no approved listings', function () {

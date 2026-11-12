@@ -34,47 +34,60 @@
             </p>
 
             <!-- Search Bar -->
-            <div
+            <form method="GET" action="{{ route('properties') }}"
                 class="bg-white rounded-xl p-3 flex flex-col md:flex-row gap-4 items-center w-full max-w-5xl shadow-xl">
+                @if (filled($filters['category'] ?? null))
+                    <input type="hidden" name="category" value="{{ $filters['category'] }}">
+                @endif
                 <!-- Lokasi -->
                 <div class="flex-1 w-full px-4 border-b md:border-b-0 md:border-r border-gray-200 pb-3 md:pb-0">
-                    <label class="text-[10px] text-gray-500 font-bold uppercase tracking-wide block mb-1">Lokasi / Kata
+                    <label for="catalogSearch"
+                        class="text-[10px] text-gray-500 font-bold uppercase tracking-wide block mb-1">Lokasi / Kata
                         Kunci</label>
                     <div class="flex items-center gap-2 text-secondary font-semibold text-sm">
                         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
-                        <input type="text" value="Jakarta Selatan, rumah dekat MRT..."
+                        <input id="catalogSearch" type="text" name="search" maxlength="100"
+                            value="{{ $filters['search'] ?? '' }}" placeholder="Jakarta Selatan, rumah dekat MRT..."
                             class="w-full bg-transparent border-none outline-none text-secondary">
                     </div>
                 </div>
                 <!-- Tipe Properti -->
                 <div class="flex-1 w-full px-4 border-b md:border-b-0 md:border-r border-gray-200 pb-3 md:pb-0">
-                    <label class="text-[10px] text-gray-500 font-bold uppercase tracking-wide block mb-1">Tipe
+                    <label for="catalogType"
+                        class="text-[10px] text-gray-500 font-bold uppercase tracking-wide block mb-1">Tipe
                         Properti</label>
-                    <select
+                    <select id="catalogType" name="type"
                         class="w-full bg-transparent border-none outline-none text-secondary font-semibold text-sm appearance-none cursor-pointer">
-                        <option>Semua tipe</option>
+                        <option value="">Semua tipe</option>
+                        @foreach ($typeOptions as $value => $label)
+                            <option value="{{ $value }}" @selected(($filters['type'] ?? null) === $value)>{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <!-- Kisaran Harga -->
                 <div class="flex-1 w-full px-4 pb-3 md:pb-0">
-                    <label class="text-[10px] text-gray-500 font-bold uppercase tracking-wide block mb-1">Kisaran
+                    <label for="catalogPrice"
+                        class="text-[10px] text-gray-500 font-bold uppercase tracking-wide block mb-1">Kisaran
                         Harga</label>
-                    <select
+                    <select id="catalogPrice" name="price_range"
                         class="w-full bg-transparent border-none outline-none text-secondary font-semibold text-sm appearance-none cursor-pointer">
-                        <option>Rp 1 M - Rp 8 M</option>
+                        <option value="">Semua harga</option>
+                        @foreach ($priceRangeOptions as $value => $label)
+                            <option value="{{ $value }}" @selected(($filters['price_range'] ?? null) === $value)>{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <!-- Button -->
                 <div class="w-full md:w-auto px-2">
-                    <button
+                    <button type="submit"
                         class="w-full md:w-auto bg-primary hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-lg transition text-sm whitespace-nowrap">
                         Cari properti
                     </button>
                 </div>
-            </div>
+            </form>
         </div>
     </header>
 
@@ -115,25 +128,26 @@
         </div>
 
         <!-- Filters -->
-        <div class="flex flex-wrap gap-2 mb-10">
-            <button class="bg-secondary text-white px-5 py-2 rounded-full text-sm font-semibold">Semua</button>
-            <button
-                class="bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary px-5 py-2 rounded-full text-sm font-semibold transition">Rumah</button>
-            <button
-                class="bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary px-5 py-2 rounded-full text-sm font-semibold transition">Apartemen</button>
-            <button
-                class="bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary px-5 py-2 rounded-full text-sm font-semibold transition">Vila</button>
-            <button
-                class="bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary px-5 py-2 rounded-full text-sm font-semibold transition">Tanah</button>
-            <button
-                class="bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary px-5 py-2 rounded-full text-sm font-semibold transition">3+
-                Kamar</button>
-            <button
-                class="bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary px-5 py-2 rounded-full text-sm font-semibold transition">Siap
-                Huni</button>
-            <button
-                class="bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary px-5 py-2 rounded-full text-sm font-semibold transition">Filter
-                lainnya +</button>
+        @php
+            $activeFilters = array_filter([
+                'search' => $filters['search'] ?? null,
+                'category' => $filters['category'] ?? null,
+                'price_range' => $filters['price_range'] ?? null,
+            ]);
+            $hasActiveFilters = $activeFilters !== [] || filled($filters['type'] ?? null);
+        @endphp
+        <div class="flex flex-wrap items-center gap-2 mb-10">
+            <a href="{{ route('properties', $activeFilters) }}"
+                class="px-5 py-2 rounded-full text-sm font-semibold transition {{ blank($filters['type'] ?? null) ? 'bg-secondary text-white' : 'bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary' }}">Semua</a>
+            @foreach ($typeOptions as $value => $label)
+                <a href="{{ route('properties', array_merge($activeFilters, ['type' => $value])) }}"
+                    class="px-5 py-2 rounded-full text-sm font-semibold transition {{ ($filters['type'] ?? null) === $value ? 'bg-secondary text-white' : 'bg-white border border-gray-200 text-secondary hover:border-primary hover:text-primary' }}">{{ $label }}</a>
+            @endforeach
+            @if ($hasActiveFilters)
+                <a href="{{ route('properties') }}"
+                    class="ml-auto px-4 py-2 rounded-full text-sm font-semibold text-primary underline-offset-4 hover:underline">Reset
+                    pencarian</a>
+            @endif
         </div>
 
         <!-- Property Grid -->
@@ -142,7 +156,14 @@
                 <x-property-card :property="$property" :savedPropertyIds="$savedPropertyIds" />
             @empty
                 <p class="col-span-full rounded-2xl bg-white p-8 text-center text-sm text-gray-500">
-                    {{ $propertiesUnavailable ? 'Properti belum dapat dimuat saat ini. Silakan coba kembali nanti.' : 'Belum ada properti terverifikasi saat ini.' }}
+                    @if ($propertiesUnavailable)
+                        Properti belum dapat dimuat saat ini. Silakan coba kembali nanti.
+                    @elseif ($hasActiveFilters)
+                        Tidak ada properti yang cocok dengan pencarian Anda. <a href="{{ route('properties') }}"
+                            class="font-bold text-primary underline underline-offset-4">Reset pencarian</a>.
+                    @else
+                        Belum ada properti terverifikasi saat ini.
+                    @endif
                 </p>
             @endforelse
         </div>
