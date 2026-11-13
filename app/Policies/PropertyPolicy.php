@@ -15,6 +15,13 @@ class PropertyPolicy
         return $property->seller_id === $user->id;
     }
 
+    public function update(User $user, Property $property): bool
+    {
+        return $property->seller_id === $user->id
+            && $property->status === 'pending_verification'
+            && $user->can('properties.update_own');
+    }
+
     public function review(User $user, Property $property): bool
     {
         return $user->can('properties.approve_listing')

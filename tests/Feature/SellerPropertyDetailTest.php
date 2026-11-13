@@ -17,8 +17,12 @@ beforeEach(function () {
         'name' => 'appointments.confirm_or_reject',
         'guard_name' => 'web',
     ]);
+    $propertyUpdatePermission = Permission::firstOrCreate([
+        'name' => 'properties.update_own',
+        'guard_name' => 'web',
+    ]);
     Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web'])
-        ->syncPermissions([$permission]);
+        ->syncPermissions([$permission, $propertyUpdatePermission]);
 });
 
 function createSellerDetailProperty(User $seller, array $attributes = []): Property
@@ -663,4 +667,255 @@ it('rejects an appointment that belongs to another property', function () {
         ->assertNotFound();
 
     expect($appointment->fresh()->status)->toBe(Appointment::STATUS_CONFIRMED);
+});
+
+it('shows the edit link only while a property awaits verification', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $pendingProperty = createSellerDetailProperty($seller, ['status' => 'pending_verification']);
+    $publishedProperty = createSellerDetailProperty($seller, ['status' => 'published']);
+    $rejectedProperty = createSellerDetailProperty($seller, ['status' => 'rejected']);
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties.show', ['property' => $pendingProperty->uuid]))
+        ->assertSeeText('Edit')
+        ->assertSee('href="'.route('seller.my-properties.edit', ['property' => $pendingProperty->uuid]).'"', false);
+
+    $this->get(route('seller.my-properties.show', ['property' => $publishedProperty->uuid]))
+        ->assertDontSee('href="'.route('seller.my-properties.edit', ['property' => $publishedProperty->uuid]).'"', false);
+
+    $this->get(route('seller.my-properties.show', ['property' => $rejectedProperty->uuid]))
+        ->assertDontSee('href="'.route('seller.my-properties.edit', ['property' => $rejectedProperty->uuid]).'"', false);
+});
+
+it('lets the owner update a pending property without changing its approval status', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $property = createSellerDetailProperty($seller, [
+        'status' => 'pending_verification',
+        'category' => 'rent',
+        'rent_period' => 'bulan',
+        'province_code' => '32',
+        'city_code' => '32.73',
+        'district_code' => '32.73.01',
+    ]);
+    $editUrl = route('seller.my-properties.edit', ['property' => $property->uuid]);
+
+    $response = $this->actingAs($seller)
+        ->get($editUrl)
+        ->assertOk()
+        ->assertSeeText('Edit properti')
+        ->assertSeeText('Informasi properti')
+        ->assertSeeText('Foto & dokumen legal')
+        ->assertSeeText('Lokasi properti')
+        ->assertSee('name="building_type"', false)
+        ->assertSee('name="transaction_type"', false)
+        ->assertSee('name="province_code"', false)
+        ->assertSee('name="url_maps"', false)
+        ->assertSee('value="'.$property->title.'"', false)
+        ->assertViewHas('initialForm', fn (array $initialForm): bool => $initialForm['property_type'] === 'bangunan'
+            && $initialForm['building_type'] === 'rumah'
+            && $initialForm['transaction_type'] === 'disewakan'
+            && $initialForm['price'] === '1.500.000.000'
+            && $initialForm['bedrooms'] === '3'
+            && $initialForm['province_code'] === '32'
+            && $initialForm['city_code'] === '32.73'
+            && $initialForm['district_code'] === '32.73.01');
+
+    expect(substr_count($response->getContent(), '<section class="wizard-card">'))->toBe(3)
+        ->and(substr_count($response->getContent(), 'action="'.route('seller.my-properties.update', ['property' => $property->uuid]).'"'))
+        ->toBe(1);
+
+    $this->put(route('seller.my-properties.update', ['property' => $property->uuid]), [
+        'property_type' => 'bangunan',
+        'building_type' => 'rumah',
+        'transaction_type' => 'dijual',
+        'rent_period' => '',
+        'title' => 'Rumah Detail Penjual Diperbarui',
+        'description' => 'Deskripsi properti yang telah diperbarui.',
+        'price' => '1.800.000.000',
+        'negotiable' => '1',
+        'land_area_sqm' => 140,
+        'building_area_sqm' => 95,
+        'bedrooms' => '4',
+        'bathrooms' => '3',
+        'floors' => '2',
+        'condition' => 'siap_huni',
+        'front_width' => 8,
+        'land_contour' => '',
+        'road_access' => '',
+        'zone_type' => '',
+        'certificate_type' => 'SHM',
+        'province' => 'Jawa Barat',
+        'province_code' => '32',
+        'city' => 'Cimahi',
+        'city_code' => '32.77',
+        'district' => 'Cimahi Utara',
+        'district_code' => '32.77.01',
+        'postal_code' => '40512',
+        'address' => 'Jl. Baru No. 2',
+        'latitude' => '',
+        'longitude' => '',
+        'url_maps' => '',
+    ])
+        ->assertRedirect(route('seller.my-properties.show', ['property' => $property->uuid]))
+        ->assertSessionHas('status', 'Perubahan properti berhasil disimpan.');
+
+    $this->assertDatabaseHas('properties', [
+        'id' => $property->id,
+        'title' => 'Rumah Detail Penjual Diperbarui',
+        'price' => 1800000000,
+        'negotiable' => true,
+        'city' => 'Cimahi',
+        'status' => 'pending_verification',
+        'rent_period' => null,
+        'province_code' => '32',
+        'city_code' => '32.77',
+        'district_code' => '32.77.01',
+    ]);
+});
+
+it('updates land details and clears fields that only apply to buildings', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $property = createSellerDetailProperty($seller, [
+        'status' => 'pending_verification',
+        'building_area_sqm' => 90,
+        'rooms' => '3',
+        'bathrooms' => '2',
+        'floors' => '2',
+        'condition' => 'siap_huni',
+    ]);
+
+    $this->actingAs($seller)
+        ->put(route('seller.my-properties.update', ['property' => $property->uuid]), [
+            'property_type' => 'tanah',
+            'land_type' => 'kavling',
+            'transaction_type' => 'dijual',
+            'title' => 'Tanah kavling strategis',
+            'description' => 'Tanah siap bangun dengan akses jalan utama.',
+            'price' => '750.000.000',
+            'negotiable' => '0',
+            'land_area_sqm' => 500,
+            'front_width' => 20,
+            'land_contour' => 'datar',
+            'road_access' => 'jalan_utama',
+            'zone_type' => 'perumahan',
+            'certificate_type' => 'SHM',
+            'province' => 'Jawa Barat',
+            'city' => 'Bandung',
+            'district' => 'Coblong',
+            'postal_code' => '40132',
+            'address' => 'Jl. Utama No. 10',
+        ])
+        ->assertRedirect(route('seller.my-properties.show', ['property' => $property->uuid]));
+
+    $this->assertDatabaseHas('properties', [
+        'id' => $property->id,
+        'property_type' => 'tanah',
+        'type' => 'kavling',
+        'category' => 'sale',
+        'price' => 750000000,
+        'building_area_sqm' => null,
+        'rooms' => null,
+        'bathrooms' => null,
+        'floors' => null,
+        'condition' => null,
+        'status' => 'pending_verification',
+    ]);
+});
+
+it('clears stale location codes when a city is changed without selecting a region', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $property = createSellerDetailProperty($seller, [
+        'status' => 'pending_verification',
+        'province_code' => '32',
+        'city_code' => '32.73',
+        'district_code' => '32.73.01',
+    ]);
+
+    $this->actingAs($seller)
+        ->put(route('seller.my-properties.update', ['property' => $property->uuid]), [
+            'property_type' => 'bangunan',
+            'type' => 'rumah',
+            'category' => 'sale',
+            'title' => 'Rumah Detail Penjual',
+            'description' => 'Deskripsi lengkap properti untuk pengujian halaman detail penjual.',
+            'price' => 1500000000,
+            'negotiable' => '1',
+            'land_area_sqm' => 120,
+            'certificate_type' => 'SHM',
+            'province' => 'Jawa Barat',
+            'city' => 'Cimahi',
+            'district' => 'Cimahi Utara',
+            'address' => 'Jl. Merdeka No. 1',
+        ])
+        ->assertRedirect(route('seller.my-properties.show', ['property' => $property->uuid]));
+
+    $this->assertDatabaseHas('properties', [
+        'id' => $property->id,
+        'province_code' => '32',
+        'city' => 'Cimahi',
+        'city_code' => null,
+        'district_code' => null,
+    ]);
+});
+
+it('forbids editing an approved property or a property owned by another seller', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $otherSeller = User::factory()->create();
+    $otherSeller->assignRole('User');
+    $approvedProperty = createSellerDetailProperty($seller, ['status' => 'published']);
+    $pendingProperty = createSellerDetailProperty($seller, ['status' => 'pending_verification']);
+
+    $this->actingAs($seller)
+        ->get(route('seller.my-properties.edit', ['property' => $approvedProperty->uuid]))
+        ->assertForbidden();
+
+    $this->put(route('seller.my-properties.update', ['property' => $approvedProperty->uuid]), [
+        'title' => 'Judul tidak boleh diperbarui',
+    ])->assertForbidden();
+
+    $this->actingAs($otherSeller)
+        ->get(route('seller.my-properties.edit', ['property' => $pendingProperty->uuid]))
+        ->assertForbidden();
+
+    $this->put(route('seller.my-properties.update', ['property' => $pendingProperty->uuid]), [
+        'title' => 'Judul milik penjual lain',
+    ])->assertForbidden();
+
+    expect($approvedProperty->fresh()->title)->toBe('Rumah Detail Penjual')
+        ->and($pendingProperty->fresh()->title)->toBe('Rumah Detail Penjual');
+});
+
+it('keeps a pending property unchanged when required edit data is invalid', function () {
+    $seller = User::factory()->create();
+    $seller->assignRole('User');
+    $property = createSellerDetailProperty($seller, ['status' => 'pending_verification']);
+
+    $this->actingAs($seller)
+        ->from(route('seller.my-properties.edit', ['property' => $property->uuid]))
+        ->put(route('seller.my-properties.update', ['property' => $property->uuid]), [
+            'title' => '',
+            'price' => '-100',
+        ])
+        ->assertRedirect(route('seller.my-properties.edit', ['property' => $property->uuid]))
+        ->assertSessionHasErrors(['title', 'price']);
+
+    $this->get(route('seller.my-properties.edit', ['property' => $property->uuid]))
+        ->assertViewHas('initialForm', fn (array $initialForm): bool => blank($initialForm['title'])
+            && $initialForm['price'] === '-100');
+
+    $this->from(route('seller.my-properties.edit', ['property' => $property->uuid]))
+        ->put(route('seller.my-properties.update', ['property' => $property->uuid]), [
+            'price' => '',
+        ])
+        ->assertSessionHasErrors(['price']);
+
+    $this->get(route('seller.my-properties.edit', ['property' => $property->uuid]))
+        ->assertViewHas('initialForm', fn (array $initialForm): bool => $initialForm['price'] === null);
+
+    expect($property->fresh()->title)->toBe('Rumah Detail Penjual');
 });
