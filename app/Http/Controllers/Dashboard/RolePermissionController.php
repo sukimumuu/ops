@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -80,7 +82,7 @@ class RolePermissionController extends Controller
         ]);
     }
 
-    public function update(Request $request, Role $role): RedirectResponse
+    public function update(Request $request, Role $role, AuditLogger $auditLogger): RedirectResponse
     {
         abort_unless($role->guard_name === 'web', 404);
         abort_if($role->name === 'Superadmin', 403, 'Role Superadmin dilindungi dan tidak dapat diubah.');
@@ -96,7 +98,21 @@ class RolePermissionController extends Controller
             'permissions.*' => ['required', 'string', 'distinct', Rule::in($editablePermissions)],
         ]);
 
+        $previousPermissions = $role->getPermissionNames()->all();
         $role->syncPermissions($validated['permissions'] ?? []);
+
+        $auditLogger->record(
+            AuditLog::EVENT_ROLE_PERMISSIONS_UPDATED,
+            'Hak akses role '.$role->name.' diperbarui.',
+            $role,
+            [
+                'permissions' => [
+                    'old' => $previousPermissions,
+                    'new' => $role->getPermissionNames()->all(),
+                ],
+            ],
+            $request->user(),
+        );
 
         return redirect()
             ->route('superadmin.configuration-system')

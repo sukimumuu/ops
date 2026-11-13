@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AuditLogFilterRequest;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\Audit\AuditLogService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -79,8 +81,16 @@ class AdminController extends Controller
         return view('dashboard.admin.master-data-property', compact('properties'));
     }
 
-    public function auditLog()
+    public function auditLog(AuditLogFilterRequest $request, AuditLogService $auditLogs): View
     {
-        return view('dashboard.admin.audit-log');
+        $filters = $request->validated();
+
+        return view('dashboard.admin.audit-log', [
+            'logs' => $auditLogs->paginate($filters),
+            'filters' => $filters,
+            'categories' => $auditLogs->categoryOptions(),
+            'events' => $auditLogs->eventOptions(),
+            'summary' => $auditLogs->summary(),
+        ]);
     }
 }

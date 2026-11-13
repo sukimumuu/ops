@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Services\Payments\DpPaymentException;
 use App\Services\Payments\DpPaymentService;
 use App\Services\Payments\XenditGatewayException;
@@ -17,13 +19,13 @@ use JsonException;
 
 class DpPaymentController extends Controller
 {
-    public function store(Request $request, Transaction $transaction, DpPaymentService $payments): RedirectResponse
+    public function store(Request $request, Transaction $transaction, DpPaymentService $payments, AuditLogger $auditLogger): RedirectResponse
     {
         $buyer = $request->user();
         abort_unless($buyer instanceof User, 404);
 
         try {
-            $payments->createOrResume($transaction, $buyer);
+            $attempt = $payments->createOrResume($transaction, $buyer);
         } catch (DpPaymentException $exception) {
             return back()->withErrors(['dp_payment' => $exception->getMessage()]);
         } catch (XenditGatewayException $exception) {
@@ -38,10 +40,22 @@ class DpPaymentController extends Controller
             ]);
         }
 
-        $propertyUuid = $transaction->property()->value('uuid');
+        $property = $transaction->property()->first(['uuid', 'title']);
+
+        $auditLogger->record(
+            AuditLog::EVENT_TRANSACTION_DP_INITIATED,
+            'Virtual Account DP disiapkan untuk properti '.($property?->title ?? $transaction->uuid).'.',
+            $transaction,
+            [
+                'reference_id' => $attempt->reference_id,
+                'amount' => (string) $attempt->amount,
+                'payment_status' => $attempt->status,
+            ],
+            $buyer,
+        );
 
         return redirect()
-            ->route('buyer.bought-properties.show', ['property' => $propertyUuid])
+            ->route('buyer.bought-properties.show', ['property' => $property->uuid])
             ->with('status', 'Virtual Account DP berhasil disiapkan. Transfer hanya ke nomor VA yang ditampilkan.');
     }
 

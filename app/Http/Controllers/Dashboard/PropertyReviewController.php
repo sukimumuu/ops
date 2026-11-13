@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -66,7 +68,7 @@ class PropertyReviewController extends Controller
         ]);
     }
 
-    public function assignPpat(Request $request, Property $property): JsonResponse
+    public function assignPpat(Request $request, Property $property, AuditLogger $auditLogger): JsonResponse
     {
         Gate::authorize('approve', $property);
 
@@ -90,8 +92,16 @@ class PropertyReviewController extends Controller
             ]);
         }
 
+        $previousPpatId = $property->assigned_ppat_id;
         $property->assignedPpat()->associate($ppat);
         $property->save();
+
+        $auditLogger->record(
+            AuditLog::EVENT_PROPERTY_PPAT_ASSIGNED,
+            'PPAT '.$ppat->name.' ditugaskan ke properti '.$property->title.'.',
+            $property,
+            ['assigned_ppat_id' => ['old' => $previousPpatId, 'new' => $ppat->id]],
+        );
 
         return response()->json([
             'message' => 'PPAT berhasil ditugaskan ke properti.',
@@ -100,7 +110,7 @@ class PropertyReviewController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, Property $property): RedirectResponse
+    public function updateStatus(Request $request, Property $property, AuditLogger $auditLogger): RedirectResponse
     {
         Gate::authorize('review', $property);
 
@@ -126,6 +136,17 @@ class PropertyReviewController extends Controller
         $message = $validated['status'] === 'published'
             ? 'Properti berhasil disetujui.'
             : 'Properti berhasil ditolak.';
+
+        $auditLogger->record(
+            $validated['status'] === 'published'
+                ? AuditLog::EVENT_PROPERTY_APPROVED
+                : AuditLog::EVENT_PROPERTY_REJECTED,
+            $validated['status'] === 'published'
+                ? 'Properti "'.$property->title.'" disetujui untuk tayang.'
+                : 'Properti "'.$property->title.'" ditolak pada tahap verifikasi.',
+            $property,
+            ['status' => ['old' => 'pending_verification', 'new' => $validated['status']]],
+        );
 
         return back()->with('status', $message);
     }

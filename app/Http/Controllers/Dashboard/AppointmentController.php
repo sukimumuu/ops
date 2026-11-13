@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\Transaction;
 use App\Models\TransactionLogs;
 use App\Notifications\AppointmentNotification;
+use App\Services\Audit\AuditLogger;
 use App\Services\Payments\DpAmountCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +25,7 @@ class AppointmentController extends Controller
     /**
      * Approve or reject a pending survey booking request from a buyer.
      */
-    public function updateStatus(Request $request, Appointment $appointment): RedirectResponse
+    public function updateStatus(Request $request, Appointment $appointment, AuditLogger $auditLogger): RedirectResponse
     {
         Gate::authorize('review', $appointment);
 
@@ -79,6 +81,17 @@ class AppointmentController extends Controller
             route('buyer.survey-schedule'),
         ));
 
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_REVIEWED,
+            'Permintaan survei properti '.$appointment->property->title.' ditandai sebagai '.$validated['status'].'.',
+            $appointment,
+            [
+                'status' => ['old' => Appointment::STATUS_REQUESTED, 'new' => $validated['status']],
+                'scheduled_at' => $appointment->scheduled_at,
+                'reschedule_suggested_at' => $appointment->reschedule_suggested_at,
+            ],
+        );
+
         $message = match ($validated['status']) {
             Appointment::STATUS_CONFIRMED => 'Permintaan survei berhasil disetujui.',
             default => $requiresSuggestion
@@ -97,6 +110,7 @@ class AppointmentController extends Controller
         Property $property,
         Appointment $appointment,
         DpAmountCalculator $amountCalculator,
+        AuditLogger $auditLogger,
     ): RedirectResponse {
         Gate::authorize('view', $property);
 
@@ -125,7 +139,7 @@ class AppointmentController extends Controller
             ? $validated['buyer_intent']
             : null;
 
-        $updated = DB::transaction(function () use ($appointment, $validated, $buyerIntent, $property, $request, $amountCalculator): int {
+        $updated = DB::transaction(function () use ($appointment, $validated, $buyerIntent, $property, $request, $amountCalculator, $auditLogger): int {
             $lockedProperty = Property::query()->lockForUpdate()->findOrFail($property->getKey());
 
             $updated = Appointment::query()
@@ -181,6 +195,17 @@ class AppointmentController extends Controller
                             'to_state' => 'draft',
                             'notes' => 'Transaksi dibuat setelah survei selesai dan pembeli menyatakan minat. DP dihitung sesuai konfigurasi transaksi.',
                         ]);
+
+                        $auditLogger->record(
+                            AuditLog::EVENT_TRANSACTION_CREATED,
+                            'Transaksi untuk properti '.$lockedProperty->title.' dibuat setelah pembeli menyatakan minat.',
+                            $transaction,
+                            [
+                                'state' => 'draft',
+                                'total_property_amount' => (string) $transaction->total_property_amount,
+                                'booking_fee_amount' => (string) $transaction->booking_fee_amount,
+                            ],
+                        );
                     }
                 }
 
@@ -197,6 +222,15 @@ class AppointmentController extends Controller
         }
 
         $appointment->refresh()->load('buyer');
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_RESULT_RECORDED,
+            'Hasil survei properti '.$property->title.' dicatat dengan status '.$appointment->status.'.',
+            $appointment,
+            [
+                'status' => ['old' => Appointment::STATUS_CONFIRMED, 'new' => $appointment->status],
+                'buyer_intent' => $buyerIntent,
+            ],
+        );
         $isCancelled = $appointment->status === Appointment::STATUS_CANCELLED;
         $resultMessage = $isCancelled
             ? 'Survei '.$property->title.' dibatalkan oleh penjual.'
@@ -229,7 +263,7 @@ class AppointmentController extends Controller
     /**
      * Save the seller's requested date for a PPAT meeting after a successful survey.
      */
-    public function schedulePpatMeeting(Request $request, Property $property, Appointment $appointment): RedirectResponse
+    public function schedulePpatMeeting(Request $request, Property $property, Appointment $appointment, AuditLogger $auditLogger): RedirectResponse
     {
         Gate::authorize('view', $property);
 
@@ -305,6 +339,16 @@ class AppointmentController extends Controller
             route('buyer.survey-schedule'),
         ));
 
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_PPAT_MEETING_REQUESTED,
+            'Penjual mengajukan jadwal temu PPAT pada '.$formattedDate.' untuk properti '.$appointment->property->title.'.',
+            $appointment,
+            [
+                'ppat_meeting_date' => $appointment->ppat_meeting_date,
+                'ppat_meeting_status' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
+            ],
+        );
+
         return redirect()
             ->route('seller.my-properties.show', [
                 'property' => $property->uuid,
@@ -316,7 +360,7 @@ class AppointmentController extends Controller
     /**
      * Approve a PPAT meeting request or reschedule it to another date.
      */
-    public function respondToPpatMeeting(Request $request, Appointment $appointment): RedirectResponse
+    public function respondToPpatMeeting(Request $request, Appointment $appointment, AuditLogger $auditLogger): RedirectResponse
     {
         Gate::authorize('managePpatMeeting', $appointment);
 
@@ -396,6 +440,21 @@ class AppointmentController extends Controller
             ]),
         ));
 
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_PPAT_MEETING_RESPONDED,
+            $isRescheduled
+                ? 'PPAT menjadwalkan ulang temu properti '.$appointment->property->title.' ke '.$meetingDate.'.'
+                : 'PPAT menyetujui jadwal temu properti '.$appointment->property->title.' pada '.$meetingDate.'.',
+            $appointment,
+            [
+                'ppat_meeting_status' => [
+                    'old' => Appointment::PPAT_MEETING_STATUS_REQUESTED,
+                    'new' => $validated['decision'],
+                ],
+                'ppat_meeting_date' => $appointment->ppat_meeting_date,
+            ],
+        );
+
         return back()->with(
             'status',
             $isRescheduled
@@ -407,7 +466,7 @@ class AppointmentController extends Controller
     /**
      * Accept or decline a reschedule suggestion proposed by the property seller.
      */
-    public function respondToReschedule(Request $request, Appointment $appointment): RedirectResponse
+    public function respondToReschedule(Request $request, Appointment $appointment, AuditLogger $auditLogger): RedirectResponse
     {
         Gate::authorize('respondToReschedule', $appointment);
 
@@ -421,6 +480,8 @@ class AppointmentController extends Controller
             ]);
         }
 
+        $previousScheduledAt = $appointment->scheduled_at;
+
         if ($validated['decision'] === 'accepted') {
             $appointment->update([
                 'scheduled_at' => $appointment->reschedule_suggested_at,
@@ -429,6 +490,15 @@ class AppointmentController extends Controller
             ]);
 
             $appointment->load(['buyer', 'property']);
+            $auditLogger->record(
+                AuditLog::EVENT_APPOINTMENT_RESCHEDULED,
+                'Pembeli menyetujui jadwal survei pengganti properti '.$appointment->property->title.'.',
+                $appointment,
+                [
+                    'decision' => 'accepted',
+                    'scheduled_at' => ['old' => $previousScheduledAt, 'new' => $appointment->scheduled_at],
+                ],
+            );
             $appointment->seller->notify(new AppointmentNotification(
                 'Jadwal pengganti disetujui',
                 $appointment->buyer->name.' menyetujui jadwal survei '.$appointment->property->title.'.',
@@ -443,6 +513,15 @@ class AppointmentController extends Controller
         ]);
 
         $appointment->load(['buyer', 'property']);
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_RESCHEDULED,
+            'Pembeli menolak jadwal survei pengganti properti '.$appointment->property->title.'.',
+            $appointment,
+            [
+                'decision' => 'declined',
+                'scheduled_at' => ['old' => $previousScheduledAt, 'new' => null],
+            ],
+        );
         $appointment->seller->notify(new AppointmentNotification(
             'Jadwal pengganti ditolak',
             $appointment->buyer->name.' menolak jadwal pengganti untuk '.$appointment->property->title.'.',
@@ -455,7 +534,7 @@ class AppointmentController extends Controller
     /**
      * Save the seller's requested date and time for an offline AJB signing with the PPAT.
      */
-    public function scheduleAjbMeeting(Request $request, Property $property, Appointment $appointment): RedirectResponse
+    public function scheduleAjbMeeting(Request $request, Property $property, Appointment $appointment, AuditLogger $auditLogger): RedirectResponse
     {
         Gate::authorize('view', $property);
 
@@ -505,6 +584,17 @@ class AppointmentController extends Controller
 
         $appointment->refresh()->load(['buyer', 'seller', 'property.assignedPpat']);
 
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_AJB_MEETING_REQUESTED,
+            'Penjual mengajukan jadwal penandatanganan AJB untuk properti '.$appointment->property->title.' pada '.$appointment->ajb_meeting_date->locale('id')->translatedFormat('d M Y').' pukul '.$appointment->ajb_meeting_time.' WIB.',
+            $appointment,
+            [
+                'ajb_meeting_date' => $appointment->ajb_meeting_date,
+                'ajb_meeting_time' => $appointment->ajb_meeting_time,
+                'ajb_meeting_status' => Appointment::AJB_MEETING_STATUS_REQUESTED,
+            ],
+        );
+
         if ($appointment->property->assignedPpat) {
             $formattedDate = $appointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y');
             $appointment->property->assignedPpat->notify(new AppointmentNotification(
@@ -534,7 +624,7 @@ class AppointmentController extends Controller
     /**
      * Approve, reject, or reschedule an AJB meeting request by PPAT.
      */
-    public function respondToAjbMeeting(Request $request, Appointment $appointment): RedirectResponse
+    public function respondToAjbMeeting(Request $request, Appointment $appointment, AuditLogger $auditLogger): RedirectResponse
     {
         Gate::authorize('manageAjbMeeting', $appointment);
 
@@ -595,6 +685,20 @@ class AppointmentController extends Controller
         $appointment->update($updates);
         $appointment->refresh()->load(['buyer', 'seller', 'property']);
 
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_AJB_MEETING_RESPONDED,
+            'PPAT menanggapi jadwal penandatanganan AJB properti '.$appointment->property->title.' dengan status '.$validated['decision'].'.',
+            $appointment,
+            [
+                'ajb_meeting_status' => [
+                    'old' => Appointment::AJB_MEETING_STATUS_REQUESTED,
+                    'new' => $validated['decision'],
+                ],
+                'ajb_suggested_date' => $appointment->ajb_suggested_date,
+                'ajb_suggested_time' => $appointment->ajb_suggested_time,
+            ],
+        );
+
         $meetingDate = $appointment->ajb_meeting_date->locale('id')->translatedFormat('l, d F Y');
         $isRescheduled = $validated['decision'] === Appointment::AJB_MEETING_STATUS_RESCHEDULED;
         $isRejected = $validated['decision'] === Appointment::AJB_MEETING_STATUS_REJECTED;
@@ -640,7 +744,7 @@ class AppointmentController extends Controller
     /**
      * Seller responds to PPAT's reschedule proposal for AJB signing.
      */
-    public function respondToAjbReschedule(Request $request, Property $property, Appointment $appointment): RedirectResponse
+    public function respondToAjbReschedule(Request $request, Property $property, Appointment $appointment, AuditLogger $auditLogger): RedirectResponse
     {
         Gate::authorize('view', $property);
         abort_unless($appointment->property_id === $property->id, 404);
@@ -666,6 +770,16 @@ class AppointmentController extends Controller
             ]);
 
             $appointment->load(['buyer', 'property.assignedPpat']);
+            $auditLogger->record(
+                AuditLog::EVENT_APPOINTMENT_AJB_RESCHEDULE_RESPONDED,
+                'Penjual menyetujui jadwal pengganti AJB properti '.$appointment->property->title.'.',
+                $appointment,
+                [
+                    'decision' => 'accepted',
+                    'ajb_meeting_date' => $appointment->ajb_meeting_date,
+                    'ajb_meeting_time' => $appointment->ajb_meeting_time,
+                ],
+            );
             if ($appointment->property->assignedPpat) {
                 $appointment->property->assignedPpat->notify(new AppointmentNotification(
                     'Jadwal pengganti AJB disetujui',
@@ -684,6 +798,12 @@ class AppointmentController extends Controller
         ]);
 
         $appointment->load(['buyer', 'property.assignedPpat']);
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_AJB_RESCHEDULE_RESPONDED,
+            'Penjual menolak jadwal pengganti AJB properti '.$appointment->property->title.'.',
+            $appointment,
+            ['decision' => 'declined'],
+        );
         if ($appointment->property->assignedPpat) {
             $appointment->property->assignedPpat->notify(new AppointmentNotification(
                 'Jadwal pengganti AJB ditolak',

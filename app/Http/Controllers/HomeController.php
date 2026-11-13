@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
 use App\Models\User;
 use App\Notifications\AppointmentNotification;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
@@ -344,7 +346,7 @@ class HomeController extends Controller
         return view('about');
     }
 
-    public function scheduleVisit(Request $request, string $uuid): RedirectResponse
+    public function scheduleVisit(Request $request, string $uuid, AuditLogger $auditLogger): RedirectResponse
     {
         if (! auth()->check()) {
             return redirect()->route('login')->with('error', 'Silakan masuk terlebih dahulu untuk menjadwalkan kunjungan.');
@@ -397,6 +399,19 @@ class HomeController extends Controller
             $request->user()->name.' mengajukan survei untuk '.$property->title.' pada '.$scheduledAt->locale('id')->translatedFormat('d M Y, H:i').' WIB.',
             route('seller.request-survey'),
         ));
+
+        $appointment->setRelation('property', $property);
+
+        $auditLogger->record(
+            AuditLog::EVENT_APPOINTMENT_CREATED,
+            'Permintaan survei diajukan untuk properti '.$property->title.' pada '.$scheduledAt->locale('id')->translatedFormat('d M Y, H:i').' WIB.',
+            $appointment,
+            [
+                'scheduled_at' => $scheduledAt,
+                'status' => Appointment::STATUS_REQUESTED,
+                'notes' => $validated['notes'] ?? null,
+            ],
+        );
 
         return back()->with('success', 'Jadwal kunjungan berhasil diajukan! Pemilik properti akan segera mengonfirmasi jadwal Anda.');
     }

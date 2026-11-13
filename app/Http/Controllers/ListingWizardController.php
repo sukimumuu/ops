@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreListingStepOneRequest;
 use App\Http\Requests\StoreListingStepTwoRequest;
+use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\PropertyPhoto;
+use App\Services\Audit\AuditLogger;
 use App\Services\ImageWatermarkService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -162,7 +164,7 @@ class ListingWizardController extends Controller
     /**
      * Handle Step 3: Submit listing for verification.
      */
-    public function submit(Request $request): JsonResponse
+    public function submit(Request $request, AuditLogger $auditLogger): JsonResponse
     {
         $step1 = $request->session()->get('listing_wizard.step_1');
         $step2 = $request->session()->get('listing_wizard.step_2');
@@ -319,6 +321,19 @@ class ListingWizardController extends Controller
         }
 
         $request->session()->forget('listing_wizard');
+
+        $auditLogger->record(
+            AuditLog::EVENT_PROPERTY_SUBMITTED,
+            'Properti "'.$property->title.'" diajukan untuk verifikasi.',
+            $property,
+            [
+                'status' => ['old' => 'draft', 'new' => 'pending_verification'],
+                'category' => $property->category,
+                'property_type' => $property->property_type,
+                'price' => (string) $property->price,
+            ],
+            $request->user(),
+        );
 
         return response()->json([
             'success' => true,

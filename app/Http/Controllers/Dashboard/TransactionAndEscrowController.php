@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\AuditLog;
 use App\Models\DpPaymentAttempt;
 use App\Models\EscrowDisbursement;
 use App\Models\Transaction;
 use App\Models\TransactionLedgerEntry;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Services\Payments\EscrowFundReleaseException;
 use App\Services\Payments\EscrowFundReleaseService;
 use Brick\Math\BigDecimal;
@@ -115,15 +117,29 @@ class TransactionAndEscrowController extends Controller
         Request $request,
         Transaction $transaction,
         EscrowFundReleaseService $releases,
+        AuditLogger $auditLogger,
     ): RedirectResponse {
         $actor = $request->user();
         abort_unless($actor instanceof User, 403);
 
         try {
-            $releases->initiate($transaction, $actor);
+            $disbursement = $releases->initiate($transaction, $actor);
         } catch (EscrowFundReleaseException $exception) {
             return back()->withErrors(['escrow_release' => $exception->getMessage()]);
         }
+
+        $auditLogger->record(
+            AuditLog::EVENT_PAYOUT_INITIATED,
+            'Pencairan escrow untuk transaksi '.$transaction->uuid.' diajukan kepada '
+                .$disbursement->recipient_name.' sebesar Rp '.number_format((float) $disbursement->amount, 0, ',', '.').'.',
+            $disbursement,
+            [
+                'amount' => (string) $disbursement->amount,
+                'status' => EscrowDisbursement::STATUS_PENDING,
+                'recipient_user_id' => $disbursement->recipient_user_id,
+            ],
+            $actor,
+        );
 
         return back()->with('status', 'Pencairan escrow dicatat sebagai menunggu konfirmasi transfer.');
     }
@@ -132,6 +148,7 @@ class TransactionAndEscrowController extends Controller
         Request $request,
         EscrowDisbursement $escrowDisbursement,
         EscrowFundReleaseService $releases,
+        AuditLogger $auditLogger,
     ): RedirectResponse {
         $validated = $request->validate([
             'transfer_reference' => ['required', 'string', 'max:255'],
@@ -148,6 +165,18 @@ class TransactionAndEscrowController extends Controller
         } catch (EscrowFundReleaseException $exception) {
             return back()->withErrors(['escrow_release' => $exception->getMessage()]);
         }
+
+        $auditLogger->record(
+            AuditLog::EVENT_PAYOUT_CONFIRMED,
+            'Pencairan escrow '.$escrowDisbursement->uuid.' dikonfirmasi dengan referensi transfer '
+                .trim($validated['transfer_reference']).'.',
+            $escrowDisbursement,
+            [
+                'transfer_reference' => trim($validated['transfer_reference']),
+                'status' => EscrowDisbursement::STATUS_RELEASED,
+            ],
+            $actor,
+        );
 
         return back()->with('status', 'Pencairan escrow berhasil dikonfirmasi dan transaksi telah diperbarui.');
     }

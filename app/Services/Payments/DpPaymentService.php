@@ -3,12 +3,14 @@
 namespace App\Services\Payments;
 
 use App\Models\Appointment;
+use App\Models\AuditLog;
 use App\Models\DpPaymentAttempt;
 use App\Models\PaymentWebhookEvent;
 use App\Models\Transaction;
 use App\Models\TransactionLedgerEntry;
 use App\Models\TransactionLogs;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -18,6 +20,7 @@ class DpPaymentService
     public function __construct(
         private readonly DpAmountCalculator $amountCalculator,
         private readonly XenditPaymentProvider $provider,
+        private readonly AuditLogger $auditLogger,
     ) {}
 
     public function createOrResume(Transaction $transaction, User $buyer): DpPaymentAttempt
@@ -259,6 +262,17 @@ class DpPaymentService
                             'to_state' => 'held_in_escrow',
                             'notes' => 'Pelunasan properti (escrow) dikonfirmasi oleh Xendit dan seluruh dana disimpan di escrow. Ref: '.$lockedAttempt->reference_id,
                         ]);
+
+                        $this->auditLogger->record(
+                            AuditLog::EVENT_TRANSACTION_ESCROW_PAID,
+                            'Pelunasan escrow transaksi '.$transaction->uuid.' terkonfirmasi oleh Xendit.',
+                            $transaction,
+                            [
+                                'reference_id' => $lockedAttempt->reference_id,
+                                'amount' => (string) $lockedAttempt->amount,
+                                'state' => ['old' => 'bpn_cleared', 'new' => 'held_in_escrow'],
+                            ],
+                        );
                     }
                 } else {
                     $transaction->ledgerEntries()->firstOrCreate(
@@ -287,6 +301,17 @@ class DpPaymentService
                             'to_state' => 'dp_paid',
                             'notes' => 'DP dikonfirmasi oleh Xendit dan dicatat sebagai dana cadangan. Ref: '.$lockedAttempt->reference_id,
                         ]);
+
+                        $this->auditLogger->record(
+                            AuditLog::EVENT_TRANSACTION_DP_PAID,
+                            'Pembayaran DP transaksi '.$transaction->uuid.' terkonfirmasi oleh Xendit.',
+                            $transaction,
+                            [
+                                'reference_id' => $lockedAttempt->reference_id,
+                                'amount' => (string) $lockedAttempt->amount,
+                                'state' => ['old' => 'draft', 'new' => 'dp_paid'],
+                            ],
+                        );
                     }
                 }
             } elseif ($lockedAttempt->status !== DpPaymentAttempt::STATUS_PAID) {

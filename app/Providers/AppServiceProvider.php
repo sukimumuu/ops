@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use App\Listeners\RecordAuthenticationAudit;
 use App\Models\User;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -31,6 +35,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen(Login::class, RecordAuthenticationAudit::class);
+        Event::listen(Logout::class, RecordAuthenticationAudit::class);
+        Event::listen(Failed::class, RecordAuthenticationAudit::class);
+
         Event::listen(NotificationFailed::class, function (NotificationFailed $event): void {
             Log::warning('Browser push notification delivery failed.', [
                 'user_id' => $event->subscription->user_id,

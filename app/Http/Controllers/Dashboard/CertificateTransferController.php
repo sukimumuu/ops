@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Services\Payments\CertificateTransferException;
 use App\Services\Payments\CertificateTransferService;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +24,7 @@ class CertificateTransferController extends Controller
         Request $request,
         Property $property,
         CertificateTransferService $certificateTransfer,
+        AuditLogger $auditLogger,
     ): RedirectResponse {
         $ppat = $request->user();
         abort_unless(
@@ -59,6 +62,19 @@ class CertificateTransferController extends Controller
         } catch (CertificateTransferException $exception) {
             return back()->withErrors(['certificate_transfer' => $exception->getMessage()]);
         }
+
+        $auditLogger->record(
+            AuditLog::EVENT_TRANSACTION_CERTIFICATE_TRANSFERRED,
+            'Tanda terima BPN untuk properti '.$property->title.' diunggah dengan referensi '
+                .trim($validated['bpn_reference']).'.',
+            $transaction,
+            [
+                'bpn_reference' => trim($validated['bpn_reference']),
+                'is_replacement' => $isReplacement,
+                'state' => $transaction->state,
+            ],
+            $ppat,
+        );
 
         return back()->with(
             'status',

@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AuditLogFilterRequest;
+use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
+use App\Services\Audit\AuditLogService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -51,7 +55,7 @@ class SuperadminController extends Controller
         return view('dashboard.superadmin.create-user');
     }
 
-    public function storeUser(Request $request): RedirectResponse
+    public function storeUser(Request $request, AuditLogger $auditLogger): RedirectResponse
     {
         if ($request->filled('phone')) {
             $normalizedPhone = new User;
@@ -86,6 +90,18 @@ class SuperadminController extends Controller
             'district' => $validated['role'] === 'ppat' ? $validated['district'] : null,
         ]);
         $user->assignRole(self::USER_ROLES[$validated['role']]);
+
+        $auditLogger->record(
+            AuditLog::EVENT_USER_CREATED,
+            'Akun pengguna '.$user->name.' dengan peran '.self::USER_ROLES[$validated['role']].' dibuat.',
+            $user,
+            [
+                'role' => self::USER_ROLES[$validated['role']],
+                'email' => $user->email,
+                'phone' => $user->phone,
+            ],
+            $request->user(),
+        );
 
         return redirect()
             ->route('superadmin.user-management')
@@ -137,8 +153,16 @@ class SuperadminController extends Controller
         return view('dashboard.superadmin.configuration-system');
     }
 
-    public function auditLog()
+    public function auditLog(AuditLogFilterRequest $request, AuditLogService $auditLogs): View
     {
-        return view('dashboard.superadmin.audit-log');
+        $filters = $request->validated();
+
+        return view('dashboard.superadmin.audit-log', [
+            'logs' => $auditLogs->paginate($filters, includeRestricted: true),
+            'filters' => $filters,
+            'categories' => $auditLogs->categoryOptions(includeRestricted: true),
+            'events' => $auditLogs->eventOptions(includeRestricted: true),
+            'summary' => $auditLogs->summary(includeRestricted: true),
+        ]);
     }
 }
