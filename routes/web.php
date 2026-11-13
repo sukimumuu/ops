@@ -78,6 +78,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/properti-saya/{property:uuid}', [ListingController::class, 'showProperty'])
             ->whereUuid('property')
             ->name('my-properties.show');
+        Route::get('/properti-saya/{property:uuid}/edit', [ListingController::class, 'editProperty'])
+            ->whereUuid('property')
+            ->name('my-properties.edit');
+        Route::put('/properti-saya/{property:uuid}', [ListingController::class, 'updateProperty'])
+            ->whereUuid('property')
+            ->name('my-properties.update');
         Route::patch('/properti-saya/{property:uuid}/survei/{appointment}', [AppointmentController::class, 'recordSurveyResult'])
             ->whereUuid('property')
             ->whereNumber('appointment')

@@ -39,6 +39,12 @@
         <template x-if="errors.province_code">
             <p class="wz-error" x-text="errors.province_code"></p>
         </template>
+        @error('province')
+            <p class="wz-error">{{ $message }}</p>
+        @enderror
+        @error('province_code')
+            <p class="wz-error">{{ $message }}</p>
+        @enderror
     </div>
 
     <div class="wizard-field wz-region-field" @click.outside="locationOpen.regencies = false">
@@ -82,6 +88,12 @@
         <template x-if="errors.city_code">
             <p class="wz-error" x-text="errors.city_code"></p>
         </template>
+        @error('city')
+            <p class="wz-error">{{ $message }}</p>
+        @enderror
+        @error('city_code')
+            <p class="wz-error">{{ $message }}</p>
+        @enderror
     </div>
 
     <div class="wizard-field wz-region-field" @click.outside="locationOpen.districts = false">
@@ -125,9 +137,21 @@
         <template x-if="errors.district_code">
             <p class="wz-error" x-text="errors.district_code"></p>
         </template>
+        @error('district')
+            <p class="wz-error">{{ $message }}</p>
+        @enderror
+        @error('district_code')
+            <p class="wz-error">{{ $message }}</p>
+        @enderror
     </div>
     <div class="wizard-field">
         <label class="wz-label">Kode pos</label>
-        <input type="text" x-model="form.postal_code" placeholder="15224" class="wz-input">
+        <input type="text" name="postal_code" x-model="form.postal_code" placeholder="15224" class="wz-input">
     </div>
 </div>
+<input type="hidden" name="province" x-model="form.province">
+<input type="hidden" name="province_code" x-model="form.province_code">
+<input type="hidden" name="city" x-model="form.city">
+<input type="hidden" name="city_code" x-model="form.city_code">
+<input type="hidden" name="district" x-model="form.district">
+<input type="hidden" name="district_code" x-model="form.district_code">

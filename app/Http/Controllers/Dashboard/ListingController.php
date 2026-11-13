@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdatePropertyRequest;
 use App\Models\Appointment;
 use App\Models\Property;
 use App\Models\Transaction;
@@ -10,6 +11,7 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -232,6 +234,104 @@ class ListingController extends Controller
             'mapUrl',
             'surveyStats',
         ));
+    }
+
+    public function editProperty(Property $property): View
+    {
+        Gate::authorize('update', $property);
+
+        $property->load(['photos', 'certificate', 'supportingDocuments']);
+        $oldInput = session()->get('_old_input', []);
+
+        $initialForm = [
+            'property_type' => old('property_type', $property->property_type),
+            'building_type' => old('building_type', old('type', $property->property_type === 'bangunan' ? $property->type : '')),
+            'land_type' => old('land_type', old('type', $property->property_type === 'tanah' ? $property->type : '')),
+            'transaction_type' => old('transaction_type', old('category', $property->category) === 'sale' ? 'dijual' : 'disewakan'),
+            'rent_period' => old('rent_period', $property->rent_period),
+            'title' => old('title', $property->title),
+            'description' => old('description', $property->description),
+            'price' => is_array($oldInput) && array_key_exists('price', $oldInput)
+                ? old('price')
+                : number_format((float) $property->price, 0, ',', '.'),
+            'negotiable' => old('negotiable', $property->negotiable),
+            'land_area_sqm' => old('land_area_sqm', $property->land_area_sqm),
+            'building_area_sqm' => old('building_area_sqm', $property->building_area_sqm),
+            'bedrooms' => old('bedrooms', old('rooms', $property->rooms)),
+            'bathrooms' => old('bathrooms', $property->bathrooms),
+            'floors' => old('floors', $property->floors),
+            'condition' => old('condition', $property->condition),
+            'front_width' => old('front_width', $property->front_width),
+            'land_contour' => old('land_contour', $property->land_contour),
+            'road_access' => old('road_access', $property->road_access),
+            'zone_type' => old('zone_type', $property->zone_type),
+            'province' => old('province', $property->province),
+            'province_code' => old('province_code', $property->province_code),
+            'city' => old('city', $property->city),
+            'city_code' => old('city_code', $property->city_code),
+            'district' => old('district', $property->district),
+            'district_code' => old('district_code', $property->district_code),
+            'postal_code' => old('postal_code', $property->postal_code),
+            'address' => old('address', $property->address),
+            'latitude' => old('latitude', $property->latitude),
+            'longitude' => old('longitude', $property->longitude),
+            'url_maps' => old('url_maps', $property->url_maps),
+        ];
+
+        return view('user.property-edit', compact('property', 'initialForm'));
+    }
+
+    public function updateProperty(UpdatePropertyRequest $request, Property $property): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        $provinceChanged = $property->province !== $validated['province'];
+        $cityChanged = $property->city !== $validated['city'];
+        $districtChanged = $property->district !== $validated['district'];
+
+        if ($validated['category'] === 'sale') {
+            $validated['rent_period'] = null;
+        }
+
+        if ($validated['property_type'] === 'bangunan') {
+            $validated['front_width'] = null;
+            $validated['land_contour'] = null;
+            $validated['road_access'] = null;
+            $validated['zone_type'] = null;
+        } else {
+            $validated['building_area_sqm'] = null;
+            $validated['rooms'] = null;
+            $validated['bathrooms'] = null;
+            $validated['floors'] = null;
+            $validated['condition'] = null;
+        }
+
+        $property->fill($validated);
+        $property->negotiable = $request->boolean('negotiable');
+
+        if ($provinceChanged) {
+            if (! filled($validated['province_code'] ?? null) || $validated['province_code'] === $property->getOriginal('province_code')) {
+                $property->province_code = null;
+            }
+        }
+
+        if ($provinceChanged || $cityChanged) {
+            if (! filled($validated['city_code'] ?? null) || $validated['city_code'] === $property->getOriginal('city_code')) {
+                $property->city_code = null;
+            }
+        }
+
+        if ($provinceChanged || $cityChanged || $districtChanged) {
+            if (! filled($validated['district_code'] ?? null) || $validated['district_code'] === $property->getOriginal('district_code')) {
+                $property->district_code = null;
+            }
+        }
+
+        $property->save();
+
+        return redirect()
+            ->route('seller.my-properties.show', ['property' => $property->uuid])
+            ->with('status', 'Perubahan properti berhasil disimpan.');
     }
 
     public function requestSurvey(Request $request): View

@@ -17,7 +17,7 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
-        detectTls: 'mihom.test',
+        detectTls: 'mihom.pausberbulu.my.id',
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },

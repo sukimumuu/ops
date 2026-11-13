@@ -128,6 +128,18 @@
                         Kembali
                     </a>
 
+                    @if ($property->status === 'pending_verification')
+                        <a href="{{ route('seller.my-properties.edit', ['property' => $property->uuid]) }}"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg border border-primary bg-transparent px-4 py-2.5 font-sans text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                            <svg class="size-4" fill="none" stroke="currentColor" stroke-width="1.8"
+                                viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="m16.862 4.487 2.651 2.651M8.25 20.25h-4.5v-4.5L16.862 2.638a1.875 1.875 0 0 1 2.651 2.651L8.25 20.25Z" />
+                            </svg>
+                            Edit
+                        </a>
+                    @endif
+
                     @if ($property->status === 'published')
                         <a href="{{ route('property-details', ['uuid' => $property->uuid]) }}" target="_blank"
                             rel="noopener"
