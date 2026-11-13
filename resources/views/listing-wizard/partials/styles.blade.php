@@ -931,15 +931,42 @@
             transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
         }
 
+        .wz-cert-dropzone {
+            cursor: default;
+        }
+
         .wz-dropzone:hover,
         .wz-dropzone.is-dragging {
             border-color: #FC4907;
             background: #FFF7F4;
         }
 
+        .wz-dropzone.has-file {
+            border-color: #FC4907;
+            background: rgba(252, 73, 7, 0.06);
+        }
+
+        .wz-dropzone.has-file:hover,
+        .wz-dropzone.has-file.is-dragging {
+            background: rgba(252, 73, 7, 0.1);
+        }
+
         .wz-dropzone:focus-within {
             border-color: #FC4907;
             box-shadow: 0 0 0 3px rgba(252, 73, 7, 0.12);
+        }
+
+        .wz-dropzone-label {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1 1 auto;
+            min-width: 0;
+            cursor: pointer;
+        }
+
+        .wz-dropzone.has-file .wz-dropzone-label {
+            cursor: default;
         }
 
         .wz-dropzone-icon {
@@ -959,6 +986,10 @@
             min-width: 0;
         }
 
+        .wz-cert-dropzone .wz-dropzone-text {
+            flex: 1 1 auto;
+        }
+
         .wz-dropzone-title {
             font-family: 'Manrope', sans-serif;
             font-size: 14px;
@@ -973,17 +1004,45 @@
             color: #64748b;
         }
 
+        .wz-dropzone-filename {
+            display: block;
+            overflow-wrap: anywhere;
+            font-family: 'Manrope', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #2C3E50;
+        }
+
+        .wz-dropzone-remove {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 32px;
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(252, 73, 7, 0.1);
+            color: #FC4907;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .wz-dropzone-remove:hover {
+            background: #FC4907;
+            color: #fff;
+        }
+
+        .wz-dropzone-remove:focus-visible {
+            outline: 2px solid rgba(252, 73, 7, 0.5);
+            outline-offset: 2px;
+        }
+
         .wz-file-hint {
             margin-top: 6px;
             font-family: 'Manrope', sans-serif;
             font-size: 11px;
             color: #94a3b8;
-        }
-
-        .wz-cert-selected {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
         }
 
         .wz-file-item {
@@ -1077,6 +1136,15 @@
 
         .wz-cert-add:hover {
             background: #e04006;
+        }
+
+        .wz-cert-add:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .wz-cert-add:disabled:hover {
+            background: #FC4907;
         }
 
         .wz-cert-add:active {

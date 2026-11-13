@@ -818,8 +818,7 @@
                         <div class="wz-cert-list mt-4">
                             <template x-for="(certificate, index) in certificates" :key="certificate.key">
                                 <div class="wz-cert-card" data-certificate-entry>
-                                    {{-- Initial state: type + dropzone side by side --}}
-                                    <div class="wz-cert-form" x-show="!certificate.file">
+                                    <div class="wz-cert-form">
                                         <div class="wz-cert-col">
                                             <label class="wz-label" :for="'jenis-sertifikat-' + index">Jenis surat <span
                                                     class="wz-required">*</span></label>
@@ -841,25 +840,50 @@
 
                                         <div class="wz-cert-col">
                                             <span class="wz-label">Upload file <span class="wz-required">*</span></span>
-                                            <label class="wz-dropzone" :for="'certificate-input-' + index"
-                                                :class="{ 'is-dragging': dragging === 'certificate-' + index }"
+                                            <div class="wz-dropzone wz-cert-dropzone"
+                                                :class="{
+                                                    'is-dragging': dragging === 'certificate-' + index,
+                                                    'has-file': !!certificate.file
+                                                }"
                                                 @dragenter.prevent="dragging = 'certificate-' + index"
                                                 @dragover.prevent="dragging = 'certificate-' + index"
                                                 @dragleave.prevent="dragging = ''"
                                                 @drop.prevent="handleCertificateDrop($event, index)">
-                                                <span class="wz-dropzone-icon" aria-hidden="true">
-                                                    <x-cloud-upload-icon class="h-10 w-10" />
-                                                </span>
-                                                <span class="wz-dropzone-text">
-                                                    <span class="wz-dropzone-title">Pilih file</span>
-                                                    <span class="wz-dropzone-desc">atau drag &amp; drop</span>
-                                                </span>
-                                                <input type="file" :id="'certificate-input-' + index"
-                                                    :name="certificateFieldName(index, 'certificate_document')"
-                                                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                                    class="sr-only" :disabled="!!certificate.file"
-                                                    @change="handleCertificateUpload($event, index)">
-                                            </label>
+                                                <label class="wz-dropzone-label" :for="'certificate-input-' + index">
+                                                    <span class="wz-dropzone-icon" x-show="!certificate.file"
+                                                        aria-hidden="true">
+                                                        <x-cloud-upload-icon class="h-10 w-10" />
+                                                    </span>
+                                                    <span class="wz-dropzone-text">
+                                                        <span class="wz-dropzone-title" x-show="!certificate.file">Pilih
+                                                            file</span>
+                                                        <span class="wz-dropzone-desc" x-show="!certificate.file">atau
+                                                            drag &amp; drop</span>
+                                                        <span class="wz-dropzone-filename" x-show="certificate.file"
+                                                            x-text="certificate.file?.name || ''"
+                                                            :title="certificate.file?.name || ''" aria-live="polite"></span>
+                                                        <span class="wz-dropzone-desc" x-show="certificate.file">
+                                                            File siap diunggah · <span
+                                                                x-text="fileMeta(certificate.file)"></span>
+                                                        </span>
+                                                    </span>
+                                                    <input type="file" :id="'certificate-input-' + index"
+                                                        :name="certificateFieldName(index, 'certificate_document')"
+                                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                                        class="sr-only" :disabled="!!certificate.file"
+                                                        @change="handleCertificateUpload($event, index)">
+                                                </label>
+                                                <button type="button" class="wz-dropzone-remove"
+                                                    x-show="certificate.file"
+                                                    @click.stop.prevent="removeCertificateFile(index, $event)"
+                                                    :aria-label="'Remove selected file ' + (certificate.file?.name || '')">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor"
+                                                        stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                             <p class="wz-file-hint">PDF, JPG, atau PNG · Maks. 10MB</p>
                                             <template x-if="certificateError(index, 'certificate_document')">
                                                 <p class="wz-error" x-text="certificateError(index, 'certificate_document')">
@@ -872,55 +896,28 @@
                                             Batalkan sertifikat tambahan
                                         </button>
                                     </div>
-
-                                    {{-- Selected state: uploaded file + add button --}}
-                                    <div class="wz-cert-selected" x-show="certificate.file">
-                                        <div class="wz-file-item">
-                                            <span class="wz-file-icon" aria-hidden="true">
-                                                <svg class="h-6 w-6" fill="none" stroke="currentColor"
-                                                    stroke-width="1.8" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8m-5-5l5 5m-5-5v5h5M9 13h6M9 17h4" />
-                                                </svg>
-                                            </span>
-                                            <span class="wz-file-info">
-                                                <span class="wz-file-name" x-text="certificate.file?.name"></span>
-                                                <span class="wz-file-meta" x-text="fileMeta(certificate.file)"></span>
-                                            </span>
-                                            <button type="button" class="wz-file-remove"
-                                                @click="removeCertificateFile(index, $event)"
-                                                :aria-label="'Hapus file ' + (certificate.file?.name || 'sertifikat')">
-                                                <svg class="h-4 w-4" fill="none" stroke="currentColor"
-                                                    stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
-                                        </div>
-
-                                        <button type="button" class="wz-cert-add"
-                                            x-show="index === certificates.length - 1 && certificates.length < maxCertificates"
-                                            @click="addCertificateEntry()">
-                                            <span class="wz-cert-add-left">
-                                                <span class="wz-cert-add-icon" aria-hidden="true">
-                                                    <x-cloud-upload-icon class="h-8 w-8" />
-                                                </span>
-                                                <span class="wz-cert-add-text">
-                                                    <span class="wz-cert-add-title">Tambah Sertifikat</span>
-                                                    <span class="wz-cert-add-desc">Klik untuk upload file</span>
-                                                </span>
-                                            </span>
-                                            <span class="wz-cert-add-plus" aria-hidden="true">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor"
-                                                    stroke-width="2.2" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M12 4v16m8-8H4" />
-                                                </svg>
-                                            </span>
-                                        </button>
-                                    </div>
                                 </div>
                             </template>
+
+                            <button type="button" class="wz-cert-add" @click="addCertificateEntry()"
+                                :disabled="certificates.length >= maxCertificates"
+                                :aria-disabled="certificates.length >= maxCertificates">
+                                <span class="wz-cert-add-left">
+                                    <span class="wz-cert-add-icon" aria-hidden="true">
+                                        <x-cloud-upload-icon class="h-8 w-8" />
+                                    </span>
+                                    <span class="wz-cert-add-text">
+                                        <span class="wz-cert-add-title">Tambah Sertifikat</span>
+                                        <span class="wz-cert-add-desc">Klik untuk upload file</span>
+                                    </span>
+                                </span>
+                                <span class="wz-cert-add-plus" aria-hidden="true">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </span>
+                            </button>
                         </div>
 
                         {{-- Optional supporting documents --}}

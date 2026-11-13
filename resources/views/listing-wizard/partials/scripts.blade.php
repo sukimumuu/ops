@@ -819,7 +819,8 @@
                         certificate.errors = {};
                     }
 
-                    const entry = event?.target?.closest('[data-certificate-entry]') ??
+                    const entry = event?.currentTarget?.closest('[data-certificate-entry]') ??
+                        event?.target?.closest('[data-certificate-entry]') ??
                         document.querySelectorAll('[data-certificate-entry]')[index];
                     const input = entry?.querySelector('input[type="file"]');
                     if (input) input.value = '';
