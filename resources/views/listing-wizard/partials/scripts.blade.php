@@ -7,6 +7,16 @@
                 showSuccess: false,
                 agreedTerms: false,
                 hasDraft: false,
+                draftUuid: null,
+                draftSaveState: '',
+                draftSaveError: '',
+                draftButtonState: 'unsaved',
+                draftEditRevision: 0,
+                draftSaveTimer: null,
+                draftSaveInProgress: false,
+                draftSavePending: false,
+                draftSavePromise: null,
+                draftSaveEndpoint: @json(route('listing.drafts.store')),
 
                 // AI auto-fill state
                 showAiModal: false,
@@ -136,6 +146,8 @@
                 errors: {},
                 photoFiles: [],
                 photoPreviews: [],
+                savedPhotoPreviews: [],
+                photoUploadError: '',
 
                 // Certificate & legal document state
                 maxCertificates: 5,
@@ -518,10 +530,38 @@
                         ...this.form,
                         ...@json($initialForm)
                     };
+                    this.draftUuid = @json($initialDraftUuid);
+                    this.hasDraft = Boolean(this.draftUuid);
+                    this.draftButtonState = this.draftUuid ? 'saved' : 'unsaved';
+                    this.currentStep = this.draftUuid ? @json($initialDraftStep) : 1;
+                    const savedUploads = @json($initialUploads);
+                    this.savedPhotoPreviews = savedUploads.photos || [];
+                    if (Array.isArray(savedUploads.certificates) && savedUploads.certificates.length > 0) {
+                        this.certificates = savedUploads.certificates.map((certificate, index) => ({
+                            key: index,
+                            jenis_sertifikat: certificate.type,
+                            file: null,
+                            savedName: certificate.name,
+                            errors: {},
+                        }));
+                        this.certificateKeySeq = this.certificates.length;
+                    }
+                    this.optionalDocuments.imb.savedName = savedUploads.imb?.name || '';
+                    this.optionalDocuments.pbb.savedName = savedUploads.pbb?.name || '';
                     this.osmUrl = this.form.url_maps || '';
                     this.locationQuery.province = this.form.province || '';
                     this.locationQuery.city = this.form.city || '';
                     this.locationQuery.district = this.form.district || '';
+
+                    this.$watch('form', () => this.scheduleDraftSave(true));
+                    this.$watch('currentStep', () => this.scheduleDraftSave());
+                    window.addEventListener('pagehide', () => {
+                        if (this.draftSaveTimer) {
+                            clearTimeout(this.draftSaveTimer);
+                            this.draftSaveTimer = null;
+                        }
+                        this.persistDraft();
+                    });
 
                     this.$watch('form.property_type', (value) => {
                         if (this.mapInstance) {
@@ -543,6 +583,9 @@
                     }
                     if (this.form.city_code) {
                         this.loadRegionOptions('districts');
+                    }
+                    if (this.hasDraftData()) {
+                        this.scheduleDraftSave();
                     }
                 },
 
@@ -742,12 +785,19 @@
 
                 handlePhotoUpload(event) {
                     const files = Array.from(event.target.files);
-                    const remaining = 10 - this.photoPreviews.length;
+                    const remaining = 10 - this.savedPhotoPreviews.length - this.photoPreviews.length;
                     const toAdd = files.slice(0, remaining);
+                    let fileError = files.length > remaining ? 'Maksimal 10 foto yang dapat diunggah.' : '';
 
                     toAdd.forEach(file => {
-                        if (!file.type.match(/^image\/(jpeg|png|webp)$/)) return;
-                        if (file.size > 5 * 1024 * 1024) return;
+                        if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+                            if (!fileError) fileError = 'Format foto yang didukung: JPEG, PNG, atau WebP.';
+                            return;
+                        }
+                        if (file.size > 2 * 1024 * 1024) {
+                            if (!fileError) fileError = 'Ukuran foto maksimal 2MB.';
+                            return;
+                        }
 
                         this.photoFiles.push(file);
                         const reader = new FileReader();
@@ -756,6 +806,14 @@
                         };
                         reader.readAsDataURL(file);
                     });
+
+                    if (fileError) {
+                        this.photoUploadError = fileError;
+                        this.errors.photos = fileError;
+                    } else if (toAdd.length > 0) {
+                        this.photoUploadError = '';
+                        delete this.errors.photos;
+                    }
 
                     event.target.value = '';
                 },
@@ -953,7 +1011,7 @@
                 },
 
                 hasCertificateFile() {
-                    return this.certificates.some((certificate) => certificate.file);
+                    return this.certificates.some((certificate) => certificate.file || certificate.savedName);
                 },
 
                 fileMeta(file) {
@@ -976,13 +1034,217 @@
                     }
                 },
 
-                saveDraft() {
-                    this.hasDraft = true;
-                    // Draft save logic would go here
+                async scrollToFirstError(errorFields) {
+                    const field = errorFields[0];
+                    if (!field) return;
+
+                    await this.$nextTick();
+
+                    let control = null;
+                    let container = null;
+
+                    if (field === 'general') {
+                        container = document.getElementById('listing-validation-summary');
+                    } else if (field === 'agreedTerms') {
+                        container = document.getElementById('listing-agreement-field');
+                    } else if (field === 'photos' || field.startsWith('photos.')) {
+                        const photoGrid = document.getElementById('photo-preview-grid');
+                        container = photoGrid?.parentElement?.querySelector('.wz-error') || photoGrid;
+                    } else if (field === 'additional_certificates') {
+                        container = document.querySelector('.wz-cert-list');
+                    } else if (field === 'url_maps') {
+                        const map = Array.from(document.querySelectorAll('.wz-map'))
+                            .find((element) => element.offsetParent !== null);
+                        container = map?.closest('.wizard-field') || map;
+                    } else {
+                        const certificateError = field.match(
+                            /^(?:certificate\.(\d+)\.|additional_certificates\.(\d+)\.|)(jenis_sertifikat|certificate_document)$/
+                        );
+
+                        if (certificateError) {
+                            const uploadedCertificateIndices = this.certificates
+                                .map((certificate, index) => certificate.file ? index : -1)
+                                .filter((index) => index >= 0);
+                            const entryIndex = certificateError[1] !== undefined
+                                ? Number(certificateError[1])
+                                : certificateError[2] !== undefined
+                                    ? uploadedCertificateIndices[Number(certificateError[2]) + 1] ??
+                                        Number(certificateError[2]) + 1
+                                    : uploadedCertificateIndices[0] ?? 0;
+                            const entries = document.querySelectorAll('[data-certificate-entry]');
+                            const entry = entries[entryIndex];
+                            const certificateField = certificateError[3];
+
+                            if (entry) {
+                                container = entry;
+                                control = certificateField === 'jenis_sertifikat'
+                                    ? entry.querySelector('select')
+                                    : entry.querySelector('input[type="file"]');
+                            }
+                        }
+                    }
+
+                    const fieldIds = {
+                        province: 'province-search',
+                        province_code: 'province-search',
+                        city: 'city-search',
+                        city_code: 'city-search',
+                        district: 'district-search',
+                        district_code: 'district-search',
+                        imb_document: 'imb-document-input',
+                        pbb_document: 'pbb-document-input',
+                    };
+
+                    if (!control && fieldIds[field]) {
+                        control = document.getElementById(fieldIds[field]);
+                    }
+
+                    if (!control) {
+                        control = Array.from(document.querySelectorAll('[x-model]'))
+                            .find((element) => element.getAttribute('x-model') === `form.${field}`) || null;
+                    }
+
+                    if (!control) {
+                        control = document.getElementsByName(field)[0] || null;
+                    }
+
+                    if (!container && control) {
+                        container = control.closest('.wizard-field, .wz-region-field, .wizard-type-card') || control;
+                    }
+
+                    const target = container || control || document.getElementById('listing-validation-summary');
+                    if (!target) return;
+
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    if (control && !control.disabled) {
+                        control.focus({ preventScroll: true });
+                    }
+                },
+
+                hasDraftData() {
+                    return Object.entries(this.form).some(([key, value]) => {
+                        if (key === 'negotiable') return false;
+                        return typeof value === 'string' ? value.trim() !== '' : value !== null && value !== undefined;
+                    });
+                },
+
+                scheduleDraftSave(markAsEdited = false) {
+                    if (markAsEdited) {
+                        this.draftEditRevision += 1;
+                        this.draftButtonState = 'unsaved';
+                    }
+
+                    if (this.draftSaveTimer) {
+                        clearTimeout(this.draftSaveTimer);
+                        this.draftSaveTimer = null;
+                    }
+
+                    if (!this.hasDraftData() && !this.draftUuid) return;
+
+                    this.draftSaveState = 'saving';
+                    this.draftSaveTimer = setTimeout(() => {
+                        this.draftSaveTimer = null;
+                        this.persistDraft();
+                    }, 800);
+                },
+
+                async saveDraft() {
+                    if (this.draftSaveTimer) {
+                        clearTimeout(this.draftSaveTimer);
+                        this.draftSaveTimer = null;
+                    }
+
+                    const editRevision = this.draftEditRevision;
+                    this.draftButtonState = 'saving';
+                    await this.persistDraft();
+                    this.draftButtonState = this.draftEditRevision === editRevision &&
+                        this.draftSaveState === 'saved' && this.draftUuid
+                        ? 'saved'
+                        : 'unsaved';
+                },
+
+                async persistDraft() {
+                    if (!this.hasDraftData() && !this.draftUuid) return;
+
+                    if (this.draftSavePromise) {
+                        this.draftSavePending = true;
+                        await this.draftSavePromise;
+                        if (this.draftSavePending) {
+                            this.draftSavePending = false;
+                            await this.persistDraft();
+                        }
+                        return;
+                    }
+
+                    this.draftSaveInProgress = true;
+                    this.draftSaveState = 'saving';
+                    this.draftSaveError = '';
+
+                    const data = {
+                        ...this.form,
+                        url_maps: this.osmUrl,
+                        price: String(this.form.price || '').replace(/\D/g, ''),
+                    };
+
+                    this.draftSavePromise = (async () => {
+                        try {
+                            const response = await fetch(this.draftSaveEndpoint, {
+                                method: 'POST',
+                                keepalive: true,
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                    'Accept': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    draft_uuid: this.draftUuid,
+                                    current_step: this.currentStep,
+                                    data,
+                                }),
+                            });
+                            const payload = await response.json().catch(() => null);
+
+                            if (!response.ok || !payload?.success) {
+                                throw new Error(payload?.message ||
+                                    'Draf gagal disimpan. Periksa koneksi lalu coba lagi.');
+                            }
+
+                            this.draftUuid = payload.draft_uuid || this.draftUuid;
+                            this.hasDraft = Boolean(this.draftUuid);
+                            this.draftSaveState = this.hasDraft ? 'saved' : '';
+                        } catch (error) {
+                            console.error('Draft save error:', error);
+                            this.draftSaveState = 'error';
+                            this.draftSaveError = error.message ||
+                                'Draf gagal disimpan. Periksa koneksi lalu coba lagi.';
+                        }
+                    })();
+
+                    try {
+                        await this.draftSavePromise;
+                    } finally {
+                        this.draftSavePromise = null;
+                        this.draftSaveInProgress = false;
+                    }
+
+                    if (this.draftSavePending) {
+                        this.draftSavePending = false;
+                        await this.persistDraft();
+                    }
                 },
 
                 async submitStepOne() {
                     this.errors = {};
+                    if (!this.draftUuid && this.hasDraftData()) {
+                        await this.saveDraft();
+                        if (!this.draftUuid) {
+                            this.errors.general = this.draftSaveError ||
+                                'Draf gagal disimpan. Periksa koneksi lalu coba lagi.';
+                            await this.scrollToFirstError(['general']);
+                            return;
+                        }
+                    }
                     this.isLoading = true;
 
                     const priceNumeric = this.form.price.replace(/\./g, '');
@@ -999,6 +1261,7 @@
                                 ...this.form,
                                 price: priceNumeric,
                                 url_maps: this.osmUrl,
+                                draft_uuid: this.draftUuid,
                             }),
                         });
 
@@ -1010,11 +1273,19 @@
                                 for (const [key, messages] of Object.entries(data.errors)) {
                                     flatErrors[key] = messages[0];
                                 }
+                                flatErrors.summary = Object.values(flatErrors)[0];
                                 this.errors = flatErrors;
+                                await this.scrollToFirstError(Object.keys(data.errors));
+                            } else {
+                                this.errors.general = data.message || 'Periksa kembali data properti Anda.';
+                                await this.scrollToFirstError(['general']);
                             }
                             return;
                         }
 
+                        this.draftUuid = data.draft_uuid;
+                        this.hasDraft = Boolean(this.draftUuid);
+                        this.draftSaveState = 'saved';
                         this.currentStep = 2;
                         window.scrollTo({
                             top: 0,
@@ -1024,6 +1295,7 @@
                     } catch (error) {
                         console.error('Step 1 error:', error);
                         this.errors.general = 'Terjadi kesalahan. Silakan coba lagi.';
+                        await this.scrollToFirstError(['general']);
                     } finally {
                         this.isLoading = false;
                     }
@@ -1031,46 +1303,65 @@
 
                 async submitStepTwo() {
                     this.errors = {};
-                    this.certificates.forEach((certificate) => {
-                        certificate.errors = {};
-                    });
 
-                    if (this.photoFiles.length === 0) {
-                        this.errors.photos = 'Minimal 1 foto properti wajib diunggah.';
+                    if (this.photoUploadError) {
+                        this.errors.photos = this.photoUploadError;
+                        this.errors.summary = this.photoUploadError;
+                        await this.scrollToFirstError(['photos']);
                         return;
                     }
 
-                    let hasCertificateError = false;
+                    if (this.photoFiles.length + this.savedPhotoPreviews.length === 0) {
+                        this.errors.photos = 'Minimal 1 foto properti wajib diunggah.';
+                        this.errors.summary = this.errors.photos;
+                        await this.scrollToFirstError(['photos']);
+                        return;
+                    }
 
-                    this.certificates.forEach((certificate) => {
+                    const certificateErrors = [];
+
+                    this.certificates.forEach((certificate, index) => {
                         if (!certificate.jenis_sertifikat) {
                             certificate.errors = {
                                 ...certificate.errors,
                                 jenis_sertifikat: 'Jenis surat wajib dipilih.',
                             };
-                            hasCertificateError = true;
+                            certificateErrors.push(`certificate.${index}.jenis_sertifikat`);
                         }
 
-                        if (!certificate.file) {
+                        if (!certificate.file && !certificate.savedName) {
                             certificate.errors = {
                                 ...certificate.errors,
-                                certificate_document: 'File sertifikat wajib diunggah.',
+                                certificate_document: certificate.errors.certificate_document ||
+                                    'File sertifikat wajib diunggah.',
                             };
-                            hasCertificateError = true;
+                            certificateErrors.push(`certificate.${index}.certificate_document`);
                         }
                     });
 
-                    if (hasCertificateError) return;
+                    if (certificateErrors.length > 0) {
+                        this.errors.summary = this.certificates
+                            .flatMap((certificate) => Object.values(certificate.errors))
+                            .find(Boolean);
+                        await this.scrollToFirstError(certificateErrors);
+                        return;
+                    }
 
-                    if (!this.agreedTerms) return;
+                    if (!this.agreedTerms) {
+                        this.errors.agreedTerms = 'Anda harus menyetujui pernyataan sebelum melanjutkan.';
+                        this.errors.summary = this.errors.agreedTerms;
+                        await this.scrollToFirstError(['agreedTerms']);
+                        return;
+                    }
 
                     this.isLoading = true;
 
                     try {
                         const formData = new FormData();
+                        formData.append('draft_uuid', this.draftUuid || '');
                         this.photoFiles.forEach(file => formData.append('photos[]', file));
 
-                        this.certificates.forEach((certificate, index) => {
+                        this.certificates.filter((certificate) => certificate.file).forEach((certificate, index) => {
                             formData.append(
                                 this.certificateFieldName(index, 'jenis_sertifikat'),
                                 certificate.jenis_sertifikat
@@ -1107,12 +1398,39 @@
                                 const flatErrors = {};
                                 for (const [key, messages] of Object.entries(data.errors)) {
                                     flatErrors[key] = messages[0];
+                                    if (key.startsWith('photos.')) {
+                                        flatErrors.photos = messages[0];
+                                    }
                                 }
+                                flatErrors.summary = Object.values(flatErrors)[0];
                                 this.errors = flatErrors;
+                                await this.scrollToFirstError(Object.keys(data.errors));
+                            } else {
+                                this.errors.general = data.message || 'Foto dan dokumen gagal disimpan.';
+                                await this.scrollToFirstError(['general']);
                             }
                             return;
                         }
 
+                        if (data.uploads) {
+                            this.savedPhotoPreviews = data.uploads.photos || [];
+                            this.photoFiles = [];
+                            this.photoPreviews = [];
+                            this.certificates = (data.uploads.certificates || []).map((certificate, index) => ({
+                                key: index,
+                                jenis_sertifikat: certificate.type,
+                                file: null,
+                                savedName: certificate.name,
+                                errors: {},
+                            }));
+                            this.certificateKeySeq = this.certificates.length;
+                            this.optionalDocuments.imb.file = null;
+                            this.optionalDocuments.imb.savedName = data.uploads.imb?.name || '';
+                            this.optionalDocuments.pbb.file = null;
+                            this.optionalDocuments.pbb.savedName = data.uploads.pbb?.name || '';
+                        }
+
+                        this.draftSaveState = 'saved';
                         this.currentStep = 3;
                         window.scrollTo({
                             top: 0,
@@ -1122,12 +1440,14 @@
                     } catch (error) {
                         console.error('Step 2 error:', error);
                         this.errors.general = 'Terjadi kesalahan saat upload. Silakan coba lagi.';
+                        await this.scrollToFirstError(['general']);
                     } finally {
                         this.isLoading = false;
                     }
                 },
 
                 async submitListing() {
+                    this.errors = {};
                     this.isLoading = true;
 
                     try {
@@ -1140,12 +1460,36 @@
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                                 'Accept': 'application/json',
                             },
+                            body: JSON.stringify({
+                                draft_uuid: this.draftUuid,
+                            }),
                         });
 
                         const data = await response.json();
 
                         if (!response.ok) {
                             console.error('Submit error:', data);
+                            if (data.errors) {
+                                const flatErrors = {};
+                                for (const [key, messages] of Object.entries(data.errors)) {
+                                    flatErrors[key] = messages[0];
+                                    if (key.startsWith('photos.')) {
+                                        flatErrors.photos = messages[0];
+                                    }
+                                }
+                                flatErrors.summary = Object.values(flatErrors)[0];
+                                this.errors = flatErrors;
+                                const errorFields = Object.keys(data.errors);
+                                this.currentStep = errorFields.some((field) =>
+                                    field === 'photos' || field.startsWith('photos.') ||
+                                    field === 'certificate_document' || field === 'jenis_sertifikat' ||
+                                    field.startsWith('additional_certificates.')
+                                ) ? 2 : 1;
+                                await this.scrollToFirstError(errorFields);
+                            } else {
+                                this.errors.general = data.message || 'Listing gagal dikirim. Silakan coba lagi.';
+                                await this.scrollToFirstError(['general']);
+                            }
                             return;
                         }
 
@@ -1153,6 +1497,8 @@
 
                     } catch (error) {
                         console.error('Submit error:', error);
+                        this.errors.general = 'Terjadi kesalahan saat mengirim listing. Silakan coba lagi.';
+                        await this.scrollToFirstError(['general']);
                     } finally {
                         this.isLoading = false;
                     }

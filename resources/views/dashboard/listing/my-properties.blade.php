@@ -37,7 +37,11 @@
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                     <p class="font-sans text-sm text-slate-500">
-                        Anda memiliki {{ $totalProperties }} properti.
+                        Anda memiliki {{ $totalProperties }} properti
+                        @if ($drafts->isNotEmpty())
+                            dan {{ $drafts->count() }} draf tersimpan
+                        @endif
+                        .
                     </p>
 
                     <form method="GET" action="{{ route('seller.my-properties') }}" class="flex items-center gap-2">
@@ -65,7 +69,7 @@
                         </noscript>
                     </form>
 
-                    <a href="{{ route('listing.create') }}"
+                    <a href="{{ route('listing.create', ['new' => 1]) }}"
                         class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3.5 py-2 font-heading text-xs font-semibold tracking-tight text-white shadow-lg shadow-primary/25 transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
                         <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                             aria-hidden="true">
@@ -122,7 +126,68 @@
                 </x-search-filter>
             </section>
 
-            @if ($properties->isEmpty())
+            @if ($drafts->isNotEmpty())
+                <section aria-labelledby="property-drafts-heading" class="mb-8">
+                    <div class="mb-4 flex items-end justify-between gap-3">
+                        <div>
+                            <h2 id="property-drafts-heading"
+                                class="font-display text-xl font-bold tracking-tight text-secondary">
+                                Draf belum selesai
+                            </h2>
+                            <p class="mt-1 text-sm text-slate-500">
+                                Draf tersimpan otomatis. Pilih kartu untuk melanjutkan pengisian.
+                            </p>
+                        </div>
+                        <span
+                            class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">{{ $drafts->count() }}
+                            draf</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach ($drafts as $draft)
+                            @php
+                                $draftPayload = $draft->payload ?? [];
+                                $draftTitle = filled($draftPayload['title'] ?? null)
+                                    ? $draftPayload['title']
+                                    : 'Draf properti tanpa judul';
+                                $draftLocation = collect([
+                                    $draftPayload['district'] ?? null,
+                                    $draftPayload['city'] ?? null,
+                                    $draftPayload['province'] ?? null,
+                                ])
+                                    ->filter()
+                                    ->implode(', ');
+                            @endphp
+                            <a href="{{ route('listing.drafts.edit', ['draft' => $draft->uuid]) }}"
+                                class="group flex min-h-44 flex-col justify-between rounded-2xl border border-amber-200 bg-white p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                                <div>
+                                    <div class="mb-3 flex items-center justify-between gap-3">
+                                        <span
+                                            class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+                                            Draf
+                                        </span>
+                                        <span class="text-xs text-slate-400">
+                                            {{ $draft->updated_at->locale('id')->translatedFormat('d M Y, H:i') }}
+                                        </span>
+                                    </div>
+                                    <h3 class="font-display text-base font-bold text-secondary group-hover:text-primary">
+                                        {{ $draftTitle }}
+                                    </h3>
+                                    <p class="mt-1 text-sm text-slate-500">
+                                        {{ $draftLocation !== '' ? $draftLocation : 'Lokasi belum diisi' }}
+                                    </p>
+                                </div>
+                                <span class="mt-4 inline-flex items-center gap-1 text-sm font-bold text-primary">
+                                    Lanjutkan mengisi
+                                    <span aria-hidden="true">&rarr;</span>
+                                </span>
+                            </a>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
+            @if ($properties->isEmpty() && $drafts->isEmpty())
                 <section
                     class="overflow-hidden rounded-2xl border border-slate-200 bg-white px-6 py-16 shadow-sm sm:px-10 sm:py-20">
                     <div class="mx-auto flex max-w-xl flex-col items-center text-center">
@@ -155,14 +220,14 @@
                                 Mulai dengan menambahkan listing properti pertama Anda. Properti yang Anda tayangkan akan
                                 muncul di sini.
                             </p>
-                            <a href="{{ route('listing.create') }}"
+                            <a href="{{ route('listing.create', ['new' => 1]) }}"
                                 class="mt-8 inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 font-sans text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2">
                                 Tambah Properti Baru
                             </a>
                         @endif
                     </div>
                 </section>
-            @else
+            @elseif ($properties->isNotEmpty())
                 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     @foreach ($properties as $property)
                         @php

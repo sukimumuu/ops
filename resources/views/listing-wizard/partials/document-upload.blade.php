@@ -11,6 +11,9 @@
 
 <div class="wz-doc-upload">
     <label class="wz-label" for="{{ $inputId }}">{{ $label }}</label>
+    <p x-show="optionalDocuments.{{ $key }}.savedName" class="mb-2 text-xs text-emerald-700">
+        Dokumen tersimpan: <span x-text="optionalDocuments.{{ $key }}.savedName"></span>
+    </p>
 
     <label for="{{ $inputId }}" class="wz-dropzone" x-show="!{{ $documentFile }}"
         :class="{ 'is-dragging': dragging === '{{ $key }}' }" @dragenter.prevent="dragging = '{{ $key }}'"

@@ -117,6 +117,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     });
     Route::prefix('listing')->name('listing.')->group(function () {
         Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');
+        Route::get('/buat/draf/{draft:uuid}', [ListingWizardController::class, 'editDraft'])
+            ->middleware('permission:properties.create')
+            ->name('drafts.edit');
+        Route::post('/draf', [ListingWizardController::class, 'saveDraft'])
+            ->middleware('permission:properties.create')
+            ->name('drafts.store');
         Route::get('/wilayah/provinces', [RegionDataController::class, 'provinces'])->name('regions.provinces');
         Route::get('/wilayah/provinces/{provinceCode}/regencies', [RegionDataController::class, 'regencies'])
             ->where('provinceCode', '\\d{2}')

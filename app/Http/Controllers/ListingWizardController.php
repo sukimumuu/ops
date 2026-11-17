@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SaveListingDraftRequest;
 use App\Http\Requests\StoreListingStepOneRequest;
 use App\Http\Requests\StoreListingStepTwoRequest;
 use App\Models\AuditLog;
 use App\Models\Property;
+use App\Models\PropertyDraft;
 use App\Models\PropertyPhoto;
 use App\Services\Audit\AuditLogger;
 use App\Services\ImageWatermarkService;
@@ -26,8 +28,141 @@ class ListingWizardController extends Controller
      */
     public function create(Request $request): View
     {
+        if ($request->boolean('new')) {
+            $request->session()->forget('listing_wizard');
+        } elseif (filled($draftUuid = $request->session()->get('listing_wizard.draft_uuid'))) {
+            $draft = PropertyDraft::query()
+                ->whereBelongsTo($request->user(), 'seller')
+                ->where('uuid', $draftUuid)
+                ->first();
+
+            if ($draft) {
+                return $this->editDraft($request, $draft);
+            }
+        }
+
         return view('listing-wizard.create', [
             'initialForm' => $request->session()->get('listing_wizard.step_1', []),
+            'initialDraftUuid' => $request->session()->get('listing_wizard.draft_uuid'),
+            'initialDraftStep' => $request->session()->get('listing_wizard.current_step', 1),
+            'initialUploads' => [],
+        ]);
+    }
+
+    public function editDraft(Request $request, PropertyDraft $draft): View
+    {
+        abort_unless($draft->seller_id === $request->user()->id, 404);
+
+        $uploads = $draft->uploads ?? [];
+        $initialUploads = $this->formatDraftUploads($uploads);
+
+        $request->session()->put('listing_wizard.draft_uuid', $draft->uuid);
+        $request->session()->put('listing_wizard.step_1', $draft->payload);
+        $request->session()->put('listing_wizard.step_2', $uploads);
+        $request->session()->put('listing_wizard.current_step', $draft->current_step);
+
+        return view('listing-wizard.create', [
+            'initialForm' => $draft->payload,
+            'initialDraftUuid' => $draft->uuid,
+            'initialDraftStep' => $draft->current_step,
+            'initialUploads' => $initialUploads,
+        ]);
+    }
+
+    /**
+     * Format stored draft uploads for display in the listing wizard.
+     *
+     * @param array{
+     *     photos?: list<array{path: string, name?: string}>,
+     *     certificates?: list<array{path: string, type?: string, name?: string}>,
+     *     imb?: array{path?: string, name?: string}|string|null,
+     *     pbb?: array{path?: string, name?: string}|string|null
+     * } $uploads
+     * @return array{
+     *     photos: list<array{url: string, name: string}>,
+     *     certificates: list<array{type: string, name: string}>,
+     *     imb: array{name: string}|null,
+     *     pbb: array{name: string}|null
+     * }
+     */
+    private function formatDraftUploads(array $uploads): array
+    {
+        return [
+            'photos' => collect($uploads['photos'] ?? [])
+                ->map(fn (array $photo): array => [
+                    'url' => Storage::disk('public')->url($photo['path']),
+                    'name' => $photo['name'] ?? basename($photo['path']),
+                ])
+                ->all(),
+            'certificates' => collect($uploads['certificates'] ?? [])
+                ->map(fn (array $certificate): array => [
+                    'type' => $certificate['type'] ?? '',
+                    'name' => $certificate['name'] ?? basename($certificate['path'] ?? ''),
+                ])
+                ->all(),
+            'imb' => $this->draftDocumentName($uploads['imb'] ?? null),
+            'pbb' => $this->draftDocumentName($uploads['pbb'] ?? null),
+        ];
+    }
+
+    /**
+     * Return a safe display name for an optional document stored with a draft.
+     *
+     * @param  array{path?: string, name?: string}|string|null  $document
+     * @return array{name: string}|null
+     */
+    private function draftDocumentName(array|string|null $document): ?array
+    {
+        if (blank($document)) {
+            return null;
+        }
+
+        if (is_string($document)) {
+            return ['name' => basename($document)];
+        }
+
+        return ['name' => $document['name'] ?? basename($document['path'] ?? '')];
+    }
+
+    public function saveDraft(SaveListingDraftRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $data = $validated['data'];
+        $hasDraftData = collect($data)
+            ->except('negotiable')
+            ->contains(fn (mixed $value): bool => is_string($value) ? trim($value) !== '' : $value !== null);
+
+        if (! $hasDraftData && blank($validated['draft_uuid'] ?? null)) {
+            return response()->json([
+                'success' => true,
+                'draft_uuid' => null,
+                'message' => 'Belum ada data untuk disimpan.',
+            ]);
+        }
+
+        $draft = filled($validated['draft_uuid'] ?? null)
+            ? PropertyDraft::query()
+                ->whereBelongsTo($request->user(), 'seller')
+                ->where('uuid', $validated['draft_uuid'])
+                ->firstOrFail()
+            : new PropertyDraft([
+                'uuid' => Str::uuid()->toString(),
+                'seller_id' => $request->user()->id,
+            ]);
+
+        $draft->fill([
+            'payload' => $data,
+            'current_step' => $validated['current_step'],
+            'last_saved_at' => now(),
+        ])->save();
+        $request->session()->put('listing_wizard.draft_uuid', $draft->uuid);
+        $request->session()->put('listing_wizard.step_1', $data);
+        $request->session()->put('listing_wizard.current_step', $draft->current_step);
+
+        return response()->json([
+            'success' => true,
+            'draft_uuid' => $draft->uuid,
+            'message' => 'Draf berhasil disimpan.',
         ]);
     }
 
@@ -37,12 +172,33 @@ class ListingWizardController extends Controller
     public function storeStepOne(StoreListingStepOneRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $draftUuid = $validated['draft_uuid'] ?? null;
+        unset($validated['draft_uuid']);
 
         $request->session()->put('listing_wizard.step_1', $validated);
+
+        $draft = filled($draftUuid)
+            ? PropertyDraft::query()
+                ->whereBelongsTo($request->user(), 'seller')
+                ->where('uuid', $draftUuid)
+                ->firstOrFail()
+            : new PropertyDraft([
+                'uuid' => Str::uuid()->toString(),
+                'seller_id' => $request->user()->id,
+            ]);
+
+        $draft->fill([
+            'payload' => $validated,
+            'current_step' => 2,
+            'last_saved_at' => now(),
+        ])->save();
+        $request->session()->put('listing_wizard.draft_uuid', $draft->uuid);
+        $request->session()->put('listing_wizard.current_step', 2);
 
         return response()->json([
             'success' => true,
             'message' => 'Informasi properti berhasil disimpan.',
+            'draft_uuid' => $draft->uuid,
         ]);
     }
 
@@ -55,22 +211,36 @@ class ListingWizardController extends Controller
             abort_unless($request->user()?->can('documents.upload_transactional'), 403);
         }
 
+        $draftUuid = $request->input('draft_uuid') ?? $request->session()->get('listing_wizard.draft_uuid');
+        $draft = filled($draftUuid)
+            ? PropertyDraft::query()
+                ->whereBelongsTo($request->user(), 'seller')
+                ->where('uuid', $draftUuid)
+                ->firstOrFail()
+            : null;
         $sessionId = session()->getId();
-        $previousStepTwo = $request->session()->get('listing_wizard.step_2', []);
-        $photoPaths = [];
+        $previousStepTwo = $draft?->uploads ?? $request->session()->get('listing_wizard.step_2', []);
+        $uploadDirectory = $draft
+            ? "property-drafts/{$draft->uuid}"
+            : "properties/tmp/{$sessionId}";
+        $photoPaths = $previousStepTwo['photos'] ?? [];
+        $newPhotoPaths = [];
         $stagedFiles = [];
+        $replacedFiles = [];
 
         try {
-            foreach ($request->file('photos') as $index => $photo) {
-                $path = $imageWatermarkService->process($photo, "properties/tmp/{$sessionId}/photos");
+            foreach ($request->file('photos', []) as $photo) {
+                $path = $imageWatermarkService->process($photo, "{$uploadDirectory}/photos");
 
-                $photoPaths[] = [
+                $newPhotoPaths[] = [
                     'path' => $path,
-                    'order' => $index,
+                    'order' => count($photoPaths) + count($newPhotoPaths),
+                    'name' => $photo->getClientOriginalName(),
                 ];
             }
+            $photoPaths = [...$photoPaths, ...$newPhotoPaths];
         } catch (Throwable $exception) {
-            Storage::disk('public')->delete(array_column($photoPaths, 'path'));
+            Storage::disk('public')->delete(array_column($newPhotoPaths, 'path'));
             report($exception);
 
             return response()->json([
@@ -80,14 +250,15 @@ class ListingWizardController extends Controller
         }
 
         try {
-            $certificates = [];
+            $certificates = $previousStepTwo['certificates'] ?? [];
+            $certificateFiles = [];
 
-            $certificateFiles = [
-                [
+            if ($request->hasFile('certificate_document')) {
+                $certificateFiles[] = [
                     'type' => $request->string('jenis_sertifikat')->toString(),
                     'file' => $request->file('certificate_document'),
-                ],
-            ];
+                ];
+            }
 
             foreach ($request->input('additional_certificates', []) as $index => $additionalCertificate) {
                 $certificateFiles[] = [
@@ -101,19 +272,20 @@ class ListingWizardController extends Controller
                     continue;
                 }
 
-                $path = $certificateFile['file']->store("properties/tmp/{$sessionId}/certificates", 'local');
+                $path = $certificateFile['file']->store("{$uploadDirectory}/certificates", 'local');
                 $stagedFiles[] = $path;
 
                 $certificates[] = [
                     'path' => $path,
                     'type' => $certificateFile['type'],
-                    'order' => $index,
+                    'order' => count($certificates),
+                    'name' => $certificateFile['file']->getClientOriginalName(),
                 ];
             }
 
             $optionalDocuments = [
-                'imb' => filled($previousStepTwo['imb'] ?? null) ? $previousStepTwo['imb'] : null,
-                'pbb' => filled($previousStepTwo['pbb'] ?? null) ? $previousStepTwo['pbb'] : null,
+                'imb' => $previousStepTwo['imb'] ?? null,
+                'pbb' => $previousStepTwo['pbb'] ?? null,
             ];
 
             foreach (['imb' => 'imb_document', 'pbb' => 'pbb_document'] as $key => $input) {
@@ -121,12 +293,22 @@ class ListingWizardController extends Controller
                     continue;
                 }
 
-                $path = $request->file($input)->store("properties/tmp/{$sessionId}/documents", 'local');
+                $existingPath = is_array($optionalDocuments[$key])
+                    ? ($optionalDocuments[$key]['path'] ?? null)
+                    : $optionalDocuments[$key];
+                if (filled($existingPath)) {
+                    $replacedFiles[] = $existingPath;
+                }
+
+                $path = $request->file($input)->store("{$uploadDirectory}/documents", 'local');
                 $stagedFiles[] = $path;
-                $optionalDocuments[$key] = $path;
+                $optionalDocuments[$key] = $draft
+                    ? ['path' => $path, 'name' => $request->file($input)->getClientOriginalName()]
+                    : $path;
             }
         } catch (Throwable $exception) {
             Storage::disk('local')->delete($stagedFiles);
+            Storage::disk('public')->delete(array_column($newPhotoPaths, 'path'));
             report($exception);
 
             return response()->json([
@@ -135,29 +317,29 @@ class ListingWizardController extends Controller
             ], 500);
         }
 
-        $currentCertificatePaths = array_column($certificates, 'path');
-
-        $replacedFiles = array_filter([
-            ...array_column($previousStepTwo['certificates'] ?? [], 'path'),
-            $previousStepTwo['certificate'] ?? null,
-            $previousStepTwo['imb'] ?? null,
-            $previousStepTwo['pbb'] ?? null,
-        ], fn ($path): bool => is_string($path)
-            && ! in_array($path, $currentCertificatePaths, true)
-            && ! in_array($path, $optionalDocuments, true));
-
         Storage::disk('local')->delete($replacedFiles);
 
-        $request->session()->put('listing_wizard.step_2', [
+        $stepTwo = [
             'photos' => $photoPaths,
             'certificates' => $certificates,
             'imb' => $optionalDocuments['imb'],
             'pbb' => $optionalDocuments['pbb'],
-        ]);
+        ];
+        $request->session()->put('listing_wizard.step_2', $stepTwo);
+        if ($draft) {
+            $draft->fill([
+                'uploads' => $stepTwo,
+                'current_step' => 3,
+                'last_saved_at' => now(),
+            ])->save();
+            $request->session()->put('listing_wizard.draft_uuid', $draft->uuid);
+            $request->session()->put('listing_wizard.current_step', 3);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Foto dan dokumen berhasil diunggah.',
+            'uploads' => $draft ? $this->formatDraftUploads($stepTwo) : null,
         ]);
     }
 
@@ -166,11 +348,36 @@ class ListingWizardController extends Controller
      */
     public function submit(Request $request, AuditLogger $auditLogger): JsonResponse
     {
-        $step1 = $request->session()->get('listing_wizard.step_1');
-        $step2 = $request->session()->get('listing_wizard.step_2');
+        $draftUuid = $request->input('draft_uuid') ?? $request->session()->get('listing_wizard.draft_uuid');
+        $draft = filled($draftUuid)
+            ? PropertyDraft::query()
+                ->whereBelongsTo($request->user(), 'seller')
+                ->where('uuid', $draftUuid)
+                ->firstOrFail()
+            : null;
+        $step1 = $request->session()->get('listing_wizard.step_1') ?? $draft?->payload;
+        $step2 = $request->session()->get('listing_wizard.step_2') ?? $draft?->uploads ?? [];
 
-        if (! $step1 || ! $step2) {
+        if (! $step1 || (! $step2 && ! $draft)) {
             return response()->json(['success' => false, 'message' => 'Data wizard tidak lengkap atau sesi telah berakhir.'], 400);
+        }
+
+        $submissionErrors = [];
+
+        if ($draft && empty($step2['photos'])) {
+            $submissionErrors['photos'] = ['Minimal 1 foto properti wajib diunggah.'];
+        }
+
+        if ($draft && empty($step2['certificates']) && blank($step2['certificate'] ?? null)) {
+            $submissionErrors['certificate_document'] = ['Sertifikat properti wajib diunggah.'];
+        }
+
+        if ($submissionErrors !== []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unggah minimal satu foto properti dan sertifikat sebelum mengirim listing.',
+                'errors' => $submissionErrors,
+            ], 422);
         }
 
         $movedFiles = [];
@@ -271,7 +478,8 @@ class ListingWizardController extends Controller
                 }
 
                 foreach (['imb', 'pbb'] as $documentType) {
-                    $stagedPath = $step2[$documentType] ?? null;
+                    $document = $step2[$documentType] ?? null;
+                    $stagedPath = is_array($document) ? ($document['path'] ?? null) : $document;
 
                     if (blank($stagedPath)) {
                         continue;
@@ -320,6 +528,7 @@ class ListingWizardController extends Controller
             ], 500);
         }
 
+        $draft?->delete();
         $request->session()->forget('listing_wizard');
 
         $auditLogger->record(
@@ -382,9 +591,12 @@ class ListingWizardController extends Controller
         $documentUrls = [];
 
         foreach (['imb', 'pbb'] as $documentType) {
-            if (filled($step2[$documentType] ?? null)) {
+            $document = $step2[$documentType] ?? null;
+            $documentPath = is_array($document) ? ($document['path'] ?? null) : $document;
+
+            if (filled($documentPath)) {
                 $documentUrls[$documentType] = Storage::disk('local')->temporaryUrl(
-                    $step2[$documentType],
+                    $documentPath,
                     now()->addMinutes(10)
                 );
             }

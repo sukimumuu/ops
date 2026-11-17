@@ -26,6 +26,7 @@ class StoreListingStepOneRequest extends FormRequest
         $cityCode = preg_quote((string) $this->input('city_code'), '/');
 
         return [
+            'draft_uuid' => ['nullable', 'uuid'],
             'property_type' => ['required', 'in:bangunan,tanah'],
             'building_type' => ['required_if:property_type,bangunan', 'string', 'nullable'],
             'land_type' => ['required_if:property_type,tanah', 'string', 'nullable'],

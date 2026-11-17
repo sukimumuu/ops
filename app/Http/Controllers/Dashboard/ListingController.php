@@ -8,6 +8,7 @@ use App\Models\Appointment;
 use App\Models\DpPaymentAttempt;
 use App\Models\EscrowDisbursement;
 use App\Models\Property;
+use App\Models\PropertyDraft;
 use App\Models\Transaction;
 use App\Models\TransactionLedgerEntry;
 use Carbon\Carbon;
@@ -167,6 +168,12 @@ class ListingController extends Controller
             });
         });
 
+        $drafts = PropertyDraft::query()
+            ->whereBelongsTo($request->user(), 'seller')
+            ->latest('updated_at')
+            ->latest('id')
+            ->get();
+
         $totalProperties = Property::query()
             ->where('seller_id', $request->user()->id)
             ->count();
@@ -178,6 +185,7 @@ class ListingController extends Controller
 
         return view('dashboard.listing.my-properties', compact(
             'properties',
+            'drafts',
             'totalProperties',
             'search',
             'status',

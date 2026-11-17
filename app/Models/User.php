@@ -87,6 +87,11 @@ class User extends Authenticatable
         return $this->hasMany(Property::class, 'seller_id');
     }
 
+    public function propertyDrafts(): HasMany
+    {
+        return $this->hasMany(PropertyDraft::class, 'seller_id');
+    }
+
     /**
      * Properties bookmarked by the user, ordered by when they saved them.
      */

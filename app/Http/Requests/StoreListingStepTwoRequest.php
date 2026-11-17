@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\PropertyDraft;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,9 +32,28 @@ class StoreListingStepTwoRequest extends FormRequest
     public function rules(): array
     {
         $documentRules = ['file', 'mimes:pdf,jpeg,jpg,png', 'extensions:pdf,jpg,jpeg,png', 'max:10240'];
+        $draft = filled($this->input('draft_uuid'))
+            ? PropertyDraft::query()
+                ->whereBelongsTo($this->user(), 'seller')
+                ->where('uuid', $this->input('draft_uuid'))
+                ->first()
+            : null;
+        $uploads = $draft?->uploads ?? [];
+        $existingPhotoCount = count($uploads['photos'] ?? []);
+        $existingCertificateCount = count($uploads['certificates'] ?? []);
+        $remainingPhotoCount = max(0, 10 - $existingPhotoCount);
+        $remainingCertificateCount = max(0, 5 - $existingCertificateCount);
+        $remainingAdditionalCertificates = max(0, min(4, $remainingCertificateCount - 1));
 
         return [
-            'photos' => ['required', 'array', 'min:1', 'max:10'],
+            'draft_uuid' => ['nullable', 'uuid'],
+            'photos' => [
+                Rule::requiredIf($existingPhotoCount === 0),
+                Rule::prohibitedIf($remainingPhotoCount === 0),
+                'nullable',
+                'array',
+                'max:'.$remainingPhotoCount,
+            ],
             'photos.*' => [
                 'required',
                 'image',
@@ -43,10 +63,21 @@ class StoreListingStepTwoRequest extends FormRequest
                 'dimensions:max_width=6000,max_height=6000',
             ],
 
-            'jenis_sertifikat' => ['required', 'string', Rule::in(self::CERTIFICATE_TYPES)],
-            'certificate_document' => ['required', ...$documentRules],
+            'jenis_sertifikat' => [
+                Rule::requiredIf($existingCertificateCount === 0),
+                Rule::prohibitedIf($remainingCertificateCount === 0),
+                'nullable',
+                'string',
+                Rule::in(self::CERTIFICATE_TYPES),
+            ],
+            'certificate_document' => [
+                Rule::requiredIf($existingCertificateCount === 0),
+                Rule::prohibitedIf($remainingCertificateCount === 0),
+                'nullable',
+                ...$documentRules,
+            ],
 
-            'additional_certificates' => ['nullable', 'array', 'max:4'],
+            'additional_certificates' => ['nullable', 'array', 'max:'.$remainingAdditionalCertificates],
             'additional_certificates.*.jenis_sertifikat' => ['required', 'string', Rule::in(self::CERTIFICATE_TYPES)],
             'additional_certificates.*.certificate_document' => ['required', ...$documentRules],
 

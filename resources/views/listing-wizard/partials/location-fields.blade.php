@@ -147,6 +147,9 @@
     <div class="wizard-field">
         <label class="wz-label">Kode pos</label>
         <input type="text" name="postal_code" x-model="form.postal_code" placeholder="15224" class="wz-input">
+        <template x-if="errors.postal_code">
+            <p class="wz-error" x-text="errors.postal_code"></p>
+        </template>
     </div>
 </div>
 <input type="hidden" name="province" x-model="form.province">

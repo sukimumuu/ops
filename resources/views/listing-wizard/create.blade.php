@@ -30,14 +30,20 @@
                 Kembali
             </a>
             <h1 class="wizard-page-title">Pasang properti Anda</h1>
-            <div class="wizard-draft-badge" x-show="hasDraft">
+            <div class="wizard-draft-badge" x-show="hasDraft" role="status" aria-live="polite">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Draf tersimpan
+                <span x-text="draftSaveState === 'saving' ? 'Menyimpan draf…' : 'Draf tersimpan'"></span>
             </div>
         </div>
+        <p x-show="draftSaveError" x-cloak role="alert"
+            class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
+            x-text="draftSaveError"></p>
+        <p id="listing-validation-summary" x-show="errors.general || errors.summary" x-cloak role="alert"
+            class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
+            x-text="errors.general || errors.summary"></p>
 
         {{-- ===== STEP INDICATOR ===== --}}
         <div class="wizard-steps">
@@ -374,14 +380,23 @@
                                             <label class="wz-label-sm">Latitude</label>
                                             <input type="number" step="0.00000001" x-model="form.latitude"
                                                 placeholder="-6.12345678" class="wz-input text-sm">
+                                            <template x-if="errors.latitude">
+                                                <p class="wz-error" x-text="errors.latitude"></p>
+                                            </template>
                                         </div>
                                         <div class="wizard-field">
                                             <label class="wz-label-sm">Longitude</label>
                                             <input type="number" step="0.00000001" x-model="form.longitude"
                                                 placeholder="106.12345678" class="wz-input text-sm">
+                                            <template x-if="errors.longitude">
+                                                <p class="wz-error" x-text="errors.longitude"></p>
+                                            </template>
                                         </div>
                                     </div>
                                     <input type="hidden" id="osm_url" x-model="osmUrl">
+                                    <template x-if="errors.url_maps">
+                                        <p class="wz-error" x-text="errors.url_maps"></p>
+                                    </template>
                                 </div>
                             </div>
 
@@ -639,14 +654,23 @@
                                             <label class="wz-label-sm">Latitude</label>
                                             <input type="number" step="0.00000001" x-model="form.latitude"
                                                 placeholder="-6.12345678" class="wz-input text-sm">
+                                            <template x-if="errors.latitude">
+                                                <p class="wz-error" x-text="errors.latitude"></p>
+                                            </template>
                                         </div>
                                         <div class="wizard-field">
                                             <label class="wz-label-sm">Longitude</label>
                                             <input type="number" step="0.00000001" x-model="form.longitude"
                                                 placeholder="106.12345678" class="wz-input text-sm">
+                                            <template x-if="errors.longitude">
+                                                <p class="wz-error" x-text="errors.longitude"></p>
+                                            </template>
                                         </div>
                                     </div>
                                     <input type="hidden" id="osm_url" x-model="osmUrl">
+                                    <template x-if="errors.url_maps">
+                                        <p class="wz-error" x-text="errors.url_maps"></p>
+                                    </template>
                                 </div>
                             </div>
 
@@ -676,6 +700,9 @@
                                                 min="0" class="wz-input has-suffix">
                                             <span class="wz-input-suffix">m</span>
                                         </div>
+                                        <template x-if="errors.front_width">
+                                            <p class="wz-error" x-text="errors.front_width"></p>
+                                        </template>
                                     </div>
                                 </div>
 
@@ -727,12 +754,14 @@
 
                 {{-- Card Footer --}}
                 <div class="wizard-card-footer" x-show="form.property_type">
-                    <button type="button" class="wz-btn-draft" @click="saveDraft()">
+                    <button type="button" class="wz-btn-draft" @click="saveDraft()"
+                        :disabled="draftButtonState === 'saving'" aria-live="polite">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                         </svg>
-                        Simpan draf
+                        <span
+                            x-text="draftButtonState === 'saved' ? 'Disimpan' : (draftButtonState === 'saving' ? 'Menyimpan...' : 'Simpan draf')"></span>
                     </button>
                     <button type="button" @click="submitStepOne()" :disabled="isLoading" class="wz-btn-primary">
                         <span x-show="!isLoading">Lanjut ke foto & dokumen</span>
@@ -770,6 +799,14 @@
                             10 foto.</p>
 
                         <div class="wz-photo-grid mt-5" id="photo-preview-grid">
+                            <template x-for="(photo, index) in savedPhotoPreviews" :key="'saved-' + index">
+                                <div class="wz-photo-item">
+                                    <img :src="photo.url" class="wz-photo-img" alt="Foto properti tersimpan">
+                                    <template x-if="index === 0">
+                                        <span class="wz-photo-badge">Utama</span>
+                                    </template>
+                                </div>
+                            </template>
                             <template x-for="(photo, index) in photoPreviews" :key="index">
                                 <div class="wz-photo-item">
                                     <img :src="photo" class="wz-photo-img" alt="Preview">
@@ -783,12 +820,12 @@
                                         </button>
                                     </div>
                                     <template x-if="index === 0">
-                                        <span class="wz-photo-badge">Utama</span>
+                                        <span class="wz-photo-badge" x-show="savedPhotoPreviews.length === 0">Utama</span>
                                     </template>
                                 </div>
                             </template>
 
-                            <template x-if="photoPreviews.length < 10">
+                            <template x-if="savedPhotoPreviews.length + photoPreviews.length < 10">
                                 <label class="wz-photo-add">
                                     <div class="wz-photo-add-icon">
                                         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
@@ -824,7 +861,9 @@
                                                     class="wz-required">*</span></label>
                                             <select :id="'jenis-sertifikat-' + index"
                                                 x-model="certificate.jenis_sertifikat"
-                                                :name="certificateFieldName(index, 'jenis_sertifikat')" class="wz-input">
+                                                @change="certificate.errors.jenis_sertifikat = ''"
+                                                :name="certificateFieldName(index, 'jenis_sertifikat')"
+                                                class="wz-input" :disabled="!!certificate.savedName">
                                                 <option value="">Pilih jenis surat</option>
                                                 <option value="SHM">SHM — Sertifikat Hak Milik</option>
                                                 <option value="SHGB">SHGB — Hak Guna Bangunan</option>
@@ -843,28 +882,36 @@
                                             <div class="wz-dropzone wz-cert-dropzone"
                                                 :class="{
                                                     'is-dragging': dragging === 'certificate-' + index,
-                                                    'has-file': !!certificate.file
+                                                    'has-file': !!certificate.file || !!certificate.savedName
                                                 }"
                                                 @dragenter.prevent="dragging = 'certificate-' + index"
                                                 @dragover.prevent="dragging = 'certificate-' + index"
                                                 @dragleave.prevent="dragging = ''"
                                                 @drop.prevent="handleCertificateDrop($event, index)">
                                                 <label class="wz-dropzone-label" :for="'certificate-input-' + index">
-                                                    <span class="wz-dropzone-icon" x-show="!certificate.file"
+                                                    <span class="wz-dropzone-icon"
+                                                        x-show="!certificate.file && !certificate.savedName"
                                                         aria-hidden="true">
                                                         <x-cloud-upload-icon class="h-10 w-10" />
                                                     </span>
                                                     <span class="wz-dropzone-text">
-                                                        <span class="wz-dropzone-title" x-show="!certificate.file">Pilih
+                                                        <span class="wz-dropzone-title"
+                                                            x-show="!certificate.file && !certificate.savedName">Pilih
                                                             file</span>
-                                                        <span class="wz-dropzone-desc" x-show="!certificate.file">atau
+                                                        <span class="wz-dropzone-desc"
+                                                            x-show="!certificate.file && !certificate.savedName">atau
                                                             drag &amp; drop</span>
-                                                        <span class="wz-dropzone-filename" x-show="certificate.file"
-                                                            x-text="certificate.file?.name || ''"
-                                                            :title="certificate.file?.name || ''" aria-live="polite"></span>
-                                                        <span class="wz-dropzone-desc" x-show="certificate.file">
-                                                            File siap diunggah · <span
-                                                                x-text="fileMeta(certificate.file)"></span>
+                                                        <span class="wz-dropzone-filename"
+                                                            x-show="certificate.file || certificate.savedName"
+                                                            x-text="certificate.file?.name || certificate.savedName || ''"
+                                                            :title="certificate.file?.name || certificate.savedName || ''"
+                                                            aria-live="polite"></span>
+                                                        <span class="wz-dropzone-desc"
+                                                            x-show="certificate.file || certificate.savedName">
+                                                            <span x-text="certificate.file ? 'File siap diunggah' : 'File tersimpan di draf'"></span>
+                                                            <template x-if="certificate.file">
+                                                                <span> · <span x-text="fileMeta(certificate.file)"></span></span>
+                                                            </template>
                                                         </span>
                                                     </span>
                                                     <input type="file" :id="'certificate-input-' + index"
@@ -918,6 +965,9 @@
                                     </svg>
                                 </span>
                             </button>
+                            <template x-if="errors.additional_certificates">
+                                <p class="wz-error mt-2" x-text="errors.additional_certificates"></p>
+                            </template>
                         </div>
 
                         {{-- Optional supporting documents --}}
@@ -955,12 +1005,16 @@
                     </div>
 
                     {{-- Agreement --}}
-                    <div class="wizard-section">
+                    <div id="listing-agreement-field" class="wizard-section">
                         <label class="wz-checkbox-label wz-agreement">
-                            <input type="checkbox" x-model="agreedTerms" class="wz-checkbox">
+                            <input type="checkbox" x-model="agreedTerms" class="wz-checkbox"
+                                @change="delete errors.agreedTerms; delete errors.summary">
                             <span>Saya menyatakan bahwa data yang saya masukkan adalah <strong>benar dan valid</strong>.
                                 Foto dan sertifikat yang diunggah sesuai dengan properti yang didaftarkan.</span>
                         </label>
+                        <template x-if="errors.agreedTerms">
+                            <p class="wz-error mt-2" x-text="errors.agreedTerms"></p>
+                        </template>
                     </div>
                 </div>
 
@@ -973,7 +1027,7 @@
                         </svg>
                         Kembali
                     </button>
-                    <button type="button" @click="submitStepTwo()" :disabled="isLoading || !agreedTerms"
+                    <button type="button" @click="submitStepTwo()" :disabled="isLoading"
                         class="wz-btn-primary">
                         <span x-show="!isLoading">Lanjutkan</span>
                         <span x-show="isLoading" class="flex items-center gap-2">
@@ -1124,40 +1178,49 @@
                             <div class="wz-review-item">
                                 <span class="wz-review-label">Foto properti</span>
                                 <div class="wz-review-photos">
+                                    <template x-for="(photo, index) in savedPhotoPreviews" :key="'saved-review-' + index">
+                                        <div class="wz-review-photo-thumb">
+                                            <img :src="photo.url" alt="Foto properti tersimpan">
+                                        </div>
+                                    </template>
                                     <template x-for="(photo, index) in photoPreviews" :key="'review-' + index">
                                         <div class="wz-review-photo-thumb">
                                             <img :src="photo" alt="Preview">
                                         </div>
                                     </template>
                                 </div>
-                                <p class="wz-review-photo-count" x-text="photoPreviews.length + ' foto diunggah'"></p>
+                                <p class="wz-review-photo-count"
+                                    x-text="(savedPhotoPreviews.length + photoPreviews.length) + ' foto diunggah'"></p>
                             </div>
                             <div class="wz-review-item mt-3">
                                 <span class="wz-review-label">Sertifikat</span>
                                 <template x-for="(certificate, index) in certificates" :key="'review-cert-' + certificate.key">
-                                    <div class="wz-review-cert-badge" x-show="certificate.file">
+                                    <div class="wz-review-cert-badge" x-show="certificate.file || certificate.savedName">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
                                             viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round"
                                                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <span x-text="certificate.file?.name"></span>
+                                        <span x-text="certificate.file?.name || certificate.savedName"></span>
                                     </div>
                                 </template>
                                 <template x-if="!hasCertificateFile()">
                                     <span class="wz-review-empty">Belum diunggah</span>
                                 </template>
                             </div>
-                            <div class="wz-review-item mt-3" x-show="optionalDocuments.imb.file || optionalDocuments.pbb.file">
+                            <div class="wz-review-item mt-3"
+                                x-show="optionalDocuments.imb.file || optionalDocuments.imb.savedName || optionalDocuments.pbb.file || optionalDocuments.pbb.savedName">
                                 <span class="wz-review-label">Dokumen pendukung</span>
-                                <template x-if="optionalDocuments.imb.file">
+                                <template x-if="optionalDocuments.imb.file || optionalDocuments.imb.savedName">
                                     <p class="wz-review-desc">
-                                        IMB / PBG: <span x-text="optionalDocuments.imb.file.name"></span>
+                                        IMB / PBG: <span
+                                            x-text="optionalDocuments.imb.file?.name || optionalDocuments.imb.savedName"></span>
                                     </p>
                                 </template>
-                                <template x-if="optionalDocuments.pbb.file">
+                                <template x-if="optionalDocuments.pbb.file || optionalDocuments.pbb.savedName">
                                     <p class="wz-review-desc">
-                                        SPPT &amp; STTS PBB: <span x-text="optionalDocuments.pbb.file.name"></span>
+                                        SPPT &amp; STTS PBB: <span
+                                            x-text="optionalDocuments.pbb.file?.name || optionalDocuments.pbb.savedName"></span>
                                     </p>
                                 </template>
                             </div>
