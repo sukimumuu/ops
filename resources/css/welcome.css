@@ -18,6 +18,18 @@
 .navbar.scrolled .hamburger-line { background: #2C3E50; }
 .navbar.scrolled .nav-hamburger:hover { background: #f3f4f6; }
 
+.navbar.navbar-light {
+    background: rgb(255 255 255 / 97%);
+    box-shadow: 0 2px 20px rgb(44 62 80 / 10%);
+}
+.navbar.navbar-light .nav-logo-text,
+.navbar.navbar-light .nav-link,
+.navbar.navbar-light .nav-user { color: #2C3E50; }
+.navbar.navbar-light .nav-link:hover,
+.navbar.navbar-light .nav-link.active { background: #fff0eb; color: #FC4907; }
+.navbar.navbar-light .hamburger-line { background: #2C3E50; }
+.navbar.navbar-light .nav-hamburger:hover { background: #f3f4f6; }
+
 .mobile-nav.open { display: flex; }
 .nav-hamburger.open .hamburger-line:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .nav-hamburger.open .hamburger-line:nth-child(2) { opacity: 0; }

@@ -1,10 +1,11 @@
-<nav class="navbar fixed inset-x-0 top-0 z-50 transition-all duration-350" id="navbar">
+<nav class="navbar {{ request()->routeIs('user-details') ? 'navbar-light' : '' }} fixed inset-x-0 top-0 z-50 transition-all duration-350"
+    id="navbar">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <a href="{{ route('home') }}" class="flex items-center gap-2 no-underline">
             <img id="logo-black" src="{{ asset('assets/png/gry trnsprn.png') }}" alt="Mihom"
-                class="hidden h-8 transition duration-100 ">
+                class="{{ request()->routeIs('user-details') ? 'block' : 'hidden' }} h-8 transition duration-100">
             <img id="logo-white" src="{{ asset('assets/png/wht trnsprn.png') }}" alt="Mihom"
-                class="h-8 transition duration-100 ">
+                class="{{ request()->routeIs('user-details') ? 'hidden' : '' }} h-8 transition duration-100">
             <span
                 class="nav-logo-text font-display text-[22px] font-extrabold tracking-tight text-white transition duration-100 -colors">mihom</span>
         </a>

@@ -16,6 +16,33 @@
     <!-- Navbar Component -->
     <x-navbar />
 
+    <div class="mobile-nav fixed inset-x-0 top-16 z-40 hidden flex-col gap-1 border-b border-gray-100 bg-white/95 p-4 shadow-xl backdrop-blur-md md:hidden"
+        id="mobileNav">
+        <a href="{{ route('home') }}"
+            class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary"
+            onclick="closeMobileNav()">Beranda</a>
+        <a href="{{ route('properties') }}"
+            class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary"
+            onclick="closeMobileNav()">Properti</a>
+        <a href="{{ route('tax-calculator') }}"
+            class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary"
+            onclick="closeMobileNav()">Kalkulator Pajak</a>
+        <a href="{{ route('about') }}"
+            class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary"
+            onclick="closeMobileNav()">Tentang Kami</a>
+        <a href="{{ route('contact') }}"
+            class="rounded-lg px-4 py-3 text-sm font-semibold text-secondary hover:bg-[#fff0eb] hover:text-primary"
+            onclick="closeMobileNav()">Kontak</a>
+        @guest
+            <a href="{{ route('login') }}"
+                class="mt-2 rounded-lg bg-primary px-5 py-3 text-center text-sm font-bold text-white">Daftar / Masuk</a>
+        @endguest
+        @auth
+            <a href="{{ route('dashboard') }}"
+                class="mt-2 rounded-lg bg-primary px-5 py-3 text-center text-sm font-bold text-white">{{ Auth::user()->name }}</a>
+        @endauth
+    </div>
+
     <main class="flex-grow pt-16">
         <!-- Breadcrumb & Top Bar -->
         <div class="bg-white border-b border-gray-100">
@@ -461,24 +488,26 @@
         const hamburger = document.getElementById('hamburgerBtn');
         const mobileNav = document.getElementById('mobileNav');
 
+        function closeMobileNav() {
+            mobileNav.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+        }
+
         if (navbar) {
             window.addEventListener('scroll', () => {
                 const scrolled = window.scrollY > 40;
                 navbar.classList.toggle('scrolled', scrolled);
                 if (blackLogo && whiteLogo) {
-                    blackLogo.classList.toggle('hidden', !scrolled);
-                    blackLogo.classList.toggle('block', scrolled);
-                    whiteLogo.classList.toggle('hidden', scrolled);
+                    const useDarkLogo = scrolled || navbar.classList.contains('navbar-light');
+                    blackLogo.classList.toggle('hidden', !useDarkLogo);
+                    blackLogo.classList.toggle('block', useDarkLogo);
+                    whiteLogo.classList.toggle('hidden', useDarkLogo);
                 }
             });
         }
 
         if (hamburger && mobileNav) {
-            function closeMobileNav() {
-                mobileNav.classList.remove('open');
-                hamburger.classList.remove('open');
-                hamburger.setAttribute('aria-expanded', 'false');
-            }
             hamburger.addEventListener('click', () => {
                 const open = mobileNav.classList.toggle('open');
                 hamburger.classList.toggle('open', open);
