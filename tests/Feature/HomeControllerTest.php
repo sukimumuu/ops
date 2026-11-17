@@ -276,6 +276,14 @@ it('shows an empty state when the property catalog has no approved listings', fu
         ->assertSee('Belum ada properti terverifikasi saat ini.');
 });
 
+it('opens the AI chatbot from the free consultation button', function () {
+    $this->get(route('properties'))
+        ->assertOk()
+        ->assertSee('data-chatbot-open', false)
+        ->assertSee('data-chatbot-launcher', false)
+        ->assertSee('Konsultasi gratis', false);
+});
+
 it('renders an approved property by its UUID', function () {
     $seller = User::factory()->create(['name' => 'Pemilik Detail']);
     $uuid = (string) Str::uuid();

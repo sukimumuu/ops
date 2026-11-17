@@ -33,6 +33,10 @@ document.addEventListener('DOMContentLoaded', function () {
         setChatbotOpen(!isOpen);
     });
 
+    document.querySelectorAll('[data-chatbot-open]').forEach((button) => {
+        button.addEventListener('click', () => setChatbotOpen(true));
+    });
+
     chatbot.querySelectorAll('[data-chatbot-close], [data-chatbot-minimize]').forEach((button) => {
         button.addEventListener('click', () => setChatbotOpen(false));
     });

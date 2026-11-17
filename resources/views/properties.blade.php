@@ -242,10 +242,15 @@
                         Konsultan lokal kami siap membantu membandingkan kawasan, harga, dan potensi investasi tanpa
                         biaya konsultasi.
                     </p>
-                    <button
-                        class="bg-primary hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-lg transition text-sm">
-                        Konsultasi gratis &rarr;
-                    </button>
+                    @can('use-chatbot')
+                        <button
+                            type="button"
+                            data-chatbot-open
+                            aria-controls="mihom-chat-panel"
+                            class="bg-primary hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-lg transition text-sm">
+                            Konsultasi gratis &rarr;
+                        </button>
+                    @endcan
                 </div>
                 <div class="flex-1">
                     <img src="https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?w=800&q=80"
