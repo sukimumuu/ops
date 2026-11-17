@@ -409,10 +409,6 @@
                     class="block lg:hidden relative px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-primary-soft hover:text-primary">
                     Notifikasi
                 </a>
-                <a href="#"
-                    class="block px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-primary-soft hover:text-primary">
-                    Settings
-                </a>
                 <hr class="my-1 border-slate-100">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

@@ -11,6 +11,29 @@ it('redirects unauthenticated guests to login when opening profile page', functi
         ->assertRedirect(route('login'));
 });
 
+it('links back to the previous internal page and removes the unused settings item', function () {
+    $user = User::factory()->create();
+    $previousUrl = route('properties');
+
+    $this->actingAs($user)
+        ->withSession(['_previous.url' => $previousUrl])
+        ->get(route('profile'))
+        ->assertSee('href="'.$previousUrl.'" aria-label="Kembali ke halaman sebelumnya"', false)
+        ->assertSee('Kembali')
+        ->assertDontSee('Settings');
+});
+
+it('falls back to home when the previous URL is external or the profile itself', function () {
+    $user = User::factory()->create();
+
+    foreach (['https://external.example/page', route('profile')] as $previousUrl) {
+        $this->actingAs($user)
+            ->withSession(['_previous.url' => $previousUrl])
+            ->get(route('profile'))
+            ->assertSee('href="'.route('home').'" aria-label="Kembali ke halaman sebelumnya"', false);
+    }
+});
+
 it('dynamically displays the profile data of the currently logged-in user', function () {
     $userRole = Role::firstOrCreate(['name' => 'User', 'guard_name' => 'web']);
 

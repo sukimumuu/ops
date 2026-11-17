@@ -188,6 +188,19 @@ class DashboardController extends Controller
         $roleDisplayName = $this->formatRoleName($user);
         $identifier = $this->formatUserIdentifier($user);
         $devices = $this->resolveConnectedDevices($request, $user);
+        $homeUrl = route('home');
+        $previousUrl = url()->previous();
+        $previousUrlParts = parse_url($previousUrl);
+        $homeUrlParts = parse_url($homeUrl);
+        $profilePath = rtrim((string) parse_url(route('profile'), PHP_URL_PATH), '/');
+        $previousPath = is_array($previousUrlParts)
+            ? rtrim($previousUrlParts['path'] ?? '', '/')
+            : null;
+        $previousUrlIsInternal = is_array($previousUrlParts)
+            && ($previousUrlParts['scheme'] ?? null) === ($homeUrlParts['scheme'] ?? null)
+            && ($previousUrlParts['host'] ?? null) === ($homeUrlParts['host'] ?? null)
+            && ($previousUrlParts['port'] ?? null) === ($homeUrlParts['port'] ?? null)
+            && $previousPath !== $profilePath;
 
         return view('dashboard.profile', [
             'user' => $user,
@@ -197,6 +210,7 @@ class DashboardController extends Controller
             'formattedPhone' => $formattedPhone,
             'maskedPhone' => $maskedPhone,
             'devices' => $devices,
+            'backUrl' => $previousUrlIsInternal ? $previousUrl : $homeUrl,
         ]);
     }
 

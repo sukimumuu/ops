@@ -40,6 +40,14 @@
 
     <!-- Page Header -->
     <div class="mb-8">
+        <a href="{{ $backUrl }}" aria-label="Kembali ke halaman sebelumnya"
+            class="mb-4 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <svg aria-hidden="true" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m7 7-7-7 7-7" />
+            </svg>
+            Kembali
+        </a>
         <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Profil Saya</h1>
         <p class="text-gray-500 mt-1">Kelola informasi pribadi, keamanan akun, dan perangkat yang terhubung</p>
     </div>
