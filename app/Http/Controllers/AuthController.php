@@ -25,7 +25,11 @@ class AuthController extends Controller
         $credentials['phone'] = preg_replace('/^(0|62)/', '', $credentials['phone']);
         $formattedPhone = '62'.$credentials['phone'];
 
-        if (Auth::attempt(['phone' => $formattedPhone, 'password' => $credentials['password']], $request->filled('remember'))) {
+        if (Auth::attempt([
+            'phone' => $formattedPhone,
+            'password' => $credentials['password'],
+            'is_active' => true,
+        ], $request->filled('remember'))) {
             $request->session()->regenerate();
 
             return redirect()->intended('dashboard');

@@ -9,7 +9,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Role::firstOrCreate(['name' => 'Superadmin']);
-    Role::firstOrCreate(['name' => 'admin']);
+    Role::firstOrCreate(['name' => 'Admin']);
     Role::firstOrCreate(['name' => 'PPAT']);
     Role::firstOrCreate(['name' => 'User']);
 });
@@ -34,13 +34,45 @@ it('shows the add user form to a superadmin', function () {
         ->assertSee('__CODE__', false);
 });
 
+it('shows editable account details and confirmation actions to superadmins', function () {
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
+    $user = User::factory()->create([
+        'name' => 'Akun Target',
+        'email' => 'target@example.test',
+        'phone' => '628123456700',
+    ]);
+    $user->assignRole('User');
+    $admin = User::factory()->create();
+    $admin->assignRole('Admin');
+
+    $this->actingAs($superadmin)
+        ->get(route('superadmin.user-management'))
+        ->assertSee('Aktif')
+        ->assertSee('Edit')
+        ->assertSee('Nonaktifkan')
+        ->assertSee('Hapus')
+        ->assertSee('aria-modal="true"', false)
+        ->assertSee('data-confirm-title="Nonaktifkan akun?"', false);
+
+    $this->get(route('superadmin.user-management.edit', $user))
+        ->assertSeeText('Edit Pengguna')
+        ->assertSee('value="Akun Target"', false)
+        ->assertSee('value="target@example.test"', false)
+        ->assertSee('value="628123456700"', false)
+        ->assertSee('value="user" selected', false);
+
+    $this->get(route('superadmin.user-management.edit', $admin))
+        ->assertSee('value="admin" selected', false);
+});
+
 it('creates a user and assigns each supported role', function () {
     $superadmin = User::factory()->create();
     $superadmin->assignRole('Superadmin');
     $this->actingAs($superadmin);
 
     foreach ([
-        ['admin', 'admin', '08123456789'],
+        ['admin', 'Admin', '08123456789'],
         ['ppat', 'PPAT', '08123456790'],
         ['user', 'User', '08123456796'],
     ] as [$role, $assignedRole, $phone]) {
@@ -125,6 +157,83 @@ it('requires and stores the selected location for PPAT users only', function () 
         ->and($user->district)->toBeNull();
 });
 
+it('updates user details and synchronizes the selected role', function () {
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
+    $user = User::factory()->create([
+        'email' => 'before@example.test',
+        'phone' => '628123456701',
+    ]);
+    $user->assignRole('User');
+
+    $this->actingAs($superadmin)
+        ->put(route('superadmin.user-management.update', $user), [
+            'name' => 'Akun Diperbarui',
+            'email' => 'after@example.test',
+            'phone' => '08123456702',
+            'role' => 'admin',
+        ])
+        ->assertRedirect(route('superadmin.user-management'));
+
+    $user->refresh();
+    expect($user->name)->toBe('Akun Diperbarui')
+        ->and($user->email)->toBe('after@example.test')
+        ->and($user->phone)->toBe('628123456702')
+        ->and($user->hasRole('Admin'))->toBeTrue()
+        ->and($user->hasRole('User'))->toBeFalse();
+});
+
+it('rejects duplicate contact details when updating a user', function () {
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
+    $existingUser = User::factory()->create();
+    $user = User::factory()->create();
+    $user->assignRole('User');
+
+    $this->actingAs($superadmin)
+        ->from(route('superadmin.user-management.edit', $user))
+        ->put(route('superadmin.user-management.update', $user), [
+            'name' => 'Akun Baru',
+            'email' => $existingUser->email,
+            'phone' => $existingUser->phone,
+            'role' => 'user',
+        ])
+        ->assertRedirect(route('superadmin.user-management.edit', $user))
+        ->assertSessionHasErrors(['email', 'phone']);
+});
+
+it('activates and deactivates managed user accounts', function () {
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
+    $user = User::factory()->create();
+    $user->assignRole('User');
+
+    $this->actingAs($superadmin)
+        ->patch(route('superadmin.user-management.status.update', $user), ['is_active' => '0'])
+        ->assertRedirect(route('superadmin.user-management'));
+
+    expect($user->fresh()->is_active)->toBeFalse();
+
+    $this->patch(route('superadmin.user-management.status.update', $user), ['is_active' => '1'])
+        ->assertRedirect(route('superadmin.user-management'));
+
+    expect($user->fresh()->is_active)->toBeTrue();
+});
+
+it('soft deletes accounts while preserving their user records', function () {
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
+    $user = User::factory()->create();
+    $user->assignRole('User');
+
+    $this->actingAs($superadmin)
+        ->delete(route('superadmin.user-management.destroy', $user))
+        ->assertRedirect(route('superadmin.user-management'));
+
+    $this->assertSoftDeleted($user);
+    expect(User::withTrashed()->findOrFail($user->id)->is_active)->toBeFalse();
+});
+
 it('rejects PPAT location codes outside the selected hierarchy', function () {
     $superadmin = User::factory()->create();
     $superadmin->assignRole('Superadmin');
@@ -192,4 +301,15 @@ it('prevents non-superadmins from accessing user management', function () {
     $this->actingAs($user)
         ->get(route('superadmin.user-management.create'))
         ->assertForbidden();
+});
+
+it('does not allow superadmins to edit another superadmin account', function () {
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
+    $protectedUser = User::factory()->create();
+    $protectedUser->assignRole('Superadmin');
+
+    $this->actingAs($superadmin)
+        ->get(route('superadmin.user-management.edit', $protectedUser))
+        ->assertNotFound();
 });

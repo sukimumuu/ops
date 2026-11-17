@@ -24,7 +24,7 @@ class AdminController extends Controller
         $search = trim($filters['search'] ?? '');
         $role = $filters['role'] ?? null;
         $users = User::withoutRole('Superadmin')
-            ->select('id', 'name', 'email', 'phone')
+            ->select('id', 'name', 'email', 'phone', 'is_active')
             ->with('roles:id,name')
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {

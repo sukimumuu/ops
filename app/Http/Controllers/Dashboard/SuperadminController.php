@@ -13,13 +13,14 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
 class SuperadminController extends Controller
 {
     private const USER_ROLES = [
-        'admin' => 'admin',
+        'admin' => 'Admin',
         'ppat' => 'PPAT',
         'user' => 'User',
     ];
@@ -33,7 +34,7 @@ class SuperadminController extends Controller
         $search = trim($filters['search'] ?? '');
         $role = $filters['role'] ?? null;
         $users = User::withoutRole('Superadmin')
-            ->select('id', 'name', 'email', 'phone')
+            ->select('id', 'name', 'email', 'phone', 'is_active')
             ->with('roles:id,name')
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
@@ -55,13 +56,22 @@ class SuperadminController extends Controller
         return view('dashboard.superadmin.create-user');
     }
 
+    public function editUser(User $user): View
+    {
+        $this->ensureUserIsManageable($user);
+
+        $roleName = strtolower($user->getRoleNames()->first() ?? '');
+        $selectedRole = array_key_exists($roleName, self::USER_ROLES) ? $roleName : '';
+
+        return view('dashboard.superadmin.create-user', [
+            'user' => $user,
+            'selectedRole' => $selectedRole,
+        ]);
+    }
+
     public function storeUser(Request $request, AuditLogger $auditLogger): RedirectResponse
     {
-        if ($request->filled('phone')) {
-            $normalizedPhone = new User;
-            $normalizedPhone->phone = (string) $request->input('phone');
-            $request->merge(['phone' => $normalizedPhone->phone]);
-        }
+        $this->normalizePhone($request);
 
         $provinceCode = preg_quote((string) $request->input('province_code'), '/');
         $cityCode = preg_quote((string) $request->input('city_code'), '/');
@@ -106,6 +116,149 @@ class SuperadminController extends Controller
         return redirect()
             ->route('superadmin.user-management')
             ->with('status', 'Pengguna baru berhasil ditambahkan.');
+    }
+
+    public function updateUser(Request $request, User $user, AuditLogger $auditLogger): RedirectResponse
+    {
+        $this->ensureUserIsManageable($user);
+        $this->normalizePhone($request);
+
+        $provinceCode = preg_quote((string) $request->input('province_code'), '/');
+        $cityCode = preg_quote((string) $request->input('city_code'), '/');
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->getKey())],
+            'phone' => ['required', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($user->getKey())],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'role' => ['required', Rule::in(array_keys(self::USER_ROLES))],
+            'province' => ['required_if:role,ppat', 'nullable', 'string', 'max:100'],
+            'city' => ['required_if:role,ppat', 'nullable', 'string', 'max:100'],
+            'district' => ['required_if:role,ppat', 'nullable', 'string', 'max:100'],
+            'province_code' => ['required_if:role,ppat', 'nullable', 'string', 'regex:/^\\d{2}$/'],
+            'city_code' => ['required_if:role,ppat', 'nullable', 'string', 'regex:/^'.$provinceCode.'\\.\\d{2}$/'],
+            'district_code' => ['required_if:role,ppat', 'nullable', 'string', 'regex:/^'.$cityCode.'\\.\\d{2}$/'],
+        ]);
+
+        $previousRole = $user->getRoleNames()->first();
+        $assignedRole = self::USER_ROLES[$validated['role']];
+
+        DB::transaction(function () use ($auditLogger, $previousRole, $request, $user, $validated, $assignedRole): void {
+            $user->fill([
+                'name' => $validated['name'],
+                'email' => $validated['email'] ?? null,
+                'phone' => $validated['phone'],
+                'province' => $validated['role'] === 'ppat' ? $validated['province'] : null,
+                'city' => $validated['role'] === 'ppat' ? $validated['city'] : null,
+                'district' => $validated['role'] === 'ppat' ? $validated['district'] : null,
+            ]);
+
+            if (! empty($validated['password'])) {
+                $user->password = $validated['password'];
+            }
+
+            $user->save();
+            $user->syncRoles($assignedRole);
+
+            $auditLogger->record(
+                AuditLog::EVENT_USER_UPDATED,
+                'Akun pengguna '.$user->name.' diperbarui.',
+                $user,
+                [
+                    'previous_role' => $previousRole,
+                    'role' => $assignedRole,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                ],
+                $request->user(),
+            );
+        });
+
+        return redirect()
+            ->route('superadmin.user-management')
+            ->with('status', 'Data pengguna berhasil diperbarui.');
+    }
+
+    public function updateUserStatus(Request $request, User $user, AuditLogger $auditLogger): RedirectResponse
+    {
+        $this->ensureUserIsManageable($user);
+
+        $validated = $request->validate([
+            'is_active' => ['required', 'boolean'],
+        ]);
+        $isActive = (bool) $validated['is_active'];
+
+        if ($user->is_active === $isActive) {
+            return redirect()
+                ->route('superadmin.user-management')
+                ->with('status', 'Status akun tidak berubah.');
+        }
+
+        DB::transaction(function () use ($auditLogger, $isActive, $request, $user): void {
+            $user->is_active = $isActive;
+            $user->save();
+
+            $event = $isActive ? AuditLog::EVENT_USER_ACTIVATED : AuditLog::EVENT_USER_DEACTIVATED;
+            $statusLabel = $isActive ? 'diaktifkan' : 'dinonaktifkan';
+            $auditLogger->record(
+                $event,
+                'Akun pengguna '.$user->name.' '.$statusLabel.'.',
+                $user,
+                ['is_active' => $isActive],
+                $request->user(),
+            );
+        });
+
+        $statusMessage = $isActive
+            ? 'Akun pengguna berhasil diaktifkan.'
+            : 'Akun pengguna berhasil dinonaktifkan.';
+
+        return redirect()
+            ->route('superadmin.user-management')
+            ->with('status', $statusMessage);
+    }
+
+    public function deleteUser(Request $request, User $user, AuditLogger $auditLogger): RedirectResponse
+    {
+        $this->ensureUserIsManageable($user);
+
+        DB::transaction(function () use ($auditLogger, $request, $user): void {
+            $user->is_active = false;
+            $user->save();
+            $user->delete();
+
+            $auditLogger->record(
+                AuditLog::EVENT_USER_DELETED,
+                'Akun pengguna '.$user->name.' dihapus.',
+                $user,
+                [
+                    'role' => $user->getRoleNames()->first(),
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                ],
+                $request->user(),
+            );
+        });
+
+        return redirect()
+            ->route('superadmin.user-management')
+            ->with('status', 'Akun pengguna berhasil dihapus.');
+    }
+
+    private function normalizePhone(Request $request): void
+    {
+        if (! $request->filled('phone')) {
+            return;
+        }
+
+        $normalizedPhone = new User;
+        $normalizedPhone->phone = (string) $request->input('phone');
+        $request->merge(['phone' => $normalizedPhone->phone]);
+    }
+
+    private function ensureUserIsManageable(User $user): void
+    {
+        abort_if($user->hasRole('Superadmin'), 404);
     }
 
     public function masterDataProperty(Request $request): View

@@ -21,7 +21,7 @@
                     <x-table.cell>Email</x-table.cell>
                     <x-table.cell>Nomor Telepon</x-table.cell>
                     <x-table.cell>Role</x-table.cell>
-                    <x-table.cell>Aksi</x-table.cell>
+                    <x-table.cell>Status</x-table.cell>
                 </x-slot>
                 @forelse($users as $user)
                     <x-table.row striped>
@@ -52,17 +52,10 @@
                             </span>
                         </x-table.data>
                         <x-table.data>
-                            <x-button-dropdown variant="ghost" label="..." :position="$loop->last ? 'top-center' : 'bottom-middle'">
-                                <x-item-dropdown href="#">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-                                        class="size-6">
-                                        <path fill-rule="evenodd"
-                                            d="m6.72 5.66 11.62 11.62A8.25 8.25 0 0 0 6.72 5.66Zm10.56 12.68L5.66 6.72a8.25 8.25 0 0 0 11.62 11.62ZM5.105 5.106c3.807-3.808 9.98-3.808 13.788 0 3.808 3.807 3.808 9.98 0 13.788-3.807 3.808-9.98 3.808-13.788 0-3.808-3.807-3.808-9.98 0-13.788Z"
-                                            clip-rule="evenodd" />
-                                    </svg>
-                                    Nonaktifkan
-                                </x-item-dropdown>
-                            </x-button-dropdown>
+                            <span
+                                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $user->is_active ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600' }}">
+                                {{ $user->is_active ? 'Aktif' : 'Nonaktif' }}
+                            </span>
                         </x-table.data>
                     </x-table.row>
                 @empty

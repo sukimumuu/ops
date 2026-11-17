@@ -25,6 +25,36 @@ it('assigns the User role to newly registered users', function () {
     $user = User::where('phone', '628123456789')->firstOrFail();
 
     expect($user->hasRole('User'))->toBeTrue();
+    $this->assertAuthenticatedAs($user);
+});
+
+it('rejects login attempts from deactivated accounts', function () {
+    User::factory()->create([
+        'phone' => '628123456789',
+        'is_active' => false,
+    ]);
+
+    $this->from(route('login'))
+        ->post(route('login'), [
+            'phone' => '08123456789',
+            'password' => 'password',
+        ])
+        ->assertRedirect(route('login'))
+        ->assertSessionHasErrors('phone');
+
+    $this->assertGuest();
+});
+
+it('logs out an authenticated user after their account is deactivated', function () {
+    $user = User::factory()->create(['is_active' => false]);
+    $user->assignRole('User');
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', 'Akun Anda telah dinonaktifkan.');
+
+    $this->assertGuest();
 });
 
 it('consolidates legacy Buyer and Seller assignments into the User role', function () {

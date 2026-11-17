@@ -26,12 +26,12 @@ class Property extends Model
 
     public function seller(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'seller_id');
+        return $this->belongsTo(User::class, 'seller_id')->withTrashed();
     }
 
     public function assignedPpat(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_ppat_id');
+        return $this->belongsTo(User::class, 'assigned_ppat_id')->withTrashed();
     }
 
     public function photos(): HasMany

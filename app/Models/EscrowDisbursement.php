@@ -33,16 +33,16 @@ class EscrowDisbursement extends Model
 
     public function recipient(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'recipient_user_id');
+        return $this->belongsTo(User::class, 'recipient_user_id')->withTrashed();
     }
 
     public function initiatedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'initiated_by');
+        return $this->belongsTo(User::class, 'initiated_by')->withTrashed();
     }
 
     public function confirmedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'confirmed_by');
+        return $this->belongsTo(User::class, 'confirmed_by')->withTrashed();
     }
 }

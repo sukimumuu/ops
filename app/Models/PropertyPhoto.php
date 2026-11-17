@@ -64,7 +64,7 @@ class PropertyPhoto extends Model
 
     public function validatedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'validated_by_id');
+        return $this->belongsTo(User::class, 'validated_by_id')->withTrashed();
     }
 
     public function typeLabel(): string

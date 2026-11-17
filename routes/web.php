@@ -243,6 +243,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             Route::get('/manajemen-user', [SuperadminController::class, 'userManagement'])->name('user-management');
             Route::get('/manajemen-user/tambah', [SuperadminController::class, 'createUser'])->name('user-management.create');
             Route::post('/manajemen-user', [SuperadminController::class, 'storeUser'])->name('user-management.store');
+            Route::get('/manajemen-user/{user}/edit', [SuperadminController::class, 'editUser'])
+                ->whereNumber('user')
+                ->name('user-management.edit');
+            Route::put('/manajemen-user/{user}', [SuperadminController::class, 'updateUser'])
+                ->whereNumber('user')
+                ->name('user-management.update');
+            Route::patch('/manajemen-user/{user}/status', [SuperadminController::class, 'updateUserStatus'])
+                ->whereNumber('user')
+                ->name('user-management.status.update');
+            Route::delete('/manajemen-user/{user}', [SuperadminController::class, 'deleteUser'])
+                ->whereNumber('user')
+                ->name('user-management.destroy');
             Route::get('/konfigurasi-sistem', [RolePermissionController::class, 'index'])->name('configuration-system');
             Route::put('/konfigurasi-sistem/roles/{role}/permissions', [RolePermissionController::class, 'update'])
                 ->whereNumber('role')

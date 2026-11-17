@@ -1,5 +1,6 @@
 @extends('layouts.app')
-@section('page-title', 'Tambah Pengguna')
+@php($editingUser = $user ?? null)
+@section('page-title', $editingUser ? 'Edit Pengguna' : 'Tambah Pengguna')
 @section('content')
     <div class="mb-5">
         <a href="{{ route('superadmin.user-management') }}"
@@ -8,33 +9,52 @@
         </a>
     </div>
 
-    <x-card-dashboard title="Tambah Pengguna" subtitle="Lengkapi informasi akun dan pilih peran pengguna.">
-        <form action="{{ route('superadmin.user-management.store') }}" method="POST" class="space-y-6" x-data="ppatUserForm()">
+    <x-card-dashboard :title="$editingUser ? 'Edit Pengguna' : 'Tambah Pengguna'"
+        :subtitle="$editingUser ? 'Perbarui informasi akun dan peran pengguna.' : 'Lengkapi informasi akun dan pilih peran pengguna.'">
+        <form
+            action="{{ $editingUser ? route('superadmin.user-management.update', $editingUser) : route('superadmin.user-management.store') }}"
+            method="POST" class="space-y-6" x-data="ppatUserForm()">
             @csrf
+            @if ($editingUser)
+                @method('PUT')
+            @endif
 
             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <x-form-text-input-dashboard id="name" name="name" label="Nama Lengkap"
-                    placeholder="Masukkan nama lengkap" :value="old('name')" :error="$errors->first('name')" required />
+                    placeholder="Masukkan nama lengkap" :value="old('name', $editingUser?->name ?? '')"
+                    :error="$errors->first('name')" required />
 
                 <x-form-text-input-dashboard id="email" name="email" type="email" label="Email"
-                    placeholder="nama@example.com" :value="old('email')" :error="$errors->first('email')" />
+                    placeholder="nama@example.com" :value="old('email', $editingUser?->email ?? '')"
+                    :error="$errors->first('email')" />
 
                 <x-form-text-input-dashboard id="phone" name="phone" type="tel" label="Nomor Telepon"
-                    placeholder="08xxxxxxxxxx" :value="old('phone')" :error="$errors->first('phone')" required />
+                    placeholder="08xxxxxxxxxx" :value="old('phone', $editingUser?->phone ?? '')"
+                    :error="$errors->first('phone')" required />
 
                 <x-form-select-dashboard id="role" name="role" label="Peran" :error="$errors->first('role')" required
                     x-model="role" @change="handleRoleChange()">
-                    <option selected value="">Pilih peran</option>
-                    <option value="admin" @selected(old('role') === 'admin')>Admin</option>
-                    <option value="ppat" @selected(old('role') === 'ppat')>PPAT</option>
-                    <option value="user" @selected(old('role') === 'user')>User</option>
+                    <option value="" @selected(old('role', $selectedRole ?? '') === '')>Pilih peran</option>
+                    <option value="admin" @selected(old('role', $selectedRole ?? '') === 'admin')>Admin</option>
+                    <option value="ppat" @selected(old('role', $selectedRole ?? '') === 'ppat')>PPAT</option>
+                    <option value="user" @selected(old('role', $selectedRole ?? '') === 'user')>User</option>
                 </x-form-select-dashboard>
 
-                <x-form-text-input-dashboard id="password" name="password" type="password" label="Kata Sandi"
-                    :error="$errors->first('password')" hint="Minimal 8 karakter." required />
+                @if ($editingUser)
+                    <x-form-text-input-dashboard id="password" name="password" type="password" label="Kata Sandi"
+                        :error="$errors->first('password')" hint="Kosongkan jika tidak ingin mengganti kata sandi." />
+                @else
+                    <x-form-text-input-dashboard id="password" name="password" type="password" label="Kata Sandi"
+                        :error="$errors->first('password')" hint="Minimal 8 karakter." required />
+                @endif
 
-                <x-form-text-input-dashboard id="password_confirmation" name="password_confirmation" type="password"
-                    label="Konfirmasi Kata Sandi" :error="$errors->first('password_confirmation')" required />
+                @if ($editingUser)
+                    <x-form-text-input-dashboard id="password_confirmation" name="password_confirmation" type="password"
+                        label="Konfirmasi Kata Sandi" :error="$errors->first('password_confirmation')" />
+                @else
+                    <x-form-text-input-dashboard id="password_confirmation" name="password_confirmation" type="password"
+                        label="Konfirmasi Kata Sandi" :error="$errors->first('password_confirmation')" required />
+                @endif
             </div>
 
             <div x-show="role === 'ppat'" x-cloak
@@ -193,7 +213,7 @@
                     Batal
                 </a>
                 <x-button type="submit" variant="primary">
-                    Simpan Pengguna
+                    {{ $editingUser ? 'Simpan Perubahan' : 'Simpan Pengguna' }}
                 </x-button>
             </div>
         </form>
@@ -203,16 +223,16 @@
         <script>
             function ppatUserForm() {
                 return {
-                    role: @json(old('role', '')),
+                    role: @json(old('role', $selectedRole ?? '')),
                     selected: {
                         provinceCode: '',
                         regencyCode: '',
                         districtCode: ''
                     },
                     locationQuery: {
-                        province: @json(old('province', '')),
-                        city: @json(old('city', '')),
-                        district: @json(old('district', '')),
+                        province: @json(old('province', $editingUser?->province ?? '')),
+                        city: @json(old('city', $editingUser?->city ?? '')),
+                        district: @json(old('district', $editingUser?->district ?? '')),
                     },
                     locationOpen: {
                         provinces: false,

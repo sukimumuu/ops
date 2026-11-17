@@ -86,6 +86,35 @@ it('rejects invalid credentials', function () {
     $this->assertGuest();
 });
 
+it('rejects deactivated users from the administrator panel', function () {
+    $user = User::factory()->create([
+        'email' => 'inactive@mihom.id',
+        'is_active' => false,
+    ]);
+    $user->assignRole('Admin');
+
+    $this->from('/panel')
+        ->post('/panel', [
+            'email' => 'inactive@mihom.id',
+            'password' => 'password',
+        ])
+        ->assertRedirect('/panel')
+        ->assertSessionHasErrors('email');
+
+    $this->assertGuest();
+});
+
+it('logs out a deactivated user from an existing session', function () {
+    $user = User::factory()->create(['is_active' => false]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', 'Akun Anda telah dinonaktifkan.');
+
+    $this->assertGuest();
+});
+
 it('redirects an authenticated administrator away from the login page', function () {
     $user = User::factory()->create();
     $user->assignRole('Admin');

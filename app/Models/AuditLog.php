@@ -87,6 +87,14 @@ class AuditLog extends Model
 
     public const EVENT_USER_CREATED = 'user.created';
 
+    public const EVENT_USER_UPDATED = 'user.updated';
+
+    public const EVENT_USER_DEACTIVATED = 'user.deactivated';
+
+    public const EVENT_USER_ACTIVATED = 'user.activated';
+
+    public const EVENT_USER_DELETED = 'user.deleted';
+
     public const EVENT_ROLE_PERMISSIONS_UPDATED = 'role.permissions_updated';
 
     /**
@@ -120,6 +128,10 @@ class AuditLog extends Model
         self::EVENT_PROPERTY_REJECTED => 'Properti ditolak',
         self::EVENT_PROPERTY_PPAT_ASSIGNED => 'PPAT ditugaskan',
         self::EVENT_USER_CREATED => 'Akun pengguna dibuat',
+        self::EVENT_USER_UPDATED => 'Akun pengguna diperbarui',
+        self::EVENT_USER_DEACTIVATED => 'Akun pengguna dinonaktifkan',
+        self::EVENT_USER_ACTIVATED => 'Akun pengguna diaktifkan',
+        self::EVENT_USER_DELETED => 'Akun pengguna dihapus',
         self::EVENT_ROLE_PERMISSIONS_UPDATED => 'Hak akses role diperbarui',
     ];
 
@@ -154,7 +166,7 @@ class AuditLog extends Model
 
     public function actor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'actor_id');
+        return $this->belongsTo(User::class, 'actor_id')->withTrashed();
     }
 
     public function scopeCategory(Builder $query, ?string $category): Builder

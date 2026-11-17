@@ -177,12 +177,12 @@ class Transaction extends Model
 
     public function buyer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'buyer_id');
+        return $this->belongsTo(User::class, 'buyer_id')->withTrashed();
     }
 
     public function seller(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'seller_id');
+        return $this->belongsTo(User::class, 'seller_id')->withTrashed();
     }
 
     public function logs(): HasMany
@@ -212,6 +212,6 @@ class Transaction extends Model
 
     public function certificateTransferSubmittedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'certificate_transfer_submitted_by');
+        return $this->belongsTo(User::class, 'certificate_transfer_submitted_by')->withTrashed();
     }
 }
