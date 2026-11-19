@@ -221,21 +221,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('document')
             ->middleware('permission:documents.verify_status')
             ->name('documents.review');
-        Route::get('/pengecekan-bpn', [LandDeedController::class, 'bpnCheck'])
-            ->middleware('permission:documents.input_bpn_result|transactions.mark_bpn_cleared')
-            ->name('bpn-check');
-        Route::get('/penandatanganan-ajb', [LandDeedController::class, 'ajbSigning'])
-            ->middleware('permission:transactions.schedule_ajb')
-            ->name('ajb-signing');
-        Route::get('/manajemen-akta', [LandDeedController::class, 'deedManagement'])
-            ->middleware('permission:documents.verify_status')
-            ->name('deed-management');
-        Route::get('/validasi-pajak', [LandDeedController::class, 'taxValidation'])
-            ->middleware('permission:documents.verify_status')
-            ->name('tax-validation');
-        Route::get('/resi-balik-nama', [LandDeedController::class, 'transferForOwnership'])
-            ->middleware('permission:documents.verify_status')
-            ->name('transfer-for-ownership');
     });
 
     Route::prefix('superadmin')->name('superadmin.')->group(function () {

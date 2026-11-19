@@ -16,9 +16,6 @@
             <img id="logo-black" src="{{ asset('assets/png/gry trnsprn.png') }}" alt="Mihom"
                 class="hidden lg:block h-8">
         </a>
-
-
-        <div class="flex-1"></div>
         <nav class="hidden lg:flex items-center text-black/80 gap-4 h-16">
             @role('Superadmin')
                 <li
@@ -113,44 +110,6 @@
                             ? 'border-b-6 border-b-primary text-primary'
                             : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                         <a href="{{ route('land-deed.client-properties') }}">Properti Klien</a>
-                    </li>
-                @endcan
-                @canany(['documents.input_bpn_result', 'transactions.mark_bpn_cleared'])
-                    <li
-                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.bpn-check')
-                            ? 'border-b-6 border-b-primary text-primary'
-                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                        <a href="{{ route('land-deed.bpn-check') }}">Pengecekan BPN</a>
-                    </li>
-                @endcanany
-                @can('documents.verify_status')
-                    <li
-                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.tax-validation')
-                            ? 'border-b-6 border-b-primary text-primary'
-                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                        <a href="{{ route('land-deed.tax-validation') }}">Validasi Pajak</a>
-                    </li>
-                @endcan
-                @can('transactions.schedule_ajb')
-                    <li
-                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.ajb-signing')
-                            ? 'border-b-6 border-b-primary text-primary'
-                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                        <a href="{{ route('land-deed.ajb-signing') }}">Jadwal Penandatanganan AJB</a>
-                    </li>
-                @endcan
-                @can('documents.verify_status')
-                    <li
-                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.deed-management')
-                            ? 'border-b-6 border-b-primary text-primary'
-                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                        <a href="{{ route('land-deed.deed-management') }}">Manajemen Akta</a>
-                    </li>
-                    <li
-                        class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('land-deed.transfer-for-ownership')
-                            ? 'border-b-6 border-b-primary text-primary'
-                            : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
-                        <a href="{{ route('land-deed.transfer-for-ownership') }}">Resi Balik Nama</a>
                     </li>
                 @endcan
             @endrole
