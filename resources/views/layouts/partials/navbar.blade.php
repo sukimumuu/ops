@@ -3,6 +3,8 @@
     class="sticky top-0 z-30 flex items-center gap-4 h-16 sm:px-6
                     bg-white border-b border-slate-200 shadow-sm">
     <nav class="w-full lg:w-4/5 lg:mx-auto top-0 z-30 flex items-center gap-4 h-16 px-4 sm:px-6">
+        @php($isSellerMode = request()->routeIs('seller.*', 'listing.*'))
+
         <!-- Mobile menu button -->
         <button @click="sidebarOpen = true"
             class="lg:hidden p-2 rounded-lg text-slate-500 hover:text-secondary hover:bg-slate-100">
@@ -114,7 +116,7 @@
                 @endcan
             @endrole
             @role('User')
-                @if (request()->routeIS('buyer.*') || request()->routeIs('dashboard'))
+                @if (!$isSellerMode)
                     <li
                         class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('dashboard')
                             ? 'border-b-6 border-b-primary text-primary'
@@ -139,7 +141,7 @@
                             : 'hover:border-b-2 hover:border-b-primary hover:text-primary/60' }}">
                         <a href="{{ route('buyer.bought-properties') }}">Properti Dibeli</a>
                     </li>
-                @elseif (request()->routeIs('seller.*'))
+                @else
                     <li
                         class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('seller.listing')
                             ? 'border-b-6 border-b-primary text-primary'
@@ -177,19 +179,18 @@
         </nav>
         <div class="flex-1"></div>
         @role('User')
-            @if (request()->routeIs('seller.*'))
-                <x-button type="button" variant="outline" class="hover:bg-primary hover:text-white">
-                    <a href="{{ route('dashboard') }}">
-                        Kembali ke Dashboard
-                    </a>
-                </x-button>
-            @elseif (request()->routeIs('buyer.*') || request()->routeIs('dashboard'))
-                <x-button type="button" variant="outline" class="hover:bg-primary hover:text-white">
-                    <a href="{{ route('seller.listing') }}">
-                        Pasang Listing
-                    </a>
-                </x-button>
-            @endif
+            <div role="group" aria-label="Pilih mode" class="hidden lg:inline-flex rounded-lg bg-slate-100 p-1">
+                <a href="{{ route('dashboard') }}"
+                    @if (!$isSellerMode) aria-current="page" @endif
+                    class="rounded-md px-3 py-1.5 text-sm font-semibold transition {{ !$isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
+                    Pembeli
+                </a>
+                <a href="{{ route('seller.listing') }}"
+                    @if ($isSellerMode) aria-current="page" @endif
+                    class="rounded-md px-3 py-1.5 text-sm font-semibold transition {{ $isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
+                    Penjual
+                </a>
+            </div>
         @endrole
         @auth
             <div id="notification-center" data-feed-url="{{ route('notifications.unread') }}"

@@ -23,10 +23,26 @@
 
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto px-3 py-5 space-y-1">
+        @php($isSellerMode = request()->routeIs('seller.*', 'listing.*'))
 
         <p class="px-3 pb-2 text-[11px] font-bold uppercase trackeeeing-widest text-black/60 lg:text-black/40">
             Main Menu
         </p>
+
+        @role('User')
+            <div role="group" aria-label="Pilih mode" class="mb-4 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
+                <a href="{{ route('dashboard') }}"
+                    @if (!$isSellerMode) aria-current="page" @endif
+                    class="rounded-md px-3 py-2 text-center text-sm font-semibold transition {{ !$isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
+                    Pembeli
+                </a>
+                <a href="{{ route('seller.listing') }}"
+                    @if ($isSellerMode) aria-current="page" @endif
+                    class="rounded-md px-3 py-2 text-center text-sm font-semibold transition {{ $isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
+                    Penjual
+                </a>
+            </div>
+        @endrole
 
         <!-- Active link: bg-primary/10 text-primary -->
         @role('Superadmin')
@@ -119,6 +135,7 @@
 
         {{-- Buyer Menu --}}
         @role('User')
+            @unless ($isSellerMode)
             <a href="{{ route('dashboard') }}"
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold
                   {{ request()->routeIs('dashboard')
@@ -171,7 +188,8 @@
                 Properti Dibeli
             </a>
 
-            <a href="#"
+            @can('transactions.view_own_tracker')
+            <a href="{{ route('buyer.transaction-escrow') }}"
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                     viewBox="0 0 24 24">
@@ -179,6 +197,7 @@
                 </svg>
                 Transaksi & Escrow
             </a>
+            @endcan
 
             <a href="{{ route('profile') }}"
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold
@@ -192,13 +211,15 @@
                 </svg>
                 Profil & Verifikasi (KYC)
             </a>
+            @endunless
         @endrole
 
         {{-- Seller Menu --}}
         @role('User')
-            <a href=""
+            @if ($isSellerMode)
+            <a href="{{ route('seller.listing') }}"
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold
-                  {{ request()->routeIs('dashboard')
+                  {{ request()->routeIs('seller.listing')
                       ? 'bg-primary text-white shadow-lg shadow-primary/25'
                       : 'text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5' }}">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
@@ -209,7 +230,7 @@
                 Dashboard
             </a>
 
-            <a href="#"
+            <a href="{{ route('seller.my-properties') }}"
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                     viewBox="0 0 24 24">
@@ -219,7 +240,7 @@
                 Properti Saya
             </a>
 
-            <a href="#"
+            <a href="{{ route('seller.request-survey') }}"
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                     viewBox="0 0 24 24">
@@ -229,7 +250,8 @@
                 Permintaan Survei Masuk
             </a>
 
-            <a href="#"
+            @can('transactions.view_own_tracker')
+            <a href="{{ route('seller.selling-transaction') }}"
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                     viewBox="0 0 24 24">
@@ -237,8 +259,9 @@
                 </svg>
                 Transaksi Penjualan
             </a>
+            @endcan
 
-            <a href="#"
+            <a href="{{ route('seller.disbursement-account') }}"
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-black/80 hover:text-black hover:bg-black/10 lg:text-black/70 lg:hover:text-black lg:hover:bg-black/5">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
                     viewBox="0 0 24 24">
@@ -259,6 +282,7 @@
                 </svg>
                 Profil & Verifikasi (KYC)
             </a>
+            @endif
         @endrole
     </nav>
 </aside>
