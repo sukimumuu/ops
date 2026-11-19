@@ -437,7 +437,8 @@
                     </div>
 
                     <!-- Mortgage Calculator -->
-                    <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                    <div
+                        class="group relative isolate overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
                         <h3 class="font-outfit text-xl font-extrabold text-secondary mb-1">Hitung cicilan dari rumah
                             impian Anda</h3>
                         <p class="text-gray-500 text-xs mb-6">Simulasi KPR untuk memudahkan perencanaan keuangan Anda
@@ -456,7 +457,7 @@
                                         <input type="text"
                                             value="{{ number_format((float) $property->price, 0, ',', '.') }}"
                                             class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-12 pr-4 text-sm font-semibold text-secondary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
-                                            id="mortgagePrice">
+                                            id="mortgagePrice" disabled>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
@@ -467,7 +468,7 @@
                                         <div class="relative">
                                             <input type="number" value="20" min="0" max="90"
                                                 class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 px-4 text-sm font-semibold text-secondary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
-                                                id="mortgageDown">
+                                                id="mortgageDown" disabled>
                                             <span
                                                 class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
                                         </div>
@@ -479,7 +480,7 @@
                                         <div class="relative">
                                             <select
                                                 class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 px-4 text-sm font-semibold text-secondary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer transition"
-                                                id="mortgageTenor">
+                                                id="mortgageTenor" disabled>
                                                 <option value="10">10 tahun</option>
                                                 <option value="15">15 tahun</option>
                                                 <option value="20" selected>20 tahun</option>
@@ -501,7 +502,7 @@
                                     <div class="flex items-center gap-3">
                                         <span class="text-xs text-gray-400 font-semibold">+ / -</span>
                                         <input type="range" min="3" max="15" value="7.5"
-                                            step="0.1" class="mortgage-range flex-1" id="mortgageRate">
+                                            step="0.1" class="mortgage-range flex-1" id="mortgageRate" disabled>
                                         <span class="text-sm font-bold text-secondary min-w-[50px] text-right"
                                             id="rateDisplay">7.5%</span>
                                     </div>
@@ -517,6 +518,7 @@
                                     <p class="text-white/50 text-xs mb-5">per bulan</p>
                                     <button
                                         class="w-full bg-primary hover:bg-[#df3f05] text-white font-bold py-3 px-6 rounded-xl transition text-sm"
+                                        disabled
                                         onclick="alert('Fitur pengajuan KPR segera hadir!')">
                                         Ajukan KPR Sekarang
                                     </button>
@@ -524,6 +526,14 @@
                                 <p class="text-[10px] text-gray-400 mt-3 text-center">*Estimasi berdasarkan suku bunga
                                     tetap. Hasil aktual dapat berbeda.</p>
                             </div>
+                        </div>
+                        <div
+                            class="absolute inset-0 z-20 flex items-center justify-center bg-white/65 p-6 backdrop-blur-[1px] transition-colors duration-500 ease-in-out group-hover:bg-secondary/70"
+                            role="status">
+                            <span
+                                class="rounded-full border border-primary/20 bg-white/90 px-6 py-3 text-center text-sm font-bold text-secondary shadow-md">
+                                Fitur yang akan datang
+                            </span>
                         </div>
                     </div>
 
