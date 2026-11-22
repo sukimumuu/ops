@@ -251,6 +251,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/master-data-properti', [SuperadminController::class, 'masterDataProperty'])
             ->middleware('role:Superadmin')
             ->name('master-data-property');
+        Route::get('/master-data-properti/{property:uuid}', [SuperadminController::class, 'masterDataPropertyDetail'])
+            ->whereUuid('property')
+            ->middleware('role:Superadmin')
+            ->name('master-data-property.show');
         Route::get('/audit-log', [SuperadminController::class, 'auditLog'])
             ->middleware(['role:Superadmin', 'permission:system.view_audit_logs'])
             ->name('audit-log');

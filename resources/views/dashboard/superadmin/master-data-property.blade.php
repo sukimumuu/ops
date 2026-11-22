@@ -26,7 +26,8 @@
                     </select>
                 </div>
                 <div>
-                    <label for="property-status-filter" class="mb-1 block text-xs font-semibold text-slate-600">Status</label>
+                    <label for="property-status-filter"
+                        class="mb-1 block text-xs font-semibold text-slate-600">Status</label>
                     <select id="property-status-filter" name="status"
                         class="min-w-36 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
                         <option value="all" @selected(request('status', 'all') === 'all')>Semua status</option>
@@ -66,7 +67,7 @@
                     </x-table.data>
                     <x-table.data>{{ $property->created_at->format('d M Y') }}</x-table.data>
                     <x-table.data>
-                        <x-dashboard.property-approval-modal :property="$property" />
+                        <x-dashboard.property-approval-modal :property="$property" :detail-url="route('superadmin.master-data-property.show', ['property' => $property->uuid])" />
                     </x-table.data>
                 </x-table.row>
             @empty

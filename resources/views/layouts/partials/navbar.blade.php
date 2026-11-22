@@ -33,7 +33,7 @@
                     <a href="{{ route('superadmin.user-management') }}">Manajemen Pengguna</a>
                 </li>
                 <li
-                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('superadmin.master-data-property')
+                    class="flex items-center list-none text-sm font-semibold h-16 {{ request()->routeIs('superadmin.master-data-property*')
                         ? 'border-b-6 border-b-primary text-primary'
                         : 'hover:border-b-2 hover:border-b-primary hover:text-primary/80' }}">
                     <a href="{{ route('superadmin.master-data-property') }}">Master Data Properti</a>
@@ -180,13 +180,11 @@
         <div class="flex-1"></div>
         @role('User')
             <div role="group" aria-label="Pilih mode" class="hidden lg:inline-flex rounded-lg bg-slate-100 p-1">
-                <a href="{{ route('dashboard') }}"
-                    @if (!$isSellerMode) aria-current="page" @endif
+                <a href="{{ route('dashboard') }}" @if (!$isSellerMode) aria-current="page" @endif
                     class="rounded-md px-3 py-1.5 text-sm font-semibold transition {{ !$isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
                     Pembeli
                 </a>
-                <a href="{{ route('seller.listing') }}"
-                    @if ($isSellerMode) aria-current="page" @endif
+                <a href="{{ route('seller.listing') }}" @if ($isSellerMode) aria-current="page" @endif
                     class="rounded-md px-3 py-1.5 text-sm font-semibold transition {{ $isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
                     Penjual
                 </a>
