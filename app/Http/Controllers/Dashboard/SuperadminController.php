@@ -4,15 +4,12 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AuditLogFilterRequest;
-use App\Models\Appointment;
 use App\Models\AuditLog;
-use App\Models\EscrowDisbursement;
 use App\Models\Property;
-use App\Models\TransactionLedgerEntry;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Audit\AuditLogService;
-use App\Services\Payments\DpAmountCalculator;
+use App\Services\Listing\PropertyTransactionDetailService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -315,110 +312,12 @@ class SuperadminController extends Controller
     public function masterDataPropertyDetail(
         Request $request,
         Property $property,
-        DpAmountCalculator $amountCalculator,
+        PropertyTransactionDetailService $propertyDetail,
     ): View {
-        $property->load([
-            'photos',
-            'documents.validatedBy:id,name',
-            'assignedPpat:id,name,email,phone,avatar_path',
-            'seller:id,name,email,phone,avatar_path',
-        ]);
-
-        $appointments = $property->appointments()
-            ->with([
-                'buyer:id,name,email,phone,avatar_path',
-                'seller:id,name,email,phone,avatar_path',
-            ])
-            ->orderByDesc('scheduled_at')
-            ->orderByDesc('id')
-            ->get();
-
-        $transaction = $property->transactions()
-            ->with(['buyer:id,name,email,phone,avatar_path'])
-            ->with('certificateTransferSubmittedBy:id,name')
-            ->latest('id')
-            ->first();
-
-        $transactionLogs = $transaction?->logs()
-            ->with('actor:id,name')
-            ->orderByDesc('id')
-            ->get() ?? collect();
-
-        $escrowDisbursement = $transaction?->latestEscrowDisbursement();
-        $isStageSevenUnlocked = $escrowDisbursement?->status === EscrowDisbursement::STATUS_RELEASED;
-        $escrowReleaseAmount = $transaction?->ledgerEntries()
-            ->where('status', TransactionLedgerEntry::STATUS_RESERVED)
-            ->sum('amount') ?? 0;
-
-        $dpPaymentAttempt = $transaction?->latestDpPaymentAttempt();
-        $escrowPaymentAttempt = $transaction?->latestEscrowPaymentAttempt();
-
-        $latestAppointment = $appointments->first();
-        $selectedAppointment = $appointments->firstWhere('id', $request->integer('appointment'))
-            ?? $latestAppointment;
-
-        $progress = $latestAppointment?->progressState() ?? [
-            'label' => 'Belum ada pengajuan survei',
-            'description' => 'Progres survei akan muncul setelah calon pembeli mengajukan jadwal kunjungan.',
-            'percentage' => 0,
-            'tone' => 'slate',
-            'completed_steps' => 0,
-            'stopped' => true,
-        ];
-
-        if ($latestAppointment) {
-            if ($latestAppointment->hasPendingReschedule()) {
-                $progress['description'] = 'Penjual menyarankan jadwal pengganti. Menunggu tanggapan calon pembeli.';
-            } elseif ($latestAppointment->status === Appointment::STATUS_REQUESTED) {
-                $progress['description'] = 'Permintaan jadwal survei menunggu persetujuan penjual.';
-            } elseif ($latestAppointment->status === Appointment::STATUS_CONFIRMED) {
-                $progress['description'] = 'Jadwal survei telah disetujui penjual.';
-            } elseif ($latestAppointment->status === Appointment::STATUS_COMPLETED) {
-                $progress['description'] = 'Survei telah selesai dilaksanakan dan hasil telah dicatat.';
-            }
-        }
-
-        $property->setAttribute('image_url', $property->primaryPhotoUrl());
-
-        $mapLocation = filled($property->latitude) && filled($property->longitude)
-            ? "{$property->latitude},{$property->longitude}"
-            : trim("{$property->address}, {$property->district}, {$property->city}, {$property->province}");
-        $mapUrl = filled($property->url_maps)
-            ? $property->url_maps
-            : 'https://www.google.com/maps/search/?api=1&query='.urlencode($mapLocation);
-
-        $clientBuyer = $transaction?->buyer ?? $latestAppointment?->buyer;
-        $bpnProgress = $property->bpnVerificationProgress();
-        $isStageThreeUnlocked = $transaction?->hasCompletedDownPayment() ?? false;
-        $isStageFourUnlocked = $transaction?->isStageFourUnlocked() ?? false;
-        $isEscrowPaid = $transaction?->hasCompletedEscrowPayment() ?? false;
-        $remainingEscrowAmount = $transaction?->remainingEscrowAmount();
-        $requiredDpAmount = $transaction?->state === 'draft'
-            ? $amountCalculator->calculate($transaction->total_property_amount)
-            : null;
-
-        return view('dashboard.superadmin.detail-property', compact(
-            'property',
-            'appointments',
-            'latestAppointment',
-            'selectedAppointment',
-            'transaction',
-            'transactionLogs',
-            'escrowDisbursement',
-            'isStageSevenUnlocked',
-            'escrowReleaseAmount',
-            'dpPaymentAttempt',
-            'escrowPaymentAttempt',
-            'requiredDpAmount',
-            'remainingEscrowAmount',
-            'progress',
-            'mapUrl',
-            'clientBuyer',
-            'bpnProgress',
-            'isStageThreeUnlocked',
-            'isStageFourUnlocked',
-            'isEscrowPaid',
-        ));
+        return view(
+            'dashboard.superadmin.detail-property',
+            $propertyDetail->build($property, $request->integer('appointment')),
+        );
     }
 
     public function configurationSystem()

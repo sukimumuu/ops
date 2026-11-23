@@ -7,6 +7,7 @@ use App\Http\Requests\AuditLogFilterRequest;
 use App\Models\Property;
 use App\Models\User;
 use App\Services\Audit\AuditLogService;
+use App\Services\Listing\PropertyTransactionDetailService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -79,6 +80,24 @@ class AdminController extends Controller
             ->withQueryString();
 
         return view('dashboard.admin.master-data-property', compact('properties'));
+    }
+
+    /**
+     * Page: Detail properti pada master data Admin.
+     *
+     * Menampilkan progres transaksi dan riwayat status properti. Aksi operasional
+     * (pembayaran, jadwal PPAT, unggah AJB) tetap menjadi kewenangan peran terkait,
+     * sehingga halaman ini bersifat pemantauan untuk Admin.
+     */
+    public function masterDataPropertyDetail(
+        Request $request,
+        Property $property,
+        PropertyTransactionDetailService $propertyDetail,
+    ): View {
+        return view(
+            'dashboard.admin.detail-property',
+            $propertyDetail->build($property, $request->integer('appointment')),
+        );
     }
 
     public function auditLog(AuditLogFilterRequest $request, AuditLogService $auditLogs): View

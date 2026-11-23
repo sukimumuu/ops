@@ -273,6 +273,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
                 'permission:documents.view_sensitive_pii',
             ])
             ->name('master-data-property');
+        Route::get('/master-data-properti/{property:uuid}', [AdminController::class, 'masterDataPropertyDetail'])
+            ->whereUuid('property')
+            ->middleware([
+                'permission:properties.approve_listing|properties.reject_listing',
+                'permission:documents.view_sensitive_pii',
+            ])
+            ->name('master-data-property.show');
         Route::get('/audit-log', [AdminController::class, 'auditLog'])
             ->middleware('permission:system.view_audit_logs')
             ->name('audit-log');
