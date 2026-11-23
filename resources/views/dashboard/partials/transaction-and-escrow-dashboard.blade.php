@@ -82,7 +82,7 @@
     <section class="overflow-hidden rounded-xl border border-violet-200 bg-white shadow-sm">
         <div class="border-b border-violet-100 bg-violet-50/60 px-4 py-4 sm:px-5">
             <h2 class="font-heading text-base font-bold text-secondary">Transaksi memenuhi syarat pencairan</h2>
-            <p class="mt-1 text-xs text-slate-600">Pencairan hanya tersedia setelah DP, pelunasan, dan bukti AJB yang disetujui PPAT terverifikasi.</p>
+            <p class="mt-1 text-xs text-slate-600">Pencairan hanya tersedia setelah DP, pelunasan, dan bukti AJB yang disetujui PPAT terverifikasi, serta penjual telah melengkapi rekening pencairan.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full min-w-[850px] text-left text-sm">
@@ -104,18 +104,104 @@
                                 <p class="mt-0.5 text-xs text-slate-500">{{ $transaction->uuid }} · {{ collect([$transaction->property->city, $transaction->property->province])->filter()->implode(', ') }}</p>
                             </td>
                             <td class="px-4 py-3 text-slate-700">{{ $transaction->buyer->name }}</td>
-                            <td class="px-4 py-3 text-slate-700">{{ $transaction->seller->name }}</td>
+                            <td class="px-4 py-3">
+                                <p class="font-medium text-slate-700">{{ $transaction->seller->name }}</p>
+                                @if ($transaction->seller->hasDisbursementAccount())
+                                    <p class="mt-1 text-xs font-semibold text-slate-600">{{ $transaction->seller->bank_name }}</p>
+                                    <p class="mt-0.5 font-mono text-xs font-bold text-secondary">
+                                        {{ $transaction->seller->bank_account_number }}</p>
+                                    <p class="mt-0.5 text-[11px] text-slate-500">
+                                        a.n. {{ $transaction->seller->bank_account_holder_name }}</p>
+                                @else
+                                    <span
+                                        class="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800"
+                                        title="Penjual belum melengkapi rekening pencairan.">
+                                        Rekening belum diatur
+                                    </span>
+                                    <p class="mt-1 text-[11px] text-slate-500">Penjual belum melengkapi rekening</p>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 font-bold text-secondary">Rp {{ number_format((float) $transaction->total_property_amount, 0, ',', '.') }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $transaction->ajb_signed_at?->locale('id')->translatedFormat('d M Y, H:i') ?? '—' }} WIB</td>
                             <td class="px-4 py-3">
                                 @can('transactions.trigger_escrow_release')
-                                    <form method="POST" action="{{ route('escrow-disbursements.store', ['transaction' => $transaction->uuid]) }}"
-                                        onsubmit="return confirm('Mulai pencairan Rp {{ number_format((float) $transaction->total_property_amount, 0, ',', '.') }} kepada {{ $transaction->seller->name }}? Transfer bank harus dilakukan di luar aplikasi lalu dikonfirmasi di sini.')">
-                                        @csrf
-                                        <button type="submit" class="whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white transition hover:bg-primary-hover">
-                                            Mulai pencairan
-                                        </button>
-                                    </form>
+                                    @if ($transaction->seller->hasDisbursementAccount())
+                                        <x-drawer title="Pencairan escrow" :subtitle="$transaction->property->title" width="lg:w-[30rem]">
+                                            <x-slot name="trigger">
+                                                <button type="button"
+                                                    class="whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white transition hover:bg-primary-hover">
+                                                    Detail &amp; mulai pencairan
+                                                </button>
+                                            </x-slot>
+
+                                            <div class="space-y-5">
+                                                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                                    <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Dana siap dilepas</p>
+                                                    <p class="mt-1 font-heading text-xl font-bold text-secondary">
+                                                        Rp {{ number_format((float) $transaction->total_property_amount, 0, ',', '.') }}
+                                                    </p>
+                                                    <p class="mt-1 text-[11px] text-slate-500">Referensi transaksi {{ $transaction->uuid }}</p>
+                                                </div>
+
+                                                <div>
+                                                    <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Rekening penerima</p>
+                                                    <dl class="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200">
+                                                        <div class="flex items-center justify-between gap-3 px-4 py-2.5">
+                                                            <div>
+                                                                <dt class="text-[11px] font-semibold text-slate-500">Bank</dt>
+                                                                <dd class="text-sm font-bold text-secondary">{{ $transaction->seller->bank_name }}</dd>
+                                                            </div>
+                                                        </div>
+                                                        <div class="flex items-center justify-between gap-3 px-4 py-2.5">
+                                                            <div>
+                                                                <dt class="text-[11px] font-semibold text-slate-500">Nomor rekening</dt>
+                                                                <dd class="font-mono text-sm font-bold text-secondary">{{ $transaction->seller->bank_account_number }}</dd>
+                                                            </div>
+                                                            <button type="button"
+                                                                x-data="{ copied: false }"
+                                                                @click="navigator.clipboard.writeText(@js($transaction->seller->bank_account_number)); copied = true; setTimeout(() => copied = false, 2000)"
+                                                                class="rounded-lg border border-slate-300 px-2.5 py-1 text-[11px] font-bold text-slate-600 transition hover:bg-white">
+                                                                <span x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
+                                                            </button>
+                                                        </div>
+                                                        <div class="px-4 py-2.5">
+                                                            <dt class="text-[11px] font-semibold text-slate-500">Atas nama</dt>
+                                                            <dd class="text-sm font-bold text-secondary">{{ $transaction->seller->bank_account_holder_name }}</dd>
+                                                        </div>
+                                                    </dl>
+                                                </div>
+
+                                                <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
+                                                    Transfer bank dilakukan manual di luar aplikasi. Setelah transfer berhasil,
+                                                    konfirmasi pada tabel riwayat pencairan dana dengan mengisi referensi transfer.
+                                                </p>
+                                            </div>
+
+                                            <x-slot name="footer">
+                                                <form method="POST" action="{{ route('escrow-disbursements.store', ['transaction' => $transaction->uuid]) }}"
+                                                    onsubmit="return confirm('Mulai pencairan Rp {{ number_format((float) $transaction->total_property_amount, 0, ',', '.') }} kepada {{ $transaction->seller->name }}? Transfer bank harus dilakukan di luar aplikasi lalu dikonfirmasi di sini.')">
+                                                    @csrf
+                                                    <button type="submit"
+                                                        class="w-full rounded-lg bg-primary px-3 py-2.5 text-xs font-bold text-white transition hover:bg-primary-hover">
+                                                        Mulai pencairan
+                                                    </button>
+                                                </form>
+                                            </x-slot>
+                                        </x-drawer>
+                                    @else
+                                        <div class="max-w-44">
+                                            <button type="button" disabled
+                                                title="Penjual belum melengkapi rekening pencairan."
+                                                class="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">
+                                                Mulai pencairan
+                                            </button>
+                                            <p class="mt-1.5 text-[11px] font-semibold leading-4 text-amber-700">
+                                                Penjual belum melengkapi rekening
+                                            </p>
+                                        </div>
+                                    @endif
+                                @else
+                                    <span class="text-xs text-slate-400">—</span>
                                 @endcan
                             </td>
                         </tr>
@@ -157,6 +243,39 @@
                             <td class="px-4 py-3">
                                 <p class="font-medium text-slate-700">{{ $disbursement->recipient_name }}</p>
                                 <p class="mt-0.5 text-xs text-slate-500">Penjual</p>
+                                @php
+                                    $recipientBank = $disbursement->recipient_bank_name
+                                        ? [
+                                            'bank' => $disbursement->recipient_bank_name,
+                                            'number' => $disbursement->recipient_bank_account_number,
+                                            'holder' => $disbursement->recipient_account_holder_name,
+                                        ]
+                                        : ($disbursement->transaction->seller?->hasDisbursementAccount()
+                                            ? [
+                                                'bank' => $disbursement->transaction->seller->bank_name,
+                                                'number' => $disbursement->transaction->seller->bank_account_number,
+                                                'holder' => $disbursement->transaction->seller->bank_account_holder_name,
+                                            ]
+                                            : null);
+                                @endphp
+                                @if ($recipientBank)
+                                    <p class="mt-1 text-xs font-semibold text-slate-600">{{ $recipientBank['bank'] }}</p>
+                                    <p class="mt-0.5 flex items-center gap-1.5 font-mono text-xs font-bold text-secondary">
+                                        {{ $recipientBank['number'] }}
+                                        <button type="button" x-data="{ copied: false }"
+                                            @click="navigator.clipboard.writeText(@js($recipientBank['number'])); copied = true; setTimeout(() => copied = false, 2000)"
+                                            class="rounded border border-slate-300 px-1.5 py-0.5 font-sans text-[10px] font-bold text-slate-500 transition hover:bg-slate-50"
+                                            title="Salin nomor rekening">
+                                            <span x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
+                                        </button>
+                                    </p>
+                                    <p class="mt-0.5 text-[11px] text-slate-500">a.n. {{ $recipientBank['holder'] }}</p>
+                                @else
+                                    <span
+                                        class="mt-1 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                                        Rekening belum diatur
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 font-bold text-secondary">Rp {{ number_format((float) $disbursement->amount, 0, ',', '.') }}</td>
                             <td class="px-4 py-3">

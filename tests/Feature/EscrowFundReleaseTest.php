@@ -23,8 +23,15 @@ function createEscrowReleaseScenario(
     string $state = 'ajb_scheduled',
     bool $includeFinalPayment = true,
     bool $includeAjbEvidence = true,
+    bool $includeBankAccount = true,
 ): array {
-    $seller = User::factory()->create(['name' => 'Penjual Tahap Enam']);
+    $seller = User::factory()->create(array_merge([
+        'name' => 'Penjual Tahap Enam',
+    ], $includeBankAccount ? [
+        'bank_name' => 'Bank Mandiri',
+        'bank_account_number' => '1370009876543',
+        'bank_account_holder_name' => 'Penjual Tahap Enam',
+    ] : []));
     $seller->assignRole('User');
 
     $buyer = User::factory()->create(['name' => 'Pembeli Tahap Enam']);
@@ -435,6 +442,54 @@ it('finalizes the purchase after PPAT uploads the BPN receipt and shares it read
         ->and($transaction->certificate_transfer_notes)->toBe('Nomor dokumen diperbarui.')
         ->and($transaction->state)->toBe(Transaction::STATE_COMPLETED)
         ->and($transaction->logs()->where('to_state', Transaction::STATE_COMPLETED)->count())->toBe(2);
+});
+
+it('blocks release when the seller has not completed the disbursement account', function () {
+    $scenario = createEscrowReleaseScenario(includeBankAccount: false);
+    $admin = createEscrowReleaseAdmin();
+
+    $this->actingAs($admin)
+        ->from(route('admin.transaction-and-escrow'))
+        ->post(route('escrow-disbursements.store', ['transaction' => $scenario['transaction']->uuid]))
+        ->assertRedirect(route('admin.transaction-and-escrow'))
+        ->assertSessionHasErrors('escrow_release');
+
+    expect(EscrowDisbursement::query()->count())->toBe(0)
+        ->and($scenario['transaction']->fresh()->state)->toBe('ajb_scheduled');
+
+    $this->actingAs($admin)
+        ->get(route('admin.transaction-and-escrow'))
+        ->assertOk()
+        ->assertSeeText('Penjual belum melengkapi rekening')
+        ->assertSeeText('Rekening belum diatur');
+
+    $scenario['seller']->forceFill([
+        'bank_name' => 'Bank BCA',
+        'bank_account_number' => '5271234567',
+        'bank_account_holder_name' => 'Penjual Tahap Enam',
+    ])->save();
+
+    $this->actingAs($admin)
+        ->get(route('admin.transaction-and-escrow'))
+        ->assertOk()
+        ->assertSeeText('Bank BCA')
+        ->assertSeeText('5271234567')
+        ->assertSeeText('Detail & mulai pencairan');
+});
+
+it('stores the recipient bank details when a disbursement is initiated', function () {
+    $scenario = createEscrowReleaseScenario();
+
+    $this->actingAs(createEscrowReleaseAdmin())
+        ->post(route('escrow-disbursements.store', ['transaction' => $scenario['transaction']->uuid]))
+        ->assertRedirect()
+        ->assertSessionHas('status');
+
+    $disbursement = EscrowDisbursement::query()->firstOrFail();
+
+    expect($disbursement->recipient_bank_name)->toBe('Bank Mandiri')
+        ->and($disbursement->recipient_bank_account_number)->toBe('1370009876543')
+        ->and($disbursement->recipient_account_holder_name)->toBe('Penjual Tahap Enam');
 });
 
 it('refuses escrow dashboard and release access to users outside Admin and Superadmin', function () {

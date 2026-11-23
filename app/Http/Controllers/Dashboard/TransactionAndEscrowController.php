@@ -59,6 +59,7 @@ class TransactionAndEscrowController extends Controller
         $disbursements = EscrowDisbursement::query()
             ->with([
                 'transaction.property:id,title,city,province',
+                'transaction.seller:id,name,bank_name,bank_account_number,bank_account_holder_name',
                 'recipient:id,name',
                 'initiatedBy:id,name',
                 'confirmedBy:id,name',
@@ -79,7 +80,7 @@ class TransactionAndEscrowController extends Controller
             ->with([
                 'property:id,title,city,province',
                 'buyer:id,name',
-                'seller:id,name',
+                'seller:id,name,bank_name,bank_account_number,bank_account_holder_name',
             ])
             ->orderByDesc('ajb_signed_at')
             ->orderByDesc('id')

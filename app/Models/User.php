@@ -39,6 +39,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'is_active' => 'boolean',
             'password' => 'hashed',
+            'bank_account_updated_at' => 'datetime',
         ];
     }
 
@@ -86,6 +87,16 @@ class User extends Authenticatable
                 return 'https://ui-avatars.com/api/?name='.urlencode($this->name).'&background=ea580c&color=fff&size=256&bold=true';
             },
         );
+    }
+
+    /**
+     * Determine whether the user has supplied a complete bank account for escrow payouts.
+     */
+    public function hasDisbursementAccount(): bool
+    {
+        return filled($this->bank_name)
+            && filled($this->bank_account_number)
+            && filled($this->bank_account_holder_name);
     }
 
     public function properties(): HasMany

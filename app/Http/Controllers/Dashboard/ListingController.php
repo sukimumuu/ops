@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateDisbursementAccountRequest;
 use App\Http\Requests\UpdatePropertyRequest;
 use App\Models\Appointment;
 use App\Models\DpPaymentAttempt;
@@ -690,8 +691,164 @@ class ListingController extends Controller
         });
     }
 
-    public function disbursementAccount()
+    /**
+     * Show the seller payout account form and the escrow payment history.
+     */
+    public function disbursementAccount(Request $request): View
     {
-        return view('dashboard.listing.disbursement-account');
+        $user = $request->user();
+
+        $transactions = Transaction::query()
+            ->where('seller_id', $user->id)
+            ->with([
+                'property:id,uuid,title,city,province',
+                'buyer:id,name',
+                'dpPaymentAttempts:id,transaction_id,payment_type,amount,status,created_at,paid_at,expires_at',
+                'escrowDisbursements:id,transaction_id,amount,status,transfer_reference,created_at,confirmed_at',
+            ])
+            ->latest('created_at')
+            ->orderByDesc('id')
+            ->paginate(10);
+
+        $transactions->getCollection()->each(function (Transaction $transaction): void {
+            $transaction->setAttribute('payment_stages', $this->sellerPaymentStages($transaction));
+        });
+
+        return view('dashboard.listing.disbursement-account', [
+            'user' => $user,
+            'transactions' => $transactions,
+            'hasDisbursementAccount' => $user->hasDisbursementAccount(),
+            'pendingDisbursementCount' => EscrowDisbursement::query()
+                ->where('recipient_user_id', $user->id)
+                ->where('status', EscrowDisbursement::STATUS_PENDING)
+                ->count(),
+        ]);
+    }
+
+    /**
+     * Persist the seller bank account used for manual escrow payouts.
+     */
+    public function updateDisbursementAccount(UpdateDisbursementAccountRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $user->forceFill([
+            'bank_name' => trim((string) $request->validated('bank_name')),
+            'bank_account_number' => $request->validated('bank_account_number'),
+            'bank_account_holder_name' => trim((string) $request->validated('bank_account_holder_name')),
+            'bank_account_updated_at' => now(),
+        ])->save();
+
+        return redirect()
+            ->route('seller.disbursement-account')
+            ->with('status', 'Rekening pencairan berhasil disimpan.');
+    }
+
+    /**
+     * Build the DP, pelunasan, and disbursement stage summary shown to the seller.
+     *
+     * @return list<array{key: string, label: string, amount: float, status: string, tone: string, description: string, occurred_at: ?Carbon}>
+     */
+    private function sellerPaymentStages(Transaction $transaction): array
+    {
+        $latestDpAttempt = $transaction->dpPaymentAttempts
+            ->filter(fn (DpPaymentAttempt $attempt): bool => $attempt->isDpPayment())
+            ->sortByDesc('id')
+            ->first();
+
+        $latestFinalAttempt = $transaction->dpPaymentAttempts
+            ->filter(fn (DpPaymentAttempt $attempt): bool => $attempt->isFinalPayment())
+            ->sortByDesc('id')
+            ->first();
+
+        $latestDisbursement = $transaction->escrowDisbursements->sortByDesc('id')->first();
+
+        $dpAmount = $latestDpAttempt !== null
+            ? (float) $latestDpAttempt->amount
+            : (float) $transaction->booking_fee_amount;
+        $finalAmount = $latestFinalAttempt !== null
+            ? (float) $latestFinalAttempt->amount
+            : max(0, (float) $transaction->total_property_amount - $dpAmount);
+
+        return [
+            $this->paymentStage('dp', 'Down Payment (DP)', $latestDpAttempt, $dpAmount, 'Pembeli belum menerima tagihan DP.'),
+            $this->paymentStage('final', 'Pelunasan', $latestFinalAttempt, $finalAmount, 'Pelunasan dibuka setelah DP terverifikasi.'),
+            [
+                'key' => 'disbursement',
+                'label' => 'Pencairan ke rekening penjual',
+                'amount' => (float) ($latestDisbursement?->amount ?? 0),
+                'status' => match ($latestDisbursement?->status) {
+                    EscrowDisbursement::STATUS_PENDING => 'Menunggu konfirmasi transfer',
+                    EscrowDisbursement::STATUS_RELEASED => 'Dana telah ditransfer',
+                    default => 'Belum dicairkan',
+                },
+                'tone' => match ($latestDisbursement?->status) {
+                    EscrowDisbursement::STATUS_PENDING => 'amber',
+                    EscrowDisbursement::STATUS_RELEASED => 'emerald',
+                    default => 'slate',
+                },
+                'description' => match ($latestDisbursement?->status) {
+                    EscrowDisbursement::STATUS_PENDING => 'Admin sedang memproses transfer bank manual ke rekening Anda.',
+                    EscrowDisbursement::STATUS_RELEASED => 'Dana sudah ditransfer dengan referensi '
+                        .($latestDisbursement->transfer_reference ?: '-').'.',
+                    default => $transaction->hasCompletedEscrowPayment()
+                        ? 'Dana pelunasan tersimpan di escrow dan menunggu pencairan setelah AJB.'
+                        : 'Pencairan tersedia setelah DP, pelunasan, dan AJB terverifikasi.',
+                },
+                'occurred_at' => $latestDisbursement?->confirmed_at,
+            ],
+        ];
+    }
+
+    /**
+     * Map a payment attempt into the seller-facing stage format.
+     *
+     * @return array{key: string, label: string, amount: float, status: string, tone: string, description: string, occurred_at: ?Carbon}
+     */
+    private function paymentStage(
+        string $key,
+        string $label,
+        ?DpPaymentAttempt $attempt,
+        float $amount,
+        string $emptyDescription,
+    ): array {
+        $status = match ($attempt?->status) {
+            null => 'Belum ditagihkan',
+            DpPaymentAttempt::STATUS_CREATING => 'Disiapkan',
+            DpPaymentAttempt::STATUS_PENDING => 'Menunggu pembayaran',
+            DpPaymentAttempt::STATUS_PAID => 'Terverifikasi',
+            DpPaymentAttempt::STATUS_EXPIRED => 'Kedaluwarsa',
+            DpPaymentAttempt::STATUS_FAILED => 'Gagal',
+            DpPaymentAttempt::STATUS_CANCELED => 'Dibatalkan',
+            default => (string) $attempt->status,
+        };
+
+        $tone = match ($attempt?->status) {
+            DpPaymentAttempt::STATUS_PAID => 'emerald',
+            DpPaymentAttempt::STATUS_CREATING, DpPaymentAttempt::STATUS_PENDING => 'amber',
+            DpPaymentAttempt::STATUS_EXPIRED, DpPaymentAttempt::STATUS_FAILED, DpPaymentAttempt::STATUS_CANCELED => 'rose',
+            default => 'slate',
+        };
+
+        $description = match ($attempt?->status) {
+            DpPaymentAttempt::STATUS_PAID => 'Pembayaran terverifikasi pada '
+                .($attempt->paid_at ?? $attempt->created_at)?->locale('id')->translatedFormat('d M Y, H:i').' WIB.',
+            DpPaymentAttempt::STATUS_CREATING, DpPaymentAttempt::STATUS_PENDING => 'Menunggu pembeli menyelesaikan pembayaran sebelum '
+                .($attempt->expires_at?->locale('id')->translatedFormat('d M Y, H:i') ?? 'batas waktu').' WIB.',
+            DpPaymentAttempt::STATUS_EXPIRED => 'Batas waktu pembayaran telah berakhir.',
+            DpPaymentAttempt::STATUS_FAILED => 'Pembayaran gagal diproses oleh kanal pembayaran.',
+            DpPaymentAttempt::STATUS_CANCELED => 'Pembayaran dibatalkan.',
+            default => $emptyDescription,
+        };
+
+        return [
+            'key' => $key,
+            'label' => $label,
+            'amount' => $amount,
+            'status' => $status,
+            'tone' => $tone,
+            'description' => $description,
+            'occurred_at' => $attempt?->status === DpPaymentAttempt::STATUS_PAID ? $attempt->paid_at : null,
+        ];
     }
 }

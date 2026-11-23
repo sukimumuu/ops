@@ -113,7 +113,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/transaksi-penjualan', [ListingController::class, 'sellingTransaction'])
             ->middleware('permission:transactions.view_own_tracker')
             ->name('selling-transaction');
-        Route::get('/rekening-pencairan', [ListingController::class, 'disbursementAccount'])->name('disbursement-account');
+        Route::get('/rekening-pencairan', [ListingController::class, 'disbursementAccount'])
+            ->name('disbursement-account');
+        Route::put('/rekening-pencairan', [ListingController::class, 'updateDisbursementAccount'])
+            ->name('disbursement-account.update');
     });
     Route::prefix('listing')->name('listing.')->group(function () {
         Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');

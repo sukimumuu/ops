@@ -36,10 +36,17 @@ class EscrowFundReleaseService
 
             $recipient = User::query()->findOrFail($lockedTransaction->seller_id);
 
+            if (! $recipient->hasDisbursementAccount()) {
+                throw new EscrowFundReleaseException('Penjual belum melengkapi rekening pencairan sehingga dana escrow belum dapat dicairkan.');
+            }
+
             $disbursement = $lockedTransaction->escrowDisbursements()->create([
                 'uuid' => (string) Str::uuid(),
                 'recipient_user_id' => $recipient->getKey(),
                 'recipient_name' => $recipient->name,
+                'recipient_bank_name' => $recipient->bank_name,
+                'recipient_bank_account_number' => $recipient->bank_account_number,
+                'recipient_account_holder_name' => $recipient->bank_account_holder_name,
                 'amount' => (string) $amount,
                 'currency' => 'IDR',
                 'status' => EscrowDisbursement::STATUS_PENDING,
@@ -53,7 +60,8 @@ class EscrowFundReleaseService
                 'to_state' => (string) $lockedTransaction->state,
                 'notes' => 'Pencairan escrow '.$disbursement->uuid.' sebesar Rp '
                     .number_format((float) $disbursement->amount, 0, ',', '.')
-                    .' kepada '.$disbursement->recipient_name.' menunggu konfirmasi transfer bank.',
+                    .' kepada '.$disbursement->recipient_name.' melalui '.$recipient->bank_name
+                    .' '.$recipient->bank_account_number.' menunggu konfirmasi transfer bank.',
             ]);
 
             return $disbursement;
