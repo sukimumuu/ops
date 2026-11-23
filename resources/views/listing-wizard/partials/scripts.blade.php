@@ -530,6 +530,7 @@
                         ...this.form,
                         ...@json($initialForm)
                     };
+                    this.isPropertyEdit = @json($isPropertyEdit ?? false);
                     this.draftUuid = @json($initialDraftUuid);
                     this.hasDraft = Boolean(this.draftUuid);
                     this.draftButtonState = this.draftUuid ? 'saved' : 'unsaved';
@@ -553,15 +554,17 @@
                     this.locationQuery.city = this.form.city || '';
                     this.locationQuery.district = this.form.district || '';
 
-                    this.$watch('form', () => this.scheduleDraftSave(true));
-                    this.$watch('currentStep', () => this.scheduleDraftSave());
-                    window.addEventListener('pagehide', () => {
-                        if (this.draftSaveTimer) {
-                            clearTimeout(this.draftSaveTimer);
-                            this.draftSaveTimer = null;
-                        }
-                        this.persistDraft();
-                    });
+                    if (!this.isPropertyEdit) {
+                        this.$watch('form', () => this.scheduleDraftSave(true));
+                        this.$watch('currentStep', () => this.scheduleDraftSave());
+                        window.addEventListener('pagehide', () => {
+                            if (this.draftSaveTimer) {
+                                clearTimeout(this.draftSaveTimer);
+                                this.draftSaveTimer = null;
+                            }
+                            this.persistDraft();
+                        });
+                    }
 
                     this.$watch('form.property_type', (value) => {
                         if (this.mapInstance) {
@@ -584,7 +587,7 @@
                     if (this.form.city_code) {
                         this.loadRegionOptions('districts');
                     }
-                    if (this.hasDraftData()) {
+                    if (!this.isPropertyEdit && this.hasDraftData()) {
                         this.scheduleDraftSave();
                     }
                 },
