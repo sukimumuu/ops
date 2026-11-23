@@ -326,7 +326,19 @@ class ListingController extends Controller
             'url_maps' => old('url_maps', $property->url_maps),
         ];
 
-        return view('user.property-edit', compact('property', 'initialForm'));
+        $initialDraftUuid = null;
+        $initialDraftStep = 1;
+        $initialUploads = [];
+        $isPropertyEdit = true;
+
+        return view('user.property-edit', compact(
+            'property',
+            'initialForm',
+            'initialDraftUuid',
+            'initialDraftStep',
+            'initialUploads',
+            'isPropertyEdit',
+        ));
     }
 
     public function updateProperty(UpdatePropertyRequest $request, Property $property): RedirectResponse
