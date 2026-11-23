@@ -28,7 +28,7 @@ function createEscrowReleaseScenario(
     $seller = User::factory()->create(array_merge([
         'name' => 'Penjual Tahap Enam',
     ], $includeBankAccount ? [
-        'bank_name' => 'Bank Mandiri',
+        'bank_name' => 'Mandiri',
         'bank_account_number' => '1370009876543',
         'bank_account_holder_name' => 'Penjual Tahap Enam',
     ] : []));
@@ -464,7 +464,7 @@ it('blocks release when the seller has not completed the disbursement account', 
         ->assertSeeText('Rekening belum diatur');
 
     $scenario['seller']->forceFill([
-        'bank_name' => 'Bank BCA',
+        'bank_name' => 'BRI',
         'bank_account_number' => '5271234567',
         'bank_account_holder_name' => 'Penjual Tahap Enam',
     ])->save();
@@ -472,7 +472,7 @@ it('blocks release when the seller has not completed the disbursement account', 
     $this->actingAs($admin)
         ->get(route('admin.transaction-and-escrow'))
         ->assertOk()
-        ->assertSeeText('Bank BCA')
+        ->assertSeeText('BRI')
         ->assertSeeText('5271234567')
         ->assertSeeText('Detail & mulai pencairan');
 });
@@ -487,7 +487,7 @@ it('stores the recipient bank details when a disbursement is initiated', functio
 
     $disbursement = EscrowDisbursement::query()->firstOrFail();
 
-    expect($disbursement->recipient_bank_name)->toBe('Bank Mandiri')
+    expect($disbursement->recipient_bank_name)->toBe('Mandiri')
         ->and($disbursement->recipient_bank_account_number)->toBe('1370009876543')
         ->and($disbursement->recipient_account_holder_name)->toBe('Penjual Tahap Enam');
 });

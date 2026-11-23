@@ -85,6 +85,9 @@ it('shows the disbursement account form and flags a missing account', function (
         ->get(route('seller.disbursement-account'))
         ->assertOk()
         ->assertSee('name="bank_name"', false)
+        ->assertSee('value="Mandiri"', false)
+        ->assertSee('assets/bank-logos/BNI.svg', false)
+        ->assertSeeText('BTN Syariah')
         ->assertSee('name="bank_account_number"', false)
         ->assertSee('name="bank_account_holder_name"', false)
         ->assertSeeText('Rekening belum lengkap')
@@ -97,7 +100,7 @@ it('lets a seller save the disbursement account and normalizes the number', func
 
     $this->actingAs($seller)
         ->put(route('seller.disbursement-account.update'), [
-            'bank_name' => 'Bank Mandiri',
+            'bank_name' => 'Mandiri',
             'bank_account_number' => '1370 0098 7654 3',
             'bank_account_holder_name' => 'Penjual Rekening Pencairan',
         ])
@@ -106,7 +109,7 @@ it('lets a seller save the disbursement account and normalizes the number', func
 
     $seller->refresh();
 
-    expect($seller->bank_name)->toBe('Bank Mandiri')
+    expect($seller->bank_name)->toBe('Mandiri')
         ->and($seller->bank_account_number)->toBe('1370009876543')
         ->and($seller->bank_account_holder_name)->toBe('Penjual Rekening Pencairan')
         ->and($seller->bank_account_updated_at)->not->toBeNull()
@@ -116,7 +119,24 @@ it('lets a seller save the disbursement account and normalizes the number', func
         ->get(route('seller.disbursement-account'))
         ->assertOk()
         ->assertSeeText('Rekening aktif')
-        ->assertSeeText('1370009876543');
+        ->assertSeeText('1370009876543')
+        ->assertSee('assets/bank-logos/Mandiri.svg', false);
+});
+
+it('rejects a bank that is not in the predefined list', function () {
+    $seller = createDisbursementAccountSeller();
+
+    $this->actingAs($seller)
+        ->from(route('seller.disbursement-account'))
+        ->put(route('seller.disbursement-account.update'), [
+            'bank_name' => 'Bank BCA',
+            'bank_account_number' => '1370009876543',
+            'bank_account_holder_name' => 'Penjual Rekening Pencairan',
+        ])
+        ->assertRedirect(route('seller.disbursement-account'))
+        ->assertSessionHasErrors('bank_name');
+
+    expect($seller->fresh()->bank_name)->toBeNull();
 });
 
 it('requires every bank field before the account can be saved', function () {
@@ -137,7 +157,7 @@ it('requires every bank field before the account can be saved', function () {
 
 it('lists DP pelunasan and disbursement stages for the seller history', function () {
     $seller = createDisbursementAccountSeller([
-        'bank_name' => 'Bank BCA',
+        'bank_name' => 'BRI',
         'bank_account_number' => '5271234567',
         'bank_account_holder_name' => 'Penjual Rekening Pencairan',
     ]);

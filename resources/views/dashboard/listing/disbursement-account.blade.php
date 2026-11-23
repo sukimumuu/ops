@@ -70,8 +70,50 @@
                     @csrf
                     @method('PUT')
 
-                    <x-form-text-input-dashboard id="bank_name" name="bank_name" label="Nama bank" required
-                        placeholder="Contoh: Bank Mandiri" :value="old('bank_name', $user->bank_name)" :error="$errors->first('bank_name')" maxlength="100" />
+                    @php
+                        $selectedBank = old('bank_name', $user->bank_name);
+                        $bankNameError = $errors->first('bank_name');
+                        $legacyBankName =
+                            filled($user->bank_name) && !array_key_exists((string) $user->bank_name, $bankOptions)
+                                ? $user->bank_name
+                                : null;
+                    @endphp
+
+                    <div>
+                        <span class="block text-sm font-bold text-secondary">
+                            Nama bank <span class="text-primary">*</span>
+                        </span>
+                        <p class="mt-1 text-xs text-slate-500">Pilih bank penampung dana pencairan dari daftar berikut.</p>
+
+                        <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Nama bank">
+                            @foreach ($bankOptions as $bankValue => $bankOption)
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="bank_name" value="{{ $bankValue }}"
+                                        @checked($selectedBank === $bankValue) class="peer sr-only">
+                                    <span @class([
+                                        'flex h-full flex-col items-center justify-center gap-2 rounded-xl border bg-white px-3 py-4 text-center text-xs font-bold text-secondary transition hover:border-primary/50 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary/20 peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30',
+                                        'border-red-400' => $bankNameError,
+                                        'border-slate-200' => !$bankNameError,
+                                    ])>
+                                        <img src="{{ asset($bankOption['logo']) }}" alt="Logo {{ $bankOption['label'] }}"
+                                            class="h-9 w-auto" loading="lazy">
+                                        {{ $bankOption['label'] }}
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+
+                        @if ($legacyBankName)
+                            <p class="mt-2 text-xs font-semibold text-amber-700">
+                                Bank tersimpan saat ini ({{ $legacyBankName }}) belum tersedia pada daftar. Pilih salah
+                                satu bank di atas untuk memperbarui rekening.
+                            </p>
+                        @endif
+
+                        @if ($bankNameError)
+                            <p class="mt-1.5 text-xs font-semibold text-red-600">{{ $bankNameError }}</p>
+                        @endif
+                    </div>
 
                     <x-form-text-input-dashboard id="bank_account_number" name="bank_account_number" label="Nomor rekening"
                         required inputmode="numeric" placeholder="Contoh: 1370012345678"
@@ -97,10 +139,19 @@
 
             <x-card-dashboard title="Rekening tersimpan">
                 @if ($hasDisbursementAccount)
+                    @php
+                        $savedBankOption = $bankOptions[$user->bank_name] ?? null;
+                    @endphp
                     <dl class="space-y-4 text-sm">
                         <div>
                             <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Bank</dt>
-                            <dd class="mt-1 font-bold text-secondary">{{ $user->bank_name }}</dd>
+                            <dd class="mt-1 flex items-center gap-2 font-bold text-secondary">
+                                @if ($savedBankOption)
+                                    <img src="{{ asset($savedBankOption['logo']) }}" alt="" class="h-6 w-auto"
+                                        loading="lazy">
+                                @endif
+                                {{ $user->bank_name }}
+                            </dd>
                         </div>
                         <div>
                             <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Nomor rekening</dt>

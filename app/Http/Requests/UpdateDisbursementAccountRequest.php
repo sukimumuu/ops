@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateDisbursementAccountRequest extends FormRequest
 {
@@ -30,7 +32,7 @@ class UpdateDisbursementAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'bank_name' => ['required', 'string', 'max:100'],
+            'bank_name' => ['required', 'string', Rule::in(array_keys(User::BANK_OPTIONS))],
             'bank_account_number' => ['required', 'string', 'regex:/^\d{6,34}$/'],
             'bank_account_holder_name' => ['required', 'string', 'max:150'],
         ];
@@ -42,8 +44,8 @@ class UpdateDisbursementAccountRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'bank_name.required' => 'Nama bank wajib diisi.',
-            'bank_name.max' => 'Nama bank tidak boleh lebih dari 100 karakter.',
+            'bank_name.required' => 'Pilih bank penampung pencairan.',
+            'bank_name.in' => 'Bank yang dipilih tidak tersedia.',
             'bank_account_number.required' => 'Nomor rekening wajib diisi.',
             'bank_account_number.regex' => 'Nomor rekening harus berupa 6-34 digit angka.',
             'bank_account_holder_name.required' => 'Nama pemilik rekening wajib diisi.',

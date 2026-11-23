@@ -33,6 +33,20 @@ class User extends Authenticatable
      */
     protected $guarded = ['id'];
 
+    /**
+     * Predefined payout banks keyed by the value stored in `users.bank_name`.
+     *
+     * @var array<string, array{label: string, logo: string}>
+     */
+    public const BANK_OPTIONS = [
+        'BNI' => ['label' => 'BNI', 'logo' => 'assets/bank-logos/BNI.svg'],
+        'BRI' => ['label' => 'BRI', 'logo' => 'assets/bank-logos/BRI.svg'],
+        'BSN' => ['label' => 'BSN', 'logo' => 'assets/bank-logos/BSN%20(Alt).svg'],
+        'BTN' => ['label' => 'BTN', 'logo' => 'assets/bank-logos/BTN%20(New).svg'],
+        'BTN Syariah' => ['label' => 'BTN Syariah', 'logo' => 'assets/bank-logos/BTN%20Syariah%20(New).svg'],
+        'Mandiri' => ['label' => 'Mandiri', 'logo' => 'assets/bank-logos/Mandiri.svg'],
+    ];
+
     protected function casts(): array
     {
         return [

@@ -12,6 +12,7 @@ use App\Models\Property;
 use App\Models\PropertyDraft;
 use App\Models\Transaction;
 use App\Models\TransactionLedgerEntry;
+use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
@@ -728,6 +729,7 @@ class ListingController extends Controller
 
         return view('dashboard.listing.disbursement-account', [
             'user' => $user,
+            'bankOptions' => User::BANK_OPTIONS,
             'transactions' => $transactions,
             'hasDisbursementAccount' => $user->hasDisbursementAccount(),
             'pendingDisbursementCount' => EscrowDisbursement::query()
