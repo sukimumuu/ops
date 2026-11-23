@@ -10,7 +10,8 @@
         @endif
 
         @if ($errors->any())
-            <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+            <div role="alert"
+                class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
                 <ul class="list-inside list-disc space-y-1">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
@@ -70,20 +71,19 @@
                     @method('PUT')
 
                     <x-form-text-input-dashboard id="bank_name" name="bank_name" label="Nama bank" required
-                        placeholder="Contoh: Bank Mandiri" :value="old('bank_name', $user->bank_name)" :error="$errors->first('bank_name')"
-                        maxlength="100" />
+                        placeholder="Contoh: Bank Mandiri" :value="old('bank_name', $user->bank_name)" :error="$errors->first('bank_name')" maxlength="100" />
 
-                    <x-form-text-input-dashboard id="bank_account_number" name="bank_account_number"
-                        label="Nomor rekening" required inputmode="numeric" placeholder="Contoh: 1370012345678"
+                    <x-form-text-input-dashboard id="bank_account_number" name="bank_account_number" label="Nomor rekening"
+                        required inputmode="numeric" placeholder="Contoh: 1370012345678"
                         hint="Hanya angka, tanpa spasi atau tanda baca." :value="old('bank_account_number', $user->bank_account_number)" :error="$errors->first('bank_account_number')"
                         maxlength="34" />
 
                     <x-form-text-input-dashboard id="bank_account_holder_name" name="bank_account_holder_name"
-                        label="Nama pemilik rekening" required placeholder="Nama sesuai buku tabungan"
-                        :value="old('bank_account_holder_name', $user->bank_account_holder_name)" :error="$errors->first('bank_account_holder_name')"
-                        maxlength="150" />
+                        label="Nama pemilik rekening" required placeholder="Nama sesuai buku tabungan" :value="old('bank_account_holder_name', $user->bank_account_holder_name)"
+                        :error="$errors->first('bank_account_holder_name')" maxlength="150" />
 
-                    <div class="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div
+                        class="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
                         <p class="text-xs text-slate-500">
                             Perubahan rekening hanya berlaku untuk pencairan berikutnya.
                         </p>
@@ -114,7 +114,8 @@
                         </div>
                         @if ($user->bank_account_updated_at)
                             <div>
-                                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Terakhir diperbarui</dt>
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Terakhir diperbarui
+                                </dt>
                                 <dd class="mt-1 text-slate-600">
                                     {{ $user->bank_account_updated_at->locale('id')->translatedFormat('d F Y, H:i') }} WIB
                                 </dd>
@@ -123,11 +124,9 @@
                     </dl>
                 @else
                     <div class="flex flex-col items-center py-6 text-center">
-                        <span
-                            class="flex size-14 items-center justify-center rounded-full bg-amber-50 text-amber-600"
+                        <span class="flex size-14 items-center justify-center rounded-full bg-amber-50 text-amber-600"
                             aria-hidden="true">
-                            <svg class="size-7" fill="none" stroke="currentColor" stroke-width="1.6"
-                                viewBox="0 0 24 24">
+                            <svg class="size-7" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M3 7h18v12H3zM7 11h.01M17 15h.01M12 11a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM6 4h12" />
                             </svg>
@@ -203,7 +202,8 @@
                                         <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                             Nilai transaksi</p>
                                         <p class="font-heading text-base font-bold text-secondary">
-                                            Rp {{ number_format((float) $transaction->total_property_amount, 0, ',', '.') }}
+                                            Rp
+                                            {{ number_format((float) $transaction->total_property_amount, 0, ',', '.') }}
                                         </p>
                                     </div>
                                 </div>

@@ -492,6 +492,33 @@ it('stores the recipient bank details when a disbursement is initiated', functio
         ->and($disbursement->recipient_account_holder_name)->toBe('Penjual Tahap Enam');
 });
 
+it('confirms escrow disbursement with an in-app step instead of native dialogs', function () {
+    $scenario = createEscrowReleaseScenario();
+    $admin = createEscrowReleaseAdmin();
+
+    $this->actingAs($admin)
+        ->get(route('admin.transaction-and-escrow'))
+        ->assertOk()
+        ->assertDontSee('onsubmit="return confirm(', false)
+        ->assertDontSee('onclick="return confirm(', false)
+        ->assertSee('x-data="{ confirming: false }"', false)
+        ->assertSeeText('Mulai pencairan')
+        ->assertSeeText('Ya, mulai pencairan');
+
+    $this->actingAs($admin)
+        ->post(route('escrow-disbursements.store', ['transaction' => $scenario['transaction']->uuid]))
+        ->assertRedirect()
+        ->assertSessionHas('status');
+
+    $this->actingAs(createEscrowReleaseAdmin('Superadmin'))
+        ->get(route('superadmin.transaction-and-escrow'))
+        ->assertOk()
+        ->assertDontSee('onsubmit="return confirm(', false)
+        ->assertDontSee('onclick="return confirm(', false)
+        ->assertSeeText('Ya, konfirmasi transfer')
+        ->assertSeeText('Konfirmasi transfer');
+});
+
 it('refuses escrow dashboard and release access to users outside Admin and Superadmin', function () {
     $scenario = createEscrowReleaseScenario();
     $ppat = $scenario['ppat'];
