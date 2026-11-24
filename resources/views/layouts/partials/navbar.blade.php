@@ -184,7 +184,7 @@
                     class="rounded-md px-3 py-1.5 text-sm font-semibold transition {{ !$isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
                     Pembeli
                 </a>
-                <a href="{{ route('seller.listing') }}" @if ($isSellerMode) aria-current="page" @endif
+                <a href="{{ route('seller.listing') }}" data-seller-feature @if ($isSellerMode) aria-current="page" @endif
                     class="rounded-md px-3 py-1.5 text-sm font-semibold transition {{ $isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
                     Penjual
                 </a>

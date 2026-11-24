@@ -46,6 +46,7 @@
 
     @stack('scripts')
     @include('layouts.partials.chatbot')
+    @include('layouts.partials.email-verification-modal')
 </body>
 
 </html>

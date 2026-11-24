@@ -69,7 +69,7 @@
                         </noscript>
                     </form>
 
-                    <a href="{{ route('listing.create', ['new' => 1]) }}"
+                    <a href="{{ route('listing.create', ['new' => 1]) }}" data-seller-feature
                         class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3.5 py-2 font-heading text-xs font-semibold tracking-tight text-white shadow-lg shadow-primary/25 transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
                         <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                             aria-hidden="true">
@@ -220,7 +220,7 @@
                                 Mulai dengan menambahkan listing properti pertama Anda. Properti yang Anda tayangkan akan
                                 muncul di sini.
                             </p>
-                            <a href="{{ route('listing.create', ['new' => 1]) }}"
+                            <a href="{{ route('listing.create', ['new' => 1]) }}" data-seller-feature
                                 class="mt-8 inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 font-sans text-sm font-semibold text-white shadow-lg shadow-primary/20 transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2">
                                 Tambah Properti Baru
                             </a>
