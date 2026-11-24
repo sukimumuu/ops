@@ -17,6 +17,7 @@ use App\Http\Controllers\Dashboard\SavedPropertyController;
 use App\Http\Controllers\Dashboard\SuperadminController;
 use App\Http\Controllers\Dashboard\TransactionAndEscrowController;
 use App\Http\Controllers\Dashboard\UserController;
+use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingAiController;
 use App\Http\Controllers\ListingWizardController;
@@ -57,6 +58,16 @@ Route::prefix('panel')->name('panel.')->group(function () {
 });
 
 Route::middleware(['auth', 'auth.session'])->group(function () {
+    Route::prefix('verifikasi-email')->name('email-verification.')->group(function () {
+        Route::get('/status', [EmailVerificationController::class, 'status'])->name('status');
+        Route::post('/kirim', [EmailVerificationController::class, 'send'])
+            ->middleware('throttle:10,1')
+            ->name('send');
+        Route::post('/konfirmasi', [EmailVerificationController::class, 'verify'])
+            ->middleware('throttle:20,1')
+            ->name('verify');
+    });
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profil', [DashboardController::class, 'profile'])->name('profile');
     Route::put('/profil/password', [ProfilePasswordController::class, 'update'])
@@ -81,7 +92,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->whereUuid('property')
         ->name('certificate-transfer.receipt.download');
 
-    Route::name('seller.')->group(function () {
+    Route::middleware('seller.email_verified')->name('seller.')->group(function () {
         Route::get('/listing', [ListingController::class, 'index'])->name('listing');
         Route::get('/properti-saya', [ListingController::class, 'myProperties'])->name('my-properties');
         Route::get('/properti-saya/{property:uuid}', [ListingController::class, 'showProperty'])
@@ -118,7 +129,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::put('/rekening-pencairan', [ListingController::class, 'updateDisbursementAccount'])
             ->name('disbursement-account.update');
     });
-    Route::prefix('listing')->name('listing.')->group(function () {
+    Route::middleware('seller.email_verified')->prefix('listing')->name('listing.')->group(function () {
         Route::get('/buat', [ListingWizardController::class, 'create'])->name('create');
         Route::get('/buat/draf/{draft:uuid}', [ListingWizardController::class, 'editDraft'])
             ->middleware('permission:properties.create')

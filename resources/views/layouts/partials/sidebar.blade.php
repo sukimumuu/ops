@@ -36,7 +36,7 @@
                     class="rounded-md px-3 py-2 text-center text-sm font-semibold transition {{ !$isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
                     Pembeli
                 </a>
-                <a href="{{ route('seller.listing') }}"
+                <a href="{{ route('seller.listing') }}" data-seller-feature
                     @if ($isSellerMode) aria-current="page" @endif
                     class="rounded-md px-3 py-2 text-center text-sm font-semibold transition {{ $isSellerMode ? 'bg-white text-primary shadow-sm' : 'text-slate-600 hover:text-secondary' }}">
                     Penjual
@@ -217,7 +217,7 @@
         {{-- Seller Menu --}}
         @role('User')
             @if ($isSellerMode)
-            <a href="{{ route('seller.listing') }}"
+            <a href="{{ route('seller.listing') }}" data-seller-feature
                 class="group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold
                   {{ request()->routeIs('seller.listing')
                       ? 'bg-primary text-white shadow-lg shadow-primary/25'
