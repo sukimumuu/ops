@@ -17,7 +17,7 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
-        detectTls: 'mihom.pausberbulu.my.id',
+        detectTls: 'mihom.pixcodio.web.id',
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },

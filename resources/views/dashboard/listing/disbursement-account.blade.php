@@ -66,7 +66,8 @@
             <x-card-dashboard title="Data rekening penampung"
                 subtitle="Pastikan nama pemilik rekening sama dengan nama pada rekening bank agar transfer tidak gagal.">
                 <form method="POST" action="{{ route('seller.disbursement-account.update') }}" class="space-y-5"
-                    autocomplete="off">
+                    autocomplete="off"
+                    onsubmit="const submitButton = this.querySelector('button[type=&quot;submit&quot;]'); if (submitButton && !submitButton.disabled) { submitButton.disabled = true; submitButton.classList.add('cursor-not-allowed', 'opacity-60'); submitButton.querySelector('[data-submit-label]').textContent = 'Menyimpan...'; }">
                     @csrf
                     @method('PUT')
 
@@ -85,22 +86,25 @@
                         </span>
                         <p class="mt-1 text-xs text-slate-500">Pilih bank penampung dana pencairan dari daftar berikut.</p>
 
-                        <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Nama bank">
-                            @foreach ($bankOptions as $bankValue => $bankOption)
-                                <label class="cursor-pointer">
-                                    <input type="radio" name="bank_name" value="{{ $bankValue }}"
-                                        @checked($selectedBank === $bankValue) class="peer sr-only">
-                                    <span @class([
-                                        'flex h-full flex-col items-center justify-center gap-2 rounded-xl border bg-white px-3 py-4 text-center text-xs font-bold text-secondary transition hover:border-primary/50 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary peer-checked:ring-2 peer-checked:ring-primary/20 peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30',
-                                        'border-red-400' => $bankNameError,
-                                        'border-slate-200' => !$bankNameError,
-                                    ])>
-                                        <img src="{{ asset($bankOption['logo']) }}" alt="Logo {{ $bankOption['label'] }}"
-                                            class="h-9 w-auto" loading="lazy">
-                                        {{ $bankOption['label'] }}
-                                    </span>
-                                </label>
-                            @endforeach
+                        <div class="mt-2 flex items-center gap-3">
+                            <div class="flex size-12 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+                                <img id="bank-logo-preview"
+                                    src="{{ isset($bankOptions[$selectedBank]) ? asset($bankOptions[$selectedBank]['logo']) : '' }}"
+                                    alt=""
+                                    class="{{ isset($bankOptions[$selectedBank]) ? 'h-8 w-auto' : 'hidden' }}"
+                                    loading="lazy">
+                            </div>
+                            <select id="bank_name" name="bank_name" required
+                                class="min-w-0 flex-1 rounded-lg border bg-white px-3.5 py-2.5 text-sm font-semibold text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 @if ($bankNameError) border-red-400 @else border-slate-300 focus:border-primary @endif"
+                                onchange="const preview = document.getElementById('bank-logo-preview'); const logo = this.selectedOptions[0].dataset.logo || ''; preview.src = logo; preview.alt = logo ? this.selectedOptions[0].textContent.trim() : ''; preview.classList.toggle('hidden', !logo);">
+                                <option value="" disabled @selected(!$selectedBank || !isset($bankOptions[$selectedBank]))>
+                                    Pilih nama bank
+                                </option>
+                                @foreach ($bankOptions as $bankValue => $bankOption)
+                                    <option value="{{ $bankValue }}" data-logo="{{ asset($bankOption['logo']) }}"
+                                        @selected($selectedBank === $bankValue)>{{ $bankOption['label'] }}</option>
+                                @endforeach
+                            </select>
                         </div>
 
                         @if ($legacyBankName)
@@ -130,8 +134,8 @@
                             Perubahan rekening hanya berlaku untuk pencairan berikutnya.
                         </p>
                         <button type="submit"
-                            class="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
-                            Simpan rekening
+                            class="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                            <span data-submit-label>Simpan rekening</span>
                         </button>
                     </div>
                 </form>

@@ -85,6 +85,8 @@ it('shows the disbursement account form and flags a missing account', function (
         ->get(route('seller.disbursement-account'))
         ->assertOk()
         ->assertSee('name="bank_name"', false)
+        ->assertSee('<select id="bank_name"', false)
+        ->assertSee('value="BCA"', false)
         ->assertSee('value="Mandiri"', false)
         ->assertSee('assets/bank-logos/BNI.svg', false)
         ->assertSeeText('BTN Syariah')
