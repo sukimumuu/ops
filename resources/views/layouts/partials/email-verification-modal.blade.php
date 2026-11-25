@@ -1,5 +1,5 @@
 @auth
-    @php($emailVerificationRequired = auth()->user()->email_verified_at === null)
+    @php($emailVerificationRequired = auth()->user()->email_verified_at === null && ! auth()->user()->hasRole('Superadmin'))
     @if ($emailVerificationRequired)
         <div id="email-verification-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/50 p-4"
             role="dialog" aria-modal="true" aria-labelledby="email-verification-title">

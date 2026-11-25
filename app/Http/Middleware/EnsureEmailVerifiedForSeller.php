@@ -19,6 +19,7 @@ class EnsureEmailVerifiedForSeller
 
         if ($user !== null
             && $user->email_verified_at === null
+            && ! $user->hasRole('Superadmin')
             && ! $request->routeIs('email-verification.*')
             && ! $request->routeIs('seller.listing')) {
             if ($request->expectsJson()) {

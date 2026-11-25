@@ -4,7 +4,9 @@ use App\Mail\EmailVerificationOtpMail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
@@ -20,6 +22,24 @@ it('requires email verification before listing routes', function () {
         ->getJson(route('listing.create'))
         ->assertForbidden()
         ->assertJsonPath('email_verification_required', true);
+});
+
+it('allows superadmins to access seller region data without email verification', function () {
+    $superadmin = User::factory()->unverified()->create();
+    $superadmin->assignRole(Role::firstOrCreate(['name' => 'Superadmin']));
+
+    Http::fake([
+        'wilayah.id/api/provinces.json' => Http::response([
+            'data' => [
+                ['code' => '36', 'name' => 'Banten'],
+            ],
+        ]),
+    ]);
+
+    $this->actingAs($superadmin)
+        ->getJson(route('listing.regions.provinces'))
+        ->assertOk()
+        ->assertJsonPath('data.0.name', 'Banten');
 });
 
 it('sends an otp to a new email and verifies it', function () {
