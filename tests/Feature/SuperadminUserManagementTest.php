@@ -15,12 +15,13 @@ beforeEach(function () {
 });
 
 it('shows the add user form to a superadmin', function () {
-    $superadmin = User::factory()->create();
+    $superadmin = User::factory()->unverified()->create();
     $superadmin->assignRole('Superadmin');
 
     $this->actingAs($superadmin)
         ->get(route('superadmin.user-management.create'))
         ->assertOk()
+        ->assertDontSee('id="email-verification-modal"', false)
         ->assertSeeText('Tambah Pengguna')
         ->assertSee('name="role"', false)
         ->assertSee('value="admin"', false)
