@@ -72,6 +72,7 @@ class SuperadminController extends Controller
 
     public function storeUser(Request $request, AuditLogger $auditLogger): RedirectResponse
     {
+        $this->normalizeEmail($request);
         $this->normalizePhone($request);
 
         $provinceCode = preg_quote((string) $request->input('province_code'), '/');
@@ -122,6 +123,7 @@ class SuperadminController extends Controller
     public function updateUser(Request $request, User $user, AuditLogger $auditLogger): RedirectResponse
     {
         $this->ensureUserIsManageable($user);
+        $this->normalizeEmail($request);
         $this->normalizePhone($request);
 
         $provinceCode = preg_quote((string) $request->input('province_code'), '/');
@@ -244,6 +246,20 @@ class SuperadminController extends Controller
         return redirect()
             ->route('superadmin.user-management')
             ->with('status', 'Akun pengguna berhasil dihapus.');
+    }
+
+    private function normalizeEmail(Request $request): void
+    {
+        if (! $request->filled('email')) {
+            return;
+        }
+
+        $email = strtolower(trim((string) $request->input('email')));
+        if (! str_contains($email, '@')) {
+            $email .= '@mihom.id';
+        }
+
+        $request->merge(['email' => $email]);
     }
 
     private function normalizePhone(Request $request): void

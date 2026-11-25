@@ -27,6 +27,9 @@ it('shows the add user form to a superadmin', function () {
         ->assertSee('value="ppat"', false)
         ->assertSee('value="user"', false)
         ->assertSee("x-show=\"role === 'ppat'\"", false)
+        ->assertSee('@mihom.id', false)
+        ->assertSee('inputmode="numeric"', false)
+        ->assertSee('>+62</span>', false)
         ->assertSee('name="province"', false)
         ->assertSee('name="city"', false)
         ->assertSee('name="district"', false)
@@ -78,7 +81,7 @@ it('creates a user and assigns each supported role', function () {
     ] as [$role, $assignedRole, $phone]) {
         $userData = [
             'name' => ucfirst($role).' Test',
-            'email' => $role.'@example.test',
+            'email' => $role,
             'phone' => $phone,
             'password' => 'password123',
             'password_confirmation' => 'password123',
@@ -99,7 +102,7 @@ it('creates a user and assigns each supported role', function () {
         $response = $this->post(route('superadmin.user-management.store'), $userData);
 
         $response->assertRedirect(route('superadmin.user-management'));
-        $createdUser = User::where('email', $role.'@example.test')->firstOrFail();
+        $createdUser = User::where('email', $role.'@mihom.id')->firstOrFail();
         expect($createdUser->hasRole($assignedRole))->toBeTrue()
             ->and($createdUser->phone)->toBe('62'.substr($phone, 1))
             ->and(Hash::check('password123', $createdUser->password))->toBeTrue();

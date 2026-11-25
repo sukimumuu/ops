@@ -24,13 +24,37 @@
                     placeholder="Masukkan nama lengkap" :value="old('name', $editingUser?->name ?? '')"
                     :error="$errors->first('name')" required />
 
-                <x-form-text-input-dashboard id="email" name="email" type="email" label="Email"
-                    placeholder="nama@example.com" :value="old('email', $editingUser?->email ?? '')"
-                    :error="$errors->first('email')" />
+                <div>
+                    <x-form-label-dashboard value="Email" />
+                    <div class="flex">
+                        <input id="email" name="email" type="text"
+                            class="block w-full rounded-l-lg border border-r-0 bg-white px-4 py-2.5 text-sm font-medium text-secondary placeholder-slate-400 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 {{ $errors->has('email') ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : 'border-slate-300' }}"
+                            placeholder="nama" autocomplete="email"
+                            value="{{ old('email', str_ends_with($editingUser?->email ?? '', '@mihom.id') ? substr($editingUser->email, 0, -strlen('@mihom.id')) : ($editingUser?->email ?? '')) }}"
+                            @input="normalizeEmail($event.target)">
+                        <span
+                            class="flex items-center rounded-r-lg border border-l-0 px-3 text-sm font-semibold text-slate-500 shadow-sm {{ $errors->has('email') ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-slate-50' }}">@mihom.id</span>
+                    </div>
+                    @if ($errors->has('email'))
+                        <p class="mt-1.5 text-xs font-semibold text-red-600">{{ $errors->first('email') }}</p>
+                    @endif
+                </div>
 
-                <x-form-text-input-dashboard id="phone" name="phone" type="tel" label="Nomor Telepon"
-                    placeholder="08xxxxxxxxxx" :value="old('phone', $editingUser?->phone ?? '')"
-                    :error="$errors->first('phone')" required />
+                <div>
+                    <x-form-label-dashboard value="Nomor Telepon" required />
+                    <div class="relative">
+                        <span
+                            class="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 border-r pr-2 text-sm font-bold {{ $errors->has('phone') ? 'border-red-300 text-red-500' : 'border-slate-300 text-slate-500' }}">+62</span>
+                        <input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel"
+                            maxlength="15"
+                            class="block w-full rounded-lg border bg-white px-4 py-2.5 pl-[58px] text-sm font-medium text-secondary placeholder-slate-400 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 {{ $errors->has('phone') ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : 'border-slate-300' }}"
+                            placeholder="812xxxxxxxx" value="{{ old('phone', $editingUser?->phone ?? '') }}"
+                            @input="normalizePhone($event.target)" required>
+                    </div>
+                    @if ($errors->has('phone'))
+                        <p class="mt-1.5 text-xs font-semibold text-red-600">{{ $errors->first('phone') }}</p>
+                    @endif
+                </div>
 
                 <x-form-select-dashboard id="role" name="role" label="Peran" :error="$errors->first('role')" required
                     x-model="role" @change="handleRoleChange()">
@@ -277,6 +301,9 @@
                     },
 
                     init() {
+                        const phoneInput = document.getElementById('phone');
+                        if (phoneInput) this.normalizePhone(phoneInput);
+
                         this.loadRegionOptions('provinces').then(async () => {
                             if (this.role !== 'ppat') return;
 
@@ -298,6 +325,20 @@
                             );
                             if (district) this.selectRegion('districts', district);
                         });
+                    },
+
+                    normalizePhone(input) {
+                        let value = input.value.replace(/\D/g, '');
+                        value = value.replace(/^(0|62)/, '');
+                        input.value = value;
+                    },
+
+                    normalizeEmail(input) {
+                        input.value = input.value
+                            .trim()
+                            .toLowerCase()
+                            .replace(/@.*/, '')
+                            .replace(/[^a-z0-9._-]/g, '');
                     },
 
                     handleRoleChange() {
